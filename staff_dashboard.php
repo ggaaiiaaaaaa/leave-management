@@ -201,8 +201,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                 <span class="kpi-sub">/ 5.0 Days</span>
               </div>
               <div class="kpi-footer positive">
-                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
-                <span>DOLE Art. 95</span>
+                <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
+                <span>Standard Allocation</span>
               </div>
             </div>
 
@@ -349,11 +349,11 @@ $leaveRequests = $leaveReqStmt->fetchAll();
               <option value="Bereavement">Bereavement Leave</option>
               <option value="Emergency">Emergency / Calamity Leave</option>
               <option value="Study">CPA Board Exam / CPD Study Leave</option>
-              <option value="SoloParent">Solo Parent Leave (RA 8972)</option>
-              <option value="Paternity">Paternity Leave (RA 8187)</option>
-              <option value="Maternity">Maternity Leave (RA 11210)</option>
-              <option value="MagnaCarta">Magna Carta of Women (RA 9710)</option>
-              <option value="VAWC">VAWC Leave (RA 9262)</option>
+              <option value="SoloParent">Solo Parent Leave</option>
+              <option value="Paternity">Paternity Leave</option>
+              <option value="Maternity">Maternity Leave</option>
+              <option value="MagnaCarta">Special Women Leave</option>
+              <option value="VAWC">VAWC Leave</option>
               <option value="Unpaid">Leave Without Pay (LWOP)</option>
             </select>
           </div>

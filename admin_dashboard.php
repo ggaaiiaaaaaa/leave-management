@@ -206,7 +206,7 @@ $allUsers = $allUsersStmt->fetchAll();
             <div class="kpi-card green">
               <div class="kpi-header"><span class="kpi-label">Service Incentive (SIL)</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value">5.0d</span><span class="kpi-sub">Standard</span></div>
-              <div class="kpi-footer positive"><i data-lucide="scale" style="width:14px;height:14px;"></i><span>DOLE Art. 95</span></div>
+              <div class="kpi-footer positive"><i data-lucide="shield-check" style="width:14px;height:14px;"></i><span>Standard Allocation</span></div>
             </div>
 
             <div class="kpi-card purple">
@@ -410,11 +410,11 @@ $allUsers = $allUsersStmt->fetchAll();
               <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
               <option value="Emergency">Emergency / Calamity Leave</option>
               <option value="Study">CPA Board Exam / CPD Study Leave</option>
-              <option value="SoloParent">Solo Parent Leave (RA 8972 / RA 11861 - 7 days)</option>
-              <option value="Paternity">Paternity Leave (RA 8187 - 7 days)</option>
-              <option value="Maternity">Maternity Leave (RA 11210 - 105 days)</option>
-              <option value="MagnaCarta">Magna Carta of Women (RA 9710)</option>
-              <option value="VAWC">VAWC Leave (RA 9262 - 10 days)</option>
+              <option value="SoloParent">Solo Parent Leave (7 days)</option>
+              <option value="Paternity">Paternity Leave (7 days)</option>
+              <option value="Maternity">Maternity Leave (105 days)</option>
+              <option value="MagnaCarta">Special Women Leave</option>
+              <option value="VAWC">VAWC Leave (10 days)</option>
               <option value="Unpaid">Leave Without Pay (LWOP / Unpaid)</option>
             </select>
           </div>
