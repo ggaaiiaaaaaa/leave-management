@@ -341,19 +341,11 @@ $leaveRequests = $leaveReqStmt->fetchAll();
         <div class="modal-body">
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
-            <select name="leave_type" id="applyLeaveType" class="form-select" required
-              onchange="calculateWorkingDays()">
-              <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
+            <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
               <option value="VL" selected>Vacation Leave (VL)</option>
               <option value="SL">Sick Leave (SL)</option>
+              <option value="Emergency">Emergency Leave</option>
               <option value="Bereavement">Bereavement Leave</option>
-              <option value="Emergency">Emergency / Calamity Leave</option>
-              <option value="Study">CPA Board Exam / CPD Study Leave</option>
-              <option value="SoloParent">Solo Parent Leave</option>
-              <option value="Paternity">Paternity Leave</option>
-              <option value="Maternity">Maternity Leave</option>
-              <option value="MagnaCarta">Special Women Leave</option>
-              <option value="VAWC">VAWC Leave</option>
               <option value="Unpaid">Leave Without Pay (LWOP)</option>
             </select>
           </div>
@@ -463,6 +455,16 @@ $leaveRequests = $leaveReqStmt->fetchAll();
     function calculateWorkingDays() {
       const startStr = document.getElementById('applyStartDate').value;
       const endStr = document.getElementById('applyEndDate').value;
+      const type = document.getElementById('applyLeaveType').value;
+
+      const balEl = document.getElementById('availableBalancePreview');
+      if (balEl) {
+        if (type === 'VL') balEl.innerText = '<?= number_format($vlBalance, 1) ?> Days';
+        else if (type === 'SL') balEl.innerText = '<?= number_format($slBalance, 1) ?> Days';
+        else if (type === 'Emergency') balEl.innerText = '3.0 Days';
+        else if (type === 'Bereavement') balEl.innerText = '3.0 Days';
+        else balEl.innerText = 'Unlimited (Unpaid)';
+      }
 
       if (!startStr || !endStr) return;
       const start = new Date(startStr);

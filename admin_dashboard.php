@@ -404,18 +404,11 @@ $allUsers = $allUsersStmt->fetchAll();
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
             <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
-              <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
               <option value="VL" selected>Vacation Leave (VL)</option>
               <option value="SL">Sick Leave (SL)</option>
-              <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
-              <option value="Emergency">Emergency / Calamity Leave</option>
-              <option value="Study">CPA Board Exam / CPD Study Leave</option>
-              <option value="SoloParent">Solo Parent Leave (7 days)</option>
-              <option value="Paternity">Paternity Leave (7 days)</option>
-              <option value="Maternity">Maternity Leave (105 days)</option>
-              <option value="MagnaCarta">Special Women Leave</option>
-              <option value="VAWC">VAWC Leave (10 days)</option>
-              <option value="Unpaid">Leave Without Pay (LWOP / Unpaid)</option>
+              <option value="Emergency">Emergency Leave</option>
+              <option value="Bereavement">Bereavement Leave</option>
+              <option value="Unpaid">Leave Without Pay (LWOP)</option>
             </select>
           </div>
           <div class="form-grid">
@@ -541,7 +534,6 @@ $allUsers = $allUsersStmt->fetchAll();
     function calculateWorkingDays() {
       const startStr = document.getElementById('applyStartDate').value;
       const endStr = document.getElementById('applyEndDate').value;
-      const duration = document.getElementById('applyDurationMode').value;
       const leaveType = document.getElementById('applyLeaveType').value;
       
       const balEl = document.getElementById('availableBalancePreview');
@@ -549,32 +541,17 @@ $allUsers = $allUsersStmt->fetchAll();
         if (currentUserBalances[leaveType] !== undefined) {
           balEl.innerText = `${currentUserBalances[leaveType].toFixed(1)} Days`;
           balEl.style.color = 'var(--accent)';
-        } else if (leaveType === 'Bereavement') {
-          balEl.innerText = '3.0 - 5.0 Days (Paid)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Study') {
-          balEl.innerText = 'CPA Exam / CPD Entitlement';
-          balEl.style.color = 'var(--accent)';
         } else if (leaveType === 'Emergency') {
-          balEl.innerText = 'Calamity Assistance';
-          balEl.style.color = 'var(--warning)';
-        } else if (leaveType === 'Paternity') {
-          balEl.innerText = '7.0 Days (RA 8187)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Maternity') {
-          balEl.innerText = '105 Days (RA 11210)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'MagnaCarta') {
-          balEl.innerText = 'Up to 60 Days (RA 9710)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'VAWC') {
-          balEl.innerText = '10 Days (RA 9262)';
-          balEl.style.color = 'var(--success)';
+          balEl.innerText = '3.0 Days';
+          balEl.style.color = 'var(--accent)';
+        } else if (leaveType === 'Bereavement') {
+          balEl.innerText = '3.0 Days';
+          balEl.style.color = 'var(--accent)';
         } else if (leaveType === 'Unpaid') {
-          balEl.innerText = 'Leave Without Pay';
+          balEl.innerText = 'Unlimited (Unpaid)';
           balEl.style.color = 'var(--text-muted)';
         } else {
-          balEl.innerText = 'Special Benefit';
+          balEl.innerText = 'Standard';
           balEl.style.color = 'var(--accent)';
         }
       }
