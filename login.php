@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-header">
       <div class="login-logo">JT</div>
       <h2>JTYeo CPA Accounting Office</h2>
-      <p>DOLE-Compliant Leave & Attendance Portal</p>
+      <p>DOLE-Compliant Leave Management Portal</p>
       <div style="margin-top:8px;">
         <span class="firm-badge" style="background:rgba(255,255,255,0.15); color:#e0f2fe; font-size:10px; padding:3px 8px;">Interactive Proposal Prototype</span>
       </div>

@@ -36,7 +36,7 @@ def create_proposal():
     p_sub = doc.add_paragraph()
     p_sub.paragraph_format.space_before = Pt(0)
     p_sub.paragraph_format.space_after = Pt(2)
-    run_sub = p_sub.add_run("Leave & Attendance Management System — Feature Overview & Pricing Proposal")
+    run_sub = p_sub.add_run("Leave Management System (LMS) — Feature Overview & Pricing Proposal")
     run_sub.font.size = Pt(11)
     run_sub.font.color.rgb = RGBColor(71, 85, 105)
 
@@ -101,7 +101,7 @@ def create_proposal():
         "One-click Approval / Rejection modal with reviewer note support (e.g., coverage handover instructions)",
         "Personal leave balance monitor (DOLE SIL, Vacation Leave, Sick Leave, Solo Parent)",
         "Submission of personal leave requests with automated working day calculation",
-        "Department-level team roster and attendance matrix view",
+        "Department-level team roster and leave schedule view",
         "Interactive full calendar visibility into firm-wide schedule and DOLE holidays"
     ]
     for feat in sup_features:
@@ -147,10 +147,10 @@ def create_proposal():
     p_pricing_desc.paragraph_format.space_before = Pt(0)
     p_pricing_desc.paragraph_format.space_after = Pt(10)
     p_pricing_desc.add_run(
-        "The leave and attendance workflows for a CPA practice require strict alignment with Philippine Labor Standards (DOLE Art. 95) "
+        "The leave workflows for a CPA practice require strict alignment with Philippine Labor Standards (DOLE Art. 95) "
         "and client engagement deadlines. The Tier 1 base system provides complete paperless leave governance and statutory compliance. "
         "Tier 2 (₱70,000) represents the Recommended Sweet Spot, introducing automated 2-tier partner signoffs, 1-click email approvals, "
-        "and peak BIR Tax Season lockout rules. Tier 3 (₱85,000) offers enterprise-grade payroll system sync, morning Viber/Teams emergency alerts, "
+        "and peak BIR Tax Season lockout rules. Tier 3 (₱85,000) offers enterprise-grade payroll software export mapping, morning Viber/Teams emergency alerts, "
         "and 3 months priority SLA maintenance."
     )
 
@@ -204,7 +204,7 @@ def create_proposal():
     r2.cells[0].text = "Scope"
     
     t1_text = (
-        "• Centralized leave & attendance database\n"
+        "• Centralized leave management database\n"
         "• DOLE statutory leave tracking (SIL 5d, VL 12d, SL 10d, Solo Parent 7d)\n"
         "• Role-separated dashboards (Staff CPA, Senior Lead, Partner/HR)\n"
         "• Philippine holiday & weekend auto-exclusion working day calculator\n"
@@ -231,7 +231,7 @@ def create_proposal():
 
     t3_text = (
         "• Everything included in Tier 2\n"
-        "• 1-Click Payroll & Timekeeper Sync Engine (mapped to payroll Excel/software)\n"
+        "• 1-Click Payroll Export Engine (mapped to payroll Excel/software)\n"
         "• Department Engagement Matrix with minimum staffing thresholds\n"
         "• Instant Chatbot / Messaging Alerts (Viber / MS Teams / Slack for morning absences)\n"
         "• Partner Executive BI Analytics (Absentee heatmaps, seasonal utilization rates)\n"
@@ -322,8 +322,13 @@ def create_proposal():
             p_b.paragraph_format.space_before = Pt(1)
             p_b.paragraph_format.space_after = Pt(2.5)
 
-    doc.save("JTYeo_CPA_Leave_Management_Proposal.docx")
-    print("Successfully generated JTYeo_CPA_Leave_Management_Proposal.docx!")
+    try:
+        doc.save("JTYeo_CPA_Leave_Management_Proposal.docx")
+        print("Saved JTYeo_CPA_Leave_Management_Proposal.docx!")
+    except Exception as e:
+        print("Note: Primary file opened by Word, saving as JTYeo_CPA_Accounting_Office_Leave_Proposal.docx")
+        doc.save("JTYeo_CPA_Accounting_Office_Leave_Proposal.docx")
+        print("Saved JTYeo_CPA_Accounting_Office_Leave_Proposal.docx!")
 
 if __name__ == "__main__":
     create_proposal()

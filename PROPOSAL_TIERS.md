@@ -69,7 +69,7 @@ This proposal outlines three strategic implementation tiers:
 *Target: Full-scale digital transformation with payroll readiness, chat alerts, and premium executive governance.*
 
 #### Why Upgrade from Tier 2 (+₱15,000 incremental value):
-1. **Payroll & Timekeeper Export Engine**: One-click payroll export mapped to client's payroll software or Excel format (computes unpaid leaves, deductions, and taxable vs non-taxable conversions).
+1. **Payroll Export Engine**: One-click payroll export mapped to client's payroll software or Excel format (computes unpaid leaves, deductions, and taxable vs non-taxable conversions).
 2. **Multi-Department / Engagement Team Matrix**: Group staff by Audit, Tax, Advisory, Bookkeeping, and Admin with department-specific leave caps (so no engagement team is left understaffed).
 3. **Chatbot / Messaging Alerts (Viber / MS Teams / Slack)**: Instant ping to managers when emergency sick leave is submitted in the morning.
 4. **Partner Analytics & Executive BI Dashboard**:

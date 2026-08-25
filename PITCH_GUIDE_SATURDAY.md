@@ -1,5 +1,5 @@
 # Executive Pitch Playbook & Closing Script (Saturday Meeting)
-**Project:** Leave & Workforce Attendance System  
+**Project:** Leave Management System (LMS)  
 **Client:** JTYeo CPA Accounting Office  
 **Location:** Philippines  
 
