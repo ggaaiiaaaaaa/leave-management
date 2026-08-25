@@ -42,32 +42,9 @@ $leaveReqStmt = $pdo->query("
 ");
 $leaveRequests = $leaveReqStmt->fetchAll();
 
-// Fetch employees actively out of office
-$activeLeavesStmt = $pdo->query("
-    SELECT r.*, u.name as employee_name, u.title, u.avatar_initials
-    FROM leave_requests r
-    JOIN users u ON r.user_id = u.id
-    WHERE r.status = 'Approved' AND date('now') <= r.end_date
-    ORDER BY r.start_date ASC
-");
-$activeLeaves = $activeLeavesStmt->fetchAll();
-
 // Fetch upcoming holidays
 $holidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC LIMIT 6");
 $holidaysList = $holidaysStmt->fetchAll();
-
-// Fetch users grouped by department for Team Roster
-$allUsersStmt = $pdo->query("
-    SELECT u.*, 
-    (SELECT r.leave_type_label FROM leave_requests r WHERE r.user_id = u.id AND r.status = 'Approved' AND date('now') BETWEEN r.start_date AND r.end_date LIMIT 1) as active_leave
-    FROM users u
-    ORDER BY u.department ASC, u.name ASC
-");
-$allUsers = $allUsersStmt->fetchAll();
-$departments = [];
-foreach ($allUsers as $u) {
-    $departments[$u['department']][] = $u;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

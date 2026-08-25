@@ -65,18 +65,9 @@ $auditLogs = $auditStmt->fetchAll();
 $holidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC LIMIT 6");
 $holidaysList = $holidaysStmt->fetchAll();
 
-// Fetch users grouped by department for Team Roster
-$allUsersStmt = $pdo->query("
-    SELECT u.*, 
-    (SELECT r.leave_type_label FROM leave_requests r WHERE r.user_id = u.id AND r.status = 'Approved' AND date('now') BETWEEN r.start_date AND r.end_date LIMIT 1) as active_leave
-    FROM users u
-    ORDER BY u.department ASC, u.name ASC
-");
+// Fetch users for HR Adjust modal & Headcount KPI
+$allUsersStmt = $pdo->query("SELECT id, name, department, title FROM users ORDER BY department ASC, name ASC");
 $allUsers = $allUsersStmt->fetchAll();
-$departments = [];
-foreach ($allUsers as $u) {
-    $departments[$u['department']][] = $u;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
