@@ -454,54 +454,42 @@ $allUsers = $allUsersStmt->fetchAll();
     </div>
   </div>
 
-  <!-- DETAILS & DUAL-STAGE MODAL -->
+  <!-- DETAILS MODAL (SIMPLE & CLEAN) -->
   <div class="modal-backdrop" id="detailsModal">
     <div class="modal-window">
       <div class="modal-header">
-        <h3><i data-lucide="file-check"></i> Leave Application Details</h3>
+        <h3><i data-lucide="file-text"></i> Leave Application Details</h3>
         <button class="btn-close-modal" onclick="closeModal('detailsModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:18px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+        <!-- Summary Box -->
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div>
               <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference Number</div>
               <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">LR-2026-XXX</div>
             </div>
             <div id="dtlStatusBadge"></div>
           </div>
-          <div style="margin-top:10px; font-size:13px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div><strong>Staff:</strong> <span id="dtlStaff"></span></div>
-            <div><strong>Category:</strong> <span id="dtlType"></span></div>
-            <div><strong>Dates:</strong> <span id="dtlDates"></span></div>
-            <div><strong>Duration:</strong> <span id="dtlDays" style="font-weight:700; color:var(--accent);"></span></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
+            <div><span style="color:var(--text-muted);">Employee:</span> <strong id="dtlStaff" style="color:var(--primary);"></strong></div>
+            <div><span style="color:var(--text-muted);">Category:</span> <strong id="dtlType"></strong></div>
+            <div><span style="color:var(--text-muted);">Inclusive Dates:</span> <span id="dtlDates" style="font-weight:600;"></span></div>
+            <div><span style="color:var(--text-muted);">Duration:</span> <strong id="dtlDays" style="color:var(--accent);"></strong></div>
           </div>
         </div>
 
-        <!-- 3-Stage Dual Signoff Stepper -->
-        <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Dual Approval & Sign-Off Workflow:</div>
-        <div class="stepper-container">
-          <div class="step-item completed" id="step1">
-            <div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div>
-            <div class="step-label">1. Staff Filed</div>
-          </div>
-          <div class="step-item" id="step2">
-            <div class="step-circle" id="step2Circle">2</div>
-            <div class="step-label">2. Lead Endorsement</div>
-          </div>
-          <div class="step-item" id="step3">
-            <div class="step-circle" id="step3Circle">3</div>
-            <div class="step-label">3. Partner Signoff</div>
-          </div>
+        <!-- Reason / Notes -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Reason / Engagement Notes:</div>
+          <div id="dtlReason" style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; font-size:13px; color:var(--text-main); line-height:1.5;"></div>
         </div>
 
-        <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
-          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Client Handoff & Engagement Notes:</div>
-          <div id="dtlReason" style="font-size:12.5px; color:var(--text-main); line-height:1.5;"></div>
-        </div>
-
-        <div id="dtlApproverSection" style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
-          <strong>Managing Signoff:</strong> <span id="dtlApprover" style="color:var(--text-main); font-weight:600;"></span>
+        <!-- Review Status -->
+        <div id="dtlApproverSection" style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; font-size:12.5px;">
+          <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Partner Review Status:</div>
+          <div style="font-weight:600; color:var(--primary);" id="dtlApprover"></div>
+          <div id="dtlRejectionReason" style="font-size:12px; color:var(--danger); margin-top:4px; display:none;"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -707,35 +695,32 @@ $allUsers = $allUsersStmt->fetchAll();
       document.getElementById('dtlRef').innerText = ref;
       document.getElementById('dtlStaff').innerText = emp;
       document.getElementById('dtlType').innerText = type;
-      document.getElementById('dtlDates').innerText = `${start} to ${end}`;
+      document.getElementById('dtlDates').innerText = (start === end) ? start : `${start} to ${end}`;
       document.getElementById('dtlDays').innerText = `${days} Working Day(s)`;
-      document.getElementById('dtlReason').innerText = reason;
-      document.getElementById('dtlApprover').innerText = approver || 'Pending Lead Review';
+      document.getElementById('dtlReason').innerText = reason || 'No additional notes provided.';
 
       let statusBadge = `<span class="badge badge-pending">${status}</span>`;
       if (status === 'Approved') statusBadge = `<span class="badge badge-approved">Approved</span>`;
       if (status === 'Rejected') statusBadge = `<span class="badge badge-rejected">Rejected</span>`;
-      if (status.includes('Endorsed')) statusBadge = `<span class="badge badge-spl">${status}</span>`;
       document.getElementById('dtlStatusBadge').innerHTML = statusBadge;
 
-      const s2 = document.getElementById('step2');
-      const s3 = document.getElementById('step3');
-      s2.className = 'step-item';
-      s3.className = 'step-item';
+      const appEl = document.getElementById('dtlApprover');
+      const rejEl = document.getElementById('dtlRejectionReason');
+
       if (status === 'Approved') {
-        s2.className = 'step-item completed';
-        s3.className = 'step-item completed';
-        document.getElementById('step2Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
-        document.getElementById('step3Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
-      } else if (status.includes('Endorsed')) {
-        s2.className = 'step-item completed';
-        s3.className = 'step-item active';
-        document.getElementById('step2Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
-        document.getElementById('step3Circle').innerText = '3';
+        appEl.innerHTML = `<span style="color:var(--success);"><i data-lucide="check-circle" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Approved by ${approver || 'Atty. Jonathan Yeo, CPA'}</span>`;
+        if (rejEl) rejEl.style.display = 'none';
+      } else if (status === 'Rejected') {
+        appEl.innerHTML = `<span style="color:var(--danger);"><i data-lucide="x-circle" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Rejected by ${approver || 'Managing Partner'}</span>`;
+        if (rejEl && rejectReason) {
+          rejEl.innerText = `Note: ${rejectReason}`;
+          rejEl.style.display = 'block';
+        } else if (rejEl) {
+          rejEl.style.display = 'none';
+        }
       } else {
-        s2.className = 'step-item active';
-        document.getElementById('step2Circle').innerText = '2';
-        document.getElementById('step3Circle').innerText = '3';
+        appEl.innerHTML = `<span style="color:var(--warning);"><i data-lucide="clock" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Pending Review by Managing Partner</span>`;
+        if (rejEl) rejEl.style.display = 'none';
       }
 
       openModal('detailsModal');
