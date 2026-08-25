@@ -339,8 +339,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       </div>
       <form id="phpLeaveForm" onsubmit="handleBackendLeaveSubmit(event)">
         <div class="modal-body">
-          <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
-
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
             <select name="leave_type" id="applyLeaveType" class="form-select" required
@@ -376,8 +374,12 @@ $leaveRequests = $leaveReqStmt->fetchAll();
 
           <div class="calculator-preview">
             <div>
-              <div class="calc-label">Total Working Days:</div>
-              <div class="calc-result" id="computedDaysPreview">1.0 Working Day</div>
+              <div class="calc-label">Total Leave Duration:</div>
+              <div class="calc-result" id="computedDaysPreview">1 Day(s)</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="calc-label">Available Balance:</div>
+              <div class="calc-result" id="availableBalancePreview" style="color:var(--accent);"><?= number_format($vlBalance, 1) ?> Days</div>
             </div>
           </div>
 
@@ -467,27 +469,9 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       const end = new Date(endStr);
       if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
 
-      const taxNotice = document.getElementById('taxSeasonNotice');
-      if (taxNotice) {
-        const m = start.getMonth() + 1;
-        const d = start.getDate();
-        const isTaxPeak = (m === 3 && d >= 15) || (m === 4 && d <= 15);
-        if (isTaxPeak) {
-          taxNotice.style.display = 'flex';
-          taxNotice.innerHTML = `<i data-lucide="alert-triangle"></i><div><strong>⚠️ Peak Tax Season:</strong> Leaves require partner endorsement.</div>`;
-          if (window.lucide) lucide.createIcons();
-        } else {
-          taxNotice.style.display = 'none';
-        }
-      }
-
-      let days = 0, cur = new Date(start);
-      while (cur <= end) {
-        const dow = cur.getDay();
-        if (dow !== 0 && dow !== 6) days++;
-        cur.setDate(cur.getDate() + 1);
-      }
-      document.getElementById('computedDaysPreview').innerText = `${days} Working Day(s)`;
+      const diffTime = end.getTime() - start.getTime();
+      const days = Math.round(diffTime / (1000 * 3600 * 24)) + 1;
+      document.getElementById('computedDaysPreview').innerText = `${days} Day(s)`;
     }
     calculateWorkingDays();
 

@@ -41,7 +41,7 @@ $typeLabels = [
 ];
 $leaveTypeLabel = $typeLabels[$leaveType] ?? $leaveType;
 
-// Calculate working days (excluding Saturdays, Sundays, and Holidays)
+// Calculate requested leave days
 $start = new DateTime($startDate);
 $end = new DateTime($endDate);
 
@@ -50,25 +50,7 @@ if ($start > $end) {
     exit;
 }
 
-// Fetch holidays from DB
-$holidays = $pdo->query("SELECT holiday_date FROM holidays")->fetchAll(PDO::FETCH_COLUMN);
-
-$workingDays = 0;
-$curr = clone $start;
-while ($curr <= $end) {
-    $dayOfWeek = (int)$curr->format('N'); // 1 (Mon) - 7 (Sun)
-    $ymd = $curr->format('Y-m-d');
-    
-    if ($dayOfWeek < 6 && !in_array($ymd, $holidays)) {
-        $workingDays += 1.0;
-    }
-    $curr->modify('+1 day');
-}
-
-if ($workingDays <= 0) {
-    echo json_encode(['success' => false, 'message' => 'Selected date range contains 0 working days (falls entirely on weekends or holidays).']);
-    exit;
-}
+$workingDays = (float)($start->diff($end)->days + 1);
 
 // Determine target employee (Admin can file for any employee)
 $targetUserId = $userId;

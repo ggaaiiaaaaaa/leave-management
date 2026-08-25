@@ -390,8 +390,6 @@ $allUsers = $allUsersStmt->fetchAll();
       </div>
       <form id="phpLeaveForm" onsubmit="handleBackendLeaveSubmit(event)">
         <div class="modal-body">
-          <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
-
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label"><i data-lucide="user" style="width:13px;height:13px;color:var(--accent);"></i> File Leave For Employee <span class="req">*</span></label>
             <select name="target_user_id" id="applyTargetUser" class="form-select" required onchange="updateSelectedUserBalances()">
@@ -432,8 +430,8 @@ $allUsers = $allUsersStmt->fetchAll();
           </div>
           <div class="calculator-preview">
             <div>
-              <div class="calc-label">Total Working Days:</div>
-              <div class="calc-result" id="computedDaysPreview">1.0 Working Day</div>
+              <div class="calc-label">Total Leave Duration:</div>
+              <div class="calc-result" id="computedDaysPreview">1 Day(s)</div>
             </div>
             <div style="text-align:right;">
               <div class="calc-label">Available Balance:</div>
@@ -586,27 +584,9 @@ $allUsers = $allUsersStmt->fetchAll();
       const end = new Date(endStr);
       if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
       
-      const taxNotice = document.getElementById('taxSeasonNotice');
-      if (taxNotice) {
-        const m = start.getMonth() + 1;
-        const d = start.getDate();
-        const isTaxPeak = (m === 3 && d >= 15) || (m === 4 && d <= 15);
-        if (isTaxPeak) {
-          taxNotice.style.display = 'flex';
-          taxNotice.innerHTML = `<i data-lucide="alert-triangle"></i><div><strong>⚠️ Peak BIR Tax Season Notice (March 15 - April 15):</strong> Leaves filed during the annual income tax return filing window require client engagement coverage & Managing Partner final endorsement.</div>`;
-          if (window.lucide) lucide.createIcons();
-        } else {
-          taxNotice.style.display = 'none';
-        }
-      }
-
-      let days = 0, cur = new Date(start);
-      while (cur <= end) {
-        const dow = cur.getDay();
-        if (dow !== 0 && dow !== 6) days++;
-        cur.setDate(cur.getDate() + 1);
-      }
-      document.getElementById('computedDaysPreview').innerText = `${days} Working Day(s)`;
+      const diffTime = end.getTime() - start.getTime();
+      const days = Math.round(diffTime / (1000 * 3600 * 24)) + 1;
+      document.getElementById('computedDaysPreview').innerText = `${days} Day(s)`;
     }
     calculateWorkingDays();
 
