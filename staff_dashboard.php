@@ -378,35 +378,6 @@ $holidaysList = $holidaysStmt->fetchAll();
                 <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave (SL)</div>
                 <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> DOLE SIL (Art. 95)</div>
                 <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
-                <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Team Matrix -->
-          <div class="dashboard-card">
-            <div class="card-head">
-              <h3><i data-lucide="calendar-range" style="color:var(--accent);"></i> Department Engagement Matrix</h3>
-            </div>
-            <div class="card-body">
-              <div style="display:grid; grid-template-columns: repeat(<?= max(1, min(3, count($departments))) ?>, 1fr); gap:16px;">
-                <?php foreach ($departments as $deptName => $members): ?>
-                  <div style="border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; background:var(--bg-subtle);">
-                    <h4 style="color:var(--primary); margin-bottom:8px; font-size:14px;"><?= htmlspecialchars($deptName) ?></h4>
-                    <ul style="font-size:12px; list-style:none; display:flex; flex-direction:column; gap:6px;">
-                      <?php foreach ($members as $mem): ?>
-                        <li>
-                          <?php if (!empty($mem['active_leave'])): ?>
-                            🌴 <strong><?= htmlspecialchars($mem['name']) ?></strong> - <span style="color:var(--accent); font-weight:600;">On <?= htmlspecialchars($mem['active_leave']) ?></span>
-                          <?php else: ?>
-                            ✔️ <strong><?= htmlspecialchars($mem['name']) ?></strong> - <span style="color:var(--text-muted);"><?= htmlspecialchars($mem['title']) ?> (On-Duty)</span>
-                          <?php endif; ?>
-                        </li>
-                      <?php endforeach; ?>
-                    </ul>
-                  </div>
-                <?php endforeach; ?>
-              </div>
             </div>
           </div>
         </div>
