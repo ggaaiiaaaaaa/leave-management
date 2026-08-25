@@ -107,10 +107,10 @@ if (empty($holidaysList)) {
           <i data-lucide="calendar-days"></i>
           <span>Team Schedule & Calendar</span>
         </a>
-        <div class="nav-category">Compliance</div>
+        <div class="nav-category">Policies & Reference</div>
         <a class="nav-item" data-tab="ph-holidays" onclick="switchTab('ph-holidays')">
           <i data-lucide="scale"></i>
-          <span>DOLE Rules & Holidays</span>
+          <span>Leave Policies & Holidays</span>
         </a>
       </nav>
     </aside>
@@ -128,6 +128,7 @@ if (empty($holidaysList)) {
         </div>
 
         <div class="header-right">
+          <!-- Backend Role Switcher for Live Demo -->
           <div class="role-switcher-container">
             <span class="role-switcher-label">Switch View:</span>
             <a href="actions/switch_role.php?role=staff" class="role-btn">Staff CPA</a>
@@ -135,6 +136,7 @@ if (empty($holidaysList)) {
             <a href="actions/switch_role.php?role=admin" class="role-btn">Partner / HR</a>
           </div>
 
+          <!-- User Profile & Logout -->
           <div class="user-profile">
             <div class="avatar"><?= htmlspecialchars($user['avatar_initials']) ?></div>
             <div class="profile-meta">
@@ -148,61 +150,75 @@ if (empty($holidaysList)) {
         </div>
       </header>
 
-      <!-- Content Area -->
+      <!-- Inner Content Container -->
       <div class="content-area">
-        <!-- TAB 1: REVIEW APPROVALS (DEFAULT FOR SUPERVISOR) -->
+        <!-- TAB 1: APPROVALS QUEUE (SUPERVISOR FOCUS) -->
         <div id="tab-approvals" class="tab-pane">
           <div class="page-header">
             <div class="page-title">
-              <h1>Leave Approval Management</h1>
-              <p>Review team leave applications, check engagement overlaps, and provide signoff feedback.</p>
+              <h1>Engagement Leave Approvals Queue</h1>
+              <p>Review and decide team leave applications to maintain audit and tax engagement coverage.</p>
             </div>
-            <button class="btn-primary" onclick="openModal('applyModal')">
-              <i data-lucide="plus-circle"></i> File My Own Leave
-            </button>
           </div>
 
-          <!-- Pending Approvals Queue -->
-          <div class="dashboard-card" style="margin-bottom:24px;">
+          <!-- Pending Requests Table Card -->
+          <div class="dashboard-card" style="margin-bottom: 24px;">
             <div class="card-head">
-              <h3><i data-lucide="inbox" style="color:var(--accent);"></i> Pending Approvals Queue</h3>
-              <span class="badge badge-pending"><?= $pendingCount ?> Pending Requests</span>
+              <h3><i data-lucide="inbox" style="color:var(--accent);"></i> Pending Review Queue (<?= count($pendingApprovals) ?>)</h3>
+              <span class="firm-badge">Action Required</span>
             </div>
             <div class="table-responsive">
               <table class="custom-table">
                 <thead>
                   <tr>
-                    <th>Staff Name & Department</th>
+                    <th>Application Ref</th>
+                    <th>Staff Member</th>
                     <th>Leave Category</th>
-                    <th>Dates Requested</th>
-                    <th>Working Days</th>
-                    <th>Reason / Client Coverage</th>
-                    <th>Action</th>
+                    <th>Requested Dates</th>
+                    <th>Duration</th>
+                    <th>Reason / Engagement Coverage</th>
+                    <th>Decision Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php if (empty($pendingApprovals)): ?>
-                    <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">No pending approvals in queue. All applications have been reviewed.</td></tr>
+                    <tr>
+                      <td colspan="7" style="text-align:center; padding:36px; color:var(--text-muted);">
+                        <i data-lucide="check-circle" style="width:32px;height:32px;margin:0 auto 8px;display:block;color:var(--success);"></i>
+                        <strong>All caught up!</strong> No pending leave applications requiring your review.
+                      </td>
+                    </tr>
                   <?php else: ?>
-                    <?php foreach ($pendingApprovals as $p): ?>
+                    <?php foreach ($pendingApprovals as $app): ?>
                       <tr>
                         <td>
-                          <div style="font-weight:700; color:var(--primary);"><?= htmlspecialchars($p['employee_name']) ?></div>
-                          <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($p['department']) ?></div>
+                          <span style="font-weight:700; color:var(--primary); font-family:monospace;"><?= $app['ref_no'] ?></span>
+                          <div style="font-size:11px; color:var(--text-light);"><?= date('M d, Y', strtotime($app['created_at'])) ?></div>
                         </td>
-                        <td><span class="badge badge-vl"><?= htmlspecialchars($p['leave_type_label']) ?></span></td>
-                        <td><?= $p['start_date'] ?> to <?= $p['end_date'] ?></td>
-                        <td><strong><?= $p['days_count'] ?> Day(s)</strong></td>
-                        <td style="font-size:12.5px;"><?= htmlspecialchars($p['reason']) ?></td>
                         <td>
-                          <div style="display:flex; gap:8px;">
-                            <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $p['ref_no'] ?>', '<?= addslashes($p['employee_name']) ?>', '<?= addslashes($p['leave_type_label']) ?>', '<?= $p['days_count'] ?>', 'Approved')">
-                              <i data-lucide="check" style="width:13px;height:13px;"></i> Approve
-                            </button>
-                            <button class="btn-secondary" style="padding:6px 12px; font-size:12px; color:var(--danger);" onclick="openDecisionModal('<?= $p['ref_no'] ?>', '<?= addslashes($p['employee_name']) ?>', '<?= addslashes($p['leave_type_label']) ?>', '<?= $p['days_count'] ?>', 'Rejected')">
-                              <i data-lucide="x" style="width:13px;height:13px;"></i> Reject
-                            </button>
+                          <div style="font-weight:600;"><?= htmlspecialchars($app['employee_name']) ?></div>
+                          <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($app['department']) ?> &bull; <?= htmlspecialchars($app['employee_title']) ?></div>
+                        </td>
+                        <td>
+                          <span class="badge badge-vl"><?= htmlspecialchars($app['leave_type_label']) ?></span>
+                        </td>
+                        <td>
+                          <div style="font-weight:600;"><?= $app['start_date'] ?> <?= $app['start_date'] !== $app['end_date'] ? 'to ' . $app['end_date'] : '' ?></div>
+                        </td>
+                        <td>
+                          <span style="font-weight:700; color:var(--accent);"><?= $app['days_count'] ?> Working Day(s)</span>
+                          <div style="font-size:10.5px; color:var(--text-muted);"><?= ucfirst($app['duration_mode']) ?> Mode</div>
+                        </td>
+                        <td>
+                          <div style="font-size:12.5px; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($app['reason']) ?>">
+                            <?= htmlspecialchars($app['reason']) ?>
                           </div>
+                        </td>
+                        <td>
+                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $app['id'] ?>', '<?= $app['ref_no'] ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>', '<?= $app['days_count'] ?>')">
+                            <i data-lucide="check-square" style="width:13px;height:13px;"></i>
+                            <span>Review & Decide</span>
+                          </button>
                         </td>
                       </tr>
                     <?php endforeach; ?>
@@ -213,83 +229,89 @@ if (empty($holidaysList)) {
           </div>
         </div>
 
-        <!-- TAB 2: TEAM OVERSIGHT & MY BALANCES -->
+        <!-- TAB 2: MY PORTAL & BALANCES (LEAD'S PERSONAL LEAVE) -->
         <div id="tab-my-portal" class="tab-pane" style="display:none;">
           <div class="page-header">
             <div class="page-title">
-              <h1>Engagement Team Oversight & Balances</h1>
-              <p>Monitor team availability, view firm leave applications, and track your personal credits.</p>
+              <h1>Welcome, <?= htmlspecialchars(explode(' ', $user['name'])[0]) ?></h1>
+              <p>Personal Leave Portal &bull; Track your personal allowances and submit leave applications.</p>
             </div>
-            <button class="btn-primary" onclick="openModal('applyModal')">
-              <i data-lucide="plus-circle"></i> File My Own Leave
-            </button>
+            <div class="header-actions">
+              <button class="btn-primary" onclick="openModal('applyModal')">
+                <i data-lucide="plus-circle"></i>
+                <span>File Leave Request</span>
+              </button>
+            </div>
           </div>
 
-          <!-- KPI Cards -->
+          <!-- KPI Summary Cards -->
           <div class="kpi-grid">
             <div class="kpi-card amber">
-              <div class="kpi-header"><span class="kpi-label">Pending Team Approvals</span><div class="kpi-icon"><i data-lucide="inbox"></i></div></div>
+              <div class="kpi-header"><span class="kpi-label">Pending Reviews</span><div class="kpi-icon"><i data-lucide="clock"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value"><?= $pendingCount ?></span><span class="kpi-sub">Requests</span></div>
-              <div class="kpi-footer <?= $pendingCount > 0 ? 'warning' : 'positive' ?>">
-                <i data-lucide="<?= $pendingCount > 0 ? 'alert-circle' : 'check' ?>" style="width:14px;height:14px;"></i>
+              <div class="kpi-footer neutral">
+                <i data-lucide="info" style="width:14px;height:14px;"></i>
                 <span><?= $pendingCount > 0 ? 'Requires Review' : 'Queue Empty' ?></span>
               </div>
             </div>
 
             <div class="kpi-card blue">
-              <div class="kpi-header"><span class="kpi-label">My DOLE SIL Balance</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
+              <div class="kpi-header"><span class="kpi-label">Service Incentive (SIL)</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value"><?= number_format($silBalance, 1) ?></span><span class="kpi-sub">/ 5.0 Days</span></div>
-              <div class="kpi-footer positive"><i data-lucide="info" style="width:14px;height:14px;"></i><span>Art. 95 Monetizable</span></div>
+              <div class="kpi-footer positive"><i data-lucide="info" style="width:14px;height:14px;"></i><span>Year-End Cash Convertible</span></div>
             </div>
 
             <div class="kpi-card green">
-              <div class="kpi-header"><span class="kpi-label">My Vacation Leave (VL)</span><div class="kpi-icon"><i data-lucide="palmtree"></i></div></div>
+              <div class="kpi-header"><span class="kpi-label">Vacation Leave (VL)</span><div class="kpi-icon"><i data-lucide="palmtree"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value"><?= number_format($vlBalance, 1) ?></span><span class="kpi-sub">/ 12.0 Days</span></div>
               <div class="kpi-footer positive"><i data-lucide="check" style="width:14px;height:14px;"></i><span>Company Benefit</span></div>
             </div>
 
             <div class="kpi-card purple">
-              <div class="kpi-header"><span class="kpi-label">My Sick Leave (SL)</span><div class="kpi-icon"><i data-lucide="heart-pulse"></i></div></div>
+              <div class="kpi-header"><span class="kpi-label">Sick Leave (SL)</span><div class="kpi-icon"><i data-lucide="heart-pulse"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value"><?= number_format($slBalance, 1) ?></span><span class="kpi-sub">/ 10.0 Days</span></div>
               <div class="kpi-footer neutral"><i data-lucide="file-text" style="width:14px;height:14px;"></i><span>Medical Policy</span></div>
             </div>
           </div>
 
-          <!-- Leave Applications History -->
+          <!-- Leave History Table Card -->
           <div class="dashboard-card">
             <div class="card-head">
-              <h3><i data-lucide="users" style="color:var(--accent);"></i> Team & Personal Leave Applications</h3>
+              <h3><i data-lucide="clock" style="color:var(--accent);"></i> My Submitted Leave History</h3>
             </div>
             <div class="table-responsive">
               <table class="custom-table">
                 <thead>
                   <tr>
-                    <th>Employee</th>
                     <th>Category</th>
-                    <th>Dates / Duration</th>
-                    <th>Reason / Engagement</th>
+                    <th>Dates & Duration</th>
+                    <th>Reason / Engagement Coverage</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Signoff Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php if (empty($leaveRequests)): ?>
-                    <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">No leave applications recorded yet.</td></tr>
+                    <tr>
+                      <td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">
+                        No personal leave applications filed yet. Click <strong>"File Leave Request"</strong> to submit.
+                      </td>
+                    </tr>
                   <?php else: ?>
                     <?php foreach ($leaveRequests as $req): ?>
                       <tr>
                         <td>
-                          <div style="font-weight:700; color:var(--primary);"><?= htmlspecialchars($req['employee_name']) ?></div>
-                          <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($req['department']) ?></div>
+                          <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
+                          <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
                         </td>
-                        <td><span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span></td>
                         <td>
                           <div style="font-weight:600;"><?= $req['start_date'] ?> <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
                           <div style="font-size:11px; color:var(--text-muted);"><?= $req['days_count'] ?> Working Day(s)</div>
                         </td>
                         <td>
-                          <div style="font-size:12.5px; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($req['reason']) ?>"><?= htmlspecialchars($req['reason']) ?></div>
-                          <div style="font-size:10.5px; color:var(--text-light);">Ref: <?= $req['ref_no'] ?></div>
+                          <div style="font-size:12.5px; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            <?= htmlspecialchars($req['reason']) ?>
+                          </div>
                         </td>
                         <td>
                           <?php
@@ -300,18 +322,9 @@ if (empty($holidaysList)) {
                           <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
                         </td>
                         <td>
-                          <?php if ($req['status'] === 'Pending'): ?>
-                            <button class="btn-icon approve" title="Approve with note" onclick="openDecisionModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', 'Approved')">
-                              <i data-lucide="check" style="width:14px;height:14px;"></i>
-                            </button>
-                            <button class="btn-icon reject" title="Reject with reason" onclick="openDecisionModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', 'Rejected')">
-                              <i data-lucide="x" style="width:14px;height:14px;"></i>
-                            </button>
-                          <?php else: ?>
-                            <button class="btn-icon" title="View Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
-                              <i data-lucide="eye" style="width:14px;height:14px;"></i>
-                            </button>
-                          <?php endif; ?>
+                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
+                            <i data-lucide="eye" style="width:14px;height:14px;"></i>
+                          </button>
                         </td>
                       </tr>
                     <?php endforeach; ?>
@@ -327,7 +340,7 @@ if (empty($holidaysList)) {
           <div class="page-header">
             <div class="page-title">
               <h1>Firm Team Roster & Interactive Leave Calendar</h1>
-              <p>Visual monthly schedule of staff leaves, departmental engagement coverage, and DOLE holidays.</p>
+              <p>Visual monthly schedule of staff leaves, departmental engagement coverage, and official holidays.</p>
             </div>
             <button class="btn-primary" onclick="openModal('applyModal')">
               <i data-lucide="calendar-plus"></i> File Leave Request
@@ -344,7 +357,7 @@ if (empty($holidaysList)) {
               <div class="calendar-legend-bar">
                 <div class="legend-chip"><span class="dot" style="background:#059669;"></span> Vacation Leave (VL)</div>
                 <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave (SL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> DOLE SIL (Art. 95)</div>
+                <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> Service Incentive (SIL)</div>
                 <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
                 <div class="legend-chip"><span class="dot" style="background:#f59e0b;"></span> Pending Approval</div>
                 <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
@@ -353,24 +366,24 @@ if (empty($holidaysList)) {
           </div>
         </div>
 
-        <!-- TAB 4: DOLE RULES -->
+        <!-- TAB 4: LEAVE POLICIES & HOLIDAYS -->
         <div id="tab-ph-holidays" class="tab-pane" style="display:none;">
           <div class="page-header">
             <div class="page-title">
-              <h1>Philippine Labor Standards & DOLE Entitlements</h1>
-              <p>Statutory leaves compliant with the Philippine Labor Code & Special Laws.</p>
+              <h1>Firm Leave Policies & Official Holidays</h1>
+              <p>Official statutory allowances, company benefits, and Philippine public holidays.</p>
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
             <div class="dashboard-card">
-              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory & Firm Leave Entitlements</h3></div>
+              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Leave Guidelines & Allowances</h3></div>
               <div class="card-body">
                 <div style="display:flex; flex-direction:column; gap:12px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
                   <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
                     <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
                     <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
-                    <span class="badge badge-sil">DOLE Statutory</span>
+                    <span class="badge badge-sil">Mandatory SIL</span>
                   </div>
 
                   <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
@@ -491,7 +504,7 @@ if (empty($holidaysList)) {
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
               <select name="leave_type" id="applyLeaveType" class="form-select" required>
-                <option value="SIL">DOLE Service Incentive Leave (5 days/yr)</option>
+                <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
                 <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>

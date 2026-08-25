@@ -26,7 +26,7 @@ if (empty($startDate) || empty($endDate) || empty($reason)) {
 
 // Leave type display mapping
 $typeLabels = [
-    'SIL' => 'Service Incentive Leave (DOLE)',
+    'SIL' => 'Service Incentive Leave (SIL)',
     'VL' => 'Vacation Leave',
     'SL' => 'Sick Leave',
     'Bereavement' => 'Bereavement Leave (3-5 Days)',

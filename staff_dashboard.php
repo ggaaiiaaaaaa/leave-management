@@ -86,10 +86,10 @@ if (empty($holidaysList)) {
           <i data-lucide="calendar-days"></i>
           <span>Team Roster & Calendar</span>
         </a>
-        <div class="nav-category">DOLE Standards</div>
+        <div class="nav-category">Policies & Reference</div>
         <a class="nav-item" data-tab="ph-holidays" onclick="switchTab('ph-holidays')">
           <i data-lucide="scale"></i>
-          <span>DOLE Rules & Holidays</span>
+          <span>Leave Policies & Holidays</span>
         </a>
       </nav>
     </aside>
@@ -150,7 +150,7 @@ if (empty($holidaysList)) {
           <div class="kpi-grid">
             <div class="kpi-card blue">
               <div class="kpi-header">
-                <span class="kpi-label">DOLE SIL Balance</span>
+                <span class="kpi-label">Service Incentive (SIL)</span>
                 <div class="kpi-icon"><i data-lucide="shield-check"></i></div>
               </div>
               <div class="kpi-value-row">
@@ -159,7 +159,7 @@ if (empty($holidaysList)) {
               </div>
               <div class="kpi-footer positive">
                 <i data-lucide="info" style="width:14px;height:14px;"></i>
-                <span>DOLE Art. 95 Monetizable</span>
+                <span>Year-End Cash Convertible</span>
               </div>
             </div>
 
@@ -216,15 +216,15 @@ if (empty($holidaysList)) {
               <!-- Leave Credit Details Card -->
               <div class="dashboard-card">
                 <div class="card-head">
-                  <h3><i data-lucide="layers" style="color:var(--accent);"></i> Statutory & Firm Leave Breakdown</h3>
-                  <span class="card-action" onclick="switchTab('ph-holidays')">View DOLE Rules</span>
+                  <h3><i data-lucide="layers" style="color:var(--accent);"></i> Leave Balance Breakdown</h3>
+                  <span class="card-action" onclick="switchTab('ph-holidays')">View Leave Policies</span>
                 </div>
                 <div class="card-body">
                   <div class="credits-grid">
                     <div class="credit-box">
                       <div class="credit-title">
                         <span>Service Incentive (SIL)</span>
-                        <span class="dole-tag law">DOLE Law</span>
+                        <span class="dole-tag law">Statutory (5d)</span>
                       </div>
                       <div class="credit-numbers">
                         <span class="credit-big"><?= number_format($silBalance, 1) ?></span>
@@ -383,7 +383,7 @@ if (empty($holidaysList)) {
               <div class="calendar-legend-bar">
                 <div class="legend-chip"><span class="dot" style="background:#059669;"></span> Vacation Leave (VL)</div>
                 <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave (SL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> DOLE SIL (Art. 95)</div>
+                <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> Service Incentive (SIL)</div>
                 <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
                 <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
               </div>
@@ -391,24 +391,24 @@ if (empty($holidaysList)) {
           </div>
         </div>
 
-        <!-- TAB 3: DOLE RULES & HOLIDAYS -->
+        <!-- TAB 3: LEAVE POLICIES & HOLIDAYS -->
         <div id="tab-ph-holidays" class="tab-pane" style="display:none;">
           <div class="page-header">
             <div class="page-title">
-              <h1>Philippine Labor Standards & DOLE Entitlements</h1>
-              <p>Statutory leaves compliant with the Philippine Labor Code & Special Laws.</p>
+              <h1>Firm Leave Policies & Official Holidays</h1>
+              <p>Official statutory allowances, company benefits, and Philippine public holidays.</p>
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
             <div class="dashboard-card">
-              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory & Firm Leave Entitlements</h3></div>
+              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Leave Guidelines & Allowances</h3></div>
               <div class="card-body">
                 <div style="display:flex; flex-direction:column; gap:12px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
                   <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
                     <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
                     <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
-                    <span class="badge badge-sil">DOLE Statutory</span>
+                    <span class="badge badge-sil">Mandatory SIL</span>
                   </div>
 
                   <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
@@ -495,7 +495,7 @@ if (empty($holidaysList)) {
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
               <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
-                <option value="SIL">DOLE Service Incentive Leave (5 days/yr)</option>
+                <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
                 <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>

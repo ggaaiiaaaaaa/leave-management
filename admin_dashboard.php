@@ -141,7 +141,7 @@ $allUsers = $allUsersStmt->fetchAll();
         </a>
         <a class="nav-item" data-tab="ph-holidays" onclick="switchTab('ph-holidays')">
           <i data-lucide="scale"></i>
-          <span>DOLE Rules & Holidays</span>
+          <span>Leave Policies & Holidays</span>
         </a>
       </nav>
     </aside>
@@ -195,7 +195,7 @@ $allUsers = $allUsersStmt->fetchAll();
               </button>
               <a href="actions/export_payroll_csv.php" class="btn-secondary">
                 <i data-lucide="download"></i>
-                <span>Export DOLE Payroll CSV</span>
+                <span>Export Payroll CSV</span>
               </a>
               <button class="btn-primary" onclick="openModal('applyModal')">
                 <i data-lucide="plus-circle"></i>
@@ -222,7 +222,7 @@ $allUsers = $allUsersStmt->fetchAll();
             </div>
 
             <div class="kpi-card green">
-              <div class="kpi-header"><span class="kpi-label">DOLE Art. 95 Monetization</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
+              <div class="kpi-header"><span class="kpi-label">Service Incentive (SIL) Reserve</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value">100%</span><span class="kpi-sub">Compliant</span></div>
               <div class="kpi-footer positive"><i data-lucide="scale" style="width:14px;height:14px;"></i><span>SIL Reserve Ready</span></div>
             </div>
@@ -453,7 +453,7 @@ $allUsers = $allUsersStmt->fetchAll();
               <h1>Audit Trail & System Compliance Logs</h1>
               <p>Immutable timestamped log of staff leave applications, managerial decisions, and balance modifications.</p>
             </div>
-            <div class="firm-badge" style="font-size:11px; padding:6px 12px;">BIR & DOLE Audit Ready</div>
+            <div class="firm-badge" style="font-size:11px; padding:6px 12px;">Full Audit Ready</div>
           </div>
 
           <div class="dashboard-card">
@@ -500,24 +500,24 @@ $allUsers = $allUsersStmt->fetchAll();
           </div>
         </div>
 
-        <!-- TAB 6: DOLE RULES -->
+        <!-- TAB 6: LEAVE POLICIES & HOLIDAYS -->
         <div id="tab-ph-holidays" class="tab-pane" style="display:none;">
           <div class="page-header">
             <div class="page-title">
-              <h1>Philippine Labor Standards & DOLE Entitlements</h1>
-              <p>Statutory leaves compliant with the Philippine Labor Code & Special Laws.</p>
+              <h1>Firm Leave Policies & Official Holidays</h1>
+              <p>Official statutory allowances, company benefits, and Philippine public holidays.</p>
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
             <div class="dashboard-card">
-              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory & Firm Leave Entitlements</h3></div>
+              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Leave Guidelines & Allowances</h3></div>
               <div class="card-body">
                 <div style="display:flex; flex-direction:column; gap:12px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
                   <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
                     <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
                     <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
-                    <span class="badge badge-sil">DOLE Statutory</span>
+                    <span class="badge badge-sil">Mandatory SIL</span>
                   </div>
 
                   <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
@@ -640,7 +640,7 @@ $allUsers = $allUsersStmt->fetchAll();
               <i data-lucide="calendar-plus" style="width:13px;height:13px; color:var(--accent);"></i> Run Monthly Accrual (+1.25d VL)
             </button>
             <button type="button" class="btn-secondary" style="flex:1; font-size:12px; padding:8px 10px;" onclick="runDoleReset()">
-              <i data-lucide="rotate-ccw" style="width:13px;height:13px; color:var(--success);"></i> Annual DOLE SIL Reset (5.0d)
+              <i data-lucide="rotate-ccw" style="width:13px;height:13px; color:var(--success);"></i> Annual SIL Reset (5.0d)
             </button>
           </div>
         </div>
@@ -660,7 +660,7 @@ $allUsers = $allUsersStmt->fetchAll();
               <label class="form-label">Leave Category</label>
               <select id="adjLeaveType" class="form-select">
                 <option value="VL">Vacation Leave (VL)</option>
-                <option value="SIL">DOLE Service Incentive Leave (SIL)</option>
+                <option value="SIL">Service Incentive Leave (SIL)</option>
                 <option value="SL">Sick Leave (SL)</option>
                 <option value="SoloParent">Solo Parent Leave</option>
               </select>
@@ -699,7 +699,7 @@ $allUsers = $allUsersStmt->fetchAll();
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
               <select name="leave_type" id="applyLeaveType" class="form-select" required>
-                <option value="SIL">DOLE Service Incentive Leave (5 days/yr)</option>
+                <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
                 <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
