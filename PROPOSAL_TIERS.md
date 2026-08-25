@@ -6,67 +6,61 @@
 ---
 
 ## Executive Summary
-For a premier accounting and auditing firm in the Philippines, workforce scheduling, statutory compliance, and leave governance are critical to safeguarding client deliverables during peak tax and audit seasons. 
+For a premier accounting and auditing practice in the Philippines, workforce scheduling, billable hour preservation, and DOLE-compliant leave governance are critical to protecting client deliverables during peak tax and audit deadlines.
 
-This proposal outlines three clear tiers designed to elevate **JTYeo CPA Accounting Office** from manual tracking to an enterprise-grade digital practice:
-- **Tier 1 (₱50,000) — Core Leave Management Tracker (The Working Prototype)**
-- **Tier 2 (₱65,000) — Professional CPA Practice Suite**
-- **Tier 3 (₱85,000) — ⭐ Enterprise Practice Cloud Suite (Target Recommendation)**
-
----
-
-## Feature Comparison Matrix
-
-| Feature / Capability | Tier 1: Core (₱50,000) | Tier 2: Pro Suite (₱65,000) | Tier 3: Enterprise Suite (₱85,000) 🏆 |
-| :--- | :---: | :---: | :---: |
-| **Core Leave Tracking & Balances** | Included | Included | Included |
-| **12 Philippine Statutory & CPA Categories** *(SIL, VL, SL, Bereavement, Emergency, Study, Solo Parent, Maternity/Paternity, Magna Carta, VAWC, LWOP)* | Included | Included | Included |
-| **Role-Based Portals** *(Staff CPA, Senior Audit Lead, Managing Partner / HR)* | Included | Included | Included |
-| **Dual Sign-off Approval Stepper** *(Staff &rarr; Lead Endorsement &rarr; Partner Final Signoff)* | Included | Included | Included |
-| **Tax Season Peak Advisory Warnings** *(March 15 - April 15 ITR filing window)* | Included | Included | Included |
-| **Interactive Team Absence Calendar & DOLE Holiday Engine** | — | Included | Included |
-| **Medical Certificate & Document Proof Uploader / Viewer** | — | Included | Included (with Cloud Storage) |
-| **Department Engagement Coverage & Overlap Detector** | — | Included | Included + Auto-Reallocation |
-| **Administrative Credit Adjuster & Automated Accruals** *(+1.25d VL monthly, 5.0d SIL reset)* | — | Included | Included |
-| **Year-End SIL Cash Monetization Ledger & Firm Liability Reserve Calculator** | — | — | **Included (DOLE Art. 95)** |
-| **Automated Payroll Export (Formatted CSV for JuanTax / Sprout / QuickBooks)** | — | — | **Included** |
-| **Immutable BIR-Ready Audit Trail & IP Activity Tracking** | — | — | **Included** |
-| **Automated Real-Time Email Notifications & Manager Absence Alerts** | — | — | **Included** |
-| **Extended Warranty & Priority SLA Support** | 30 Days | 60 Days | **3 Months Priority SLA + Staff Training** |
+This proposal outlines two streamlined implementation tiers tailored for **JTYeo CPA Accounting Office**:
+- **Tier 1 (₱75,000) — Professional CPA Practice Edition (Core + Engagement Suite)**
+- **Tier 2 (₱85,000) — ⭐ Enterprise Practice Cloud Suite (Target Recommendation & Payroll Integration)**
 
 ---
 
-## Strategic Tier Breakdown
+## 2-Tier Comparison Matrix
 
-### 🥉 Tier 1: Core Leave Tracker — ₱50,000
-* **Goal:** Eliminate paper forms, centralize balances, and enforce statutory leave compliance.
-* **Includes:**
-  1. Staff self-service portal with personal balance ledger (SIL, VL, SL, Solo Parent).
-  2. 12 pre-configured Philippine statutory & CPA office leave categories.
-  3. Working days calculator excluding weekends and Philippine holidays.
-  4. 3-Stage visual approval workflow (Staff Filed &rarr; Lead Endorsement &rarr; Partner Approval).
-  5. Peak BIR Tax Season (March 15 – April 15) advisory warnings.
+| Feature / Capability | Tier 1: Pro Edition (₱75,000) | Tier 2: Enterprise Cloud Suite (₱85,000) 🏆 |
+| :--- | :---: | :---: |
+| **Core Leave Tracking & Live Balance Ledgers** | Included | Included |
+| **12 Philippine Statutory & CPA Categories** *(SIL, VL, SL, Bereavement, Emergency, Study, Solo Parent, Maternity/Paternity, Magna Carta, VAWC, LWOP)* | Included | Included |
+| **Role-Based Portals** *(Staff CPA Associate & Managing Partner / HR Executive)* | Included | Included |
+| **Dual Sign-Off Approval Stepper & Engagement Notes** | Included | Included |
+| **Peak Tax Season (March 15 – April 15) Blackout Warnings** | Included | Included |
+| **Partner Filing on Behalf of Any Employee** | Included | Included |
+| **Interactive Team Absence Calendar & DOLE Holiday Engine** | Included | Included |
+| **Medical Certificate & Document Proof Uploader / Viewer** | Included | Included (with Cloud Sync) |
+| **Standard Formatted Leave Ledger Export** | Included | Included |
+| **Year-End SIL Cash Monetization Ledger (DOLE Art. 95)** | — | **Included (Real-Time Liability Forecast)** |
+| **Automated Payroll CSV Export (JuanTax / Sprout / QuickBooks)** | — | **Included (Direct Deduction Engine)** |
+| **Immutable BIR-Ready Audit Trail & IP Activity Tracking** | — | **Included (Tamper-Proof Logs)** |
+| **Automated Real-Time Email Notifications & Manager Alerts** | — | **Included** |
+| **Administrative Accrual Engine (+1.25d/mo & SIL Rollover)** | — | **Included** |
+| **Warranty & SLA Support Period** | 60 Days | **3 Months Priority SLA + Staff Training** |
 
 ---
 
-### 🥈 Tier 2: Professional CPA Practice Suite — ₱65,000
-* **Goal:** Enhance audit engagement coverage and verify medical compliance.
-* **Includes everything in Tier 1 PLUS:**
-  1. **Interactive FullCalendar Team Absence Schedule:** Visual monthly schedule of approved leaves and official Philippine holidays.
-  2. **Medical Certificate & Document Proof Engine:** Staff upload doctor slips / CPD seminar notices with 1-click in-app preview for reviewers.
-  3. **Engagement Coverage Conflict Detector:** Evaluates practice team availability before leaves are approved.
-  4. **Administrative Leave Credit Adjuster:** Manual balance adjustments with internal remarks.
+## Detailed Tier Breakdown
+
+### 🥈 Tier 1: Professional CPA Practice Edition — ₱75,000
+* **Target:** Centralizing all leave filing, enforcing statutory DOLE rules, managing team schedules, and verifying medical slips.
+* **Scope & Deliverables:**
+  1. **Staff Self-Service Portal:** Instant visibility of personal leave balances (SIL, VL, SL, Solo Parent) and application history.
+  2. **12 Statutory & CPA Office Categories:** Pre-configured with Philippine labor rules and CPA exam study entitlements.
+  3. **Managing Partner Executive Portal:** Review queue, direct approval/rejection with notes, and ability to file leaves on behalf of any staff.
+  4. **Working Days Calculator:** Automatically excludes weekends and Philippine statutory regular/special holidays.
+  5. **Peak BIR Tax Season Advisory:** Visual alerts for leaves requested during March 15 – April 15 filing windows.
+  6. **Interactive Team Absence Calendar:** Visual monthly schedule of approved leaves and official Philippine holidays.
+  7. **Medical Certificate & Document Proof Engine:** Staff upload doctor slips / CPD notices with 1-click in-app preview.
+  8. **Warranty:** 60 days standard warranty and technical support.
 
 ---
 
-### 🥇 Tier 3: Enterprise Practice Cloud Suite — ₱85,000 ⭐ (Recommended)
-* **Goal:** Complete digital integration connecting leave management directly to firm financials, payroll, and executive governance.
-* **Includes everything in Tier 1 & 2 PLUS:**
-  1. **Year-End SIL Cash Monetization & Liability Ledger (DOLE Art. 95):** Real-time automated calculation of unconsumed SIL credits $\times$ daily salary rate, forecasting total firm cash reserve obligations (e.g. ₱46,700.00).
-  2. **Automated Payroll CSV Export Engine:** One-click payroll deduction summaries formatted for standard Philippine payroll computation (JuanTax, Sprout Solutions, QuickBooks, Excel).
+### 🥇 Tier 2: Enterprise Practice Cloud Suite — ₱85,000 ⭐ (Recommended)
+* **Target:** Complete digital integration connecting leave management directly to firm financials, payroll, and executive governance.
+* **Scope & Deliverables (Everything in Tier 1 PLUS):**
+  1. **Year-End DOLE SIL Cash Monetization & Liability Ledger (Art. 95):** Automated real-time calculation of unconsumed SIL credits $\times$ daily salary rate, forecasting total firm cash reserve obligations.
+  2. **Automated Payroll CSV Export Engine:** One-click payroll deduction summaries custom-formatted for standard Philippine payroll software (JuanTax, Sprout Solutions, QuickBooks, Excel).
   3. **Immutable Audit Activity Trail & IP Security Tracking:** Timestamped, tamper-proof logs capturing every application, approval, rejection, and balance change with client IP addresses.
-  4. **Automated Real-Time Email Notifications:** Instant email notifications to staff and managers upon leave filing, lead endorsement, and partner decisions.
-  5. **3 Months Priority SLA & Dedicated Partner Support:** Bug fixes, feature tweaks, and a live staff training walkthrough session.
+  4. **Automated Real-Time Email Notifications:** Instant email alerts sent to staff and managers upon leave filing, approval, or rejection.
+  5. **Automated Accrual & Rollover Engine:** Automated monthly accrual rules (+1.25d VL monthly) and annual 5.0d SIL rollover configuration.
+  6. **Priority Warranty & SLA Support:** **3 Months Priority SLA Support**, bug fixes, feature adjustments, and a live staff training walkthrough session.
 
 ---
 
@@ -74,14 +68,15 @@ This proposal outlines three clear tiers designed to elevate **JTYeo CPA Account
 
 ```mermaid
 graph TD
-    A["Present Clean Live Demo (Tier 1 Base: ₱50k)"] --> B["Demonstrate 12 Leave Types & 3-Stage Dual Signoff Stepper"]
-    B --> C["Client Asks: 'How do we handle payroll deductions and medical slips?'"]
-    C --> D["Upsell Tier 2 (₱65k): Team Calendar + Medical Proof Uploader"]
-    D --> E["Present Tier 3 (₱85k Enterprise): Automated Payroll Export + SIL Cash Liability Ledger + Audit Logs + Email Alerts"]
-    E --> F["Close ₱85,000 Enterprise Package"]
+    A["Present Professional CPA Suite (Tier 1: ₱75,000)"] --> B["Show 12 Statutory Leaves, Partner Filing & Calendar Schedule"]
+    B --> C["Client Inquires: 'How do we process payroll deductions and year-end SIL monetization?'"]
+    C --> D["Present Enterprise Suite (Tier 2: ₱85,000 - Only +₱10k Difference!)"]
+    D --> E["Highlight: Automated Payroll Export + SIL Cash Liability Ledger + IP Audit Trail + Email Alerts + 3-Mo SLA"]
+    E --> F["Close ₱85,000 Enterprise Flagship Package"]
 ```
 
 ### Executive Pitch Script:
-> *"Atty. Yeo, what you are seeing today is the live Core Engine (₱50,000) which already solves 100% of the manual paperwork, tracking all 12 Philippine statutory leaves with peak tax season blackout warnings.*
+> *"Atty. Yeo, our **Professional CPA Edition (₱75,000)** provides everything needed to organize firm scheduling, manage all 12 DOLE leave categories, and verify medical certificates.*
 > 
-> *For an established practice like **JTYeo CPA Accounting Office**, we strongly recommend the **₱85,000 Enterprise Suite**. For just ₱85,000 total, you unlock the **Year-End SIL Cash Monetization Ledger** (giving you real-time visibility on cash reserves owed under DOLE Art. 95), **One-Click Formatted Payroll CSV Export**, **Immutable Audit Logs with IP tracking**, **Email Notifications**, and **3 Months Priority SLA Warranty** with complete staff training."*
+> *However, for just an additional **₱10,000 (₱85,000 Enterprise Suite)**, your firm unlocks the **Year-End SIL Cash Monetization Ledger** (computing your firm's cash liabilities under DOLE Art. 95), **One-Click Formatted Payroll CSV Export**, **Immutable BIR-Ready Audit Logs with IP tracking**, **Email Notifications**, and **3 Months Priority SLA Warranty** with complete staff training."*
+
