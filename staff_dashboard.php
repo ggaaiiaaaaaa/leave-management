@@ -137,18 +137,6 @@ foreach ($allUsers as $u) {
 
       <!-- Inner Content Container -->
       <div class="content-area">
-        <!-- Tax Season Notice Banner -->
-        <div class="tax-season-alert">
-          <div class="alert-content">
-            <div class="alert-icon"><i data-lucide="alert-triangle"></i></div>
-            <div class="alert-text">
-              <h4>Upcoming BIR Q1 & Annual Tax Filing Season (March 15 – April 15)</h4>
-              <p>Leaves during peak engagement periods require advance planning and Senior Lead approval.</p>
-            </div>
-          </div>
-          <button class="btn-alert-action" onclick="openModal('applyModal')">Plan Leave Early</button>
-        </div>
-
         <!-- TAB 1: MY PORTAL & BALANCES -->
         <div id="tab-my-portal" class="tab-pane">
           <div class="page-header">
