@@ -1006,6 +1006,8 @@ body {
 .modal-body {
   padding: 24px;
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .modal-footer {
@@ -1024,6 +1026,8 @@ body {
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group {
@@ -1031,6 +1035,8 @@ body {
   flex-direction: column;
   gap: 6px;
   margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group.full-width {
@@ -1048,6 +1054,8 @@ body {
 }
 
 .form-input, .form-select, .form-textarea {
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);

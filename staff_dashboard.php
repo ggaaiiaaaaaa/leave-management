@@ -539,7 +539,7 @@ if (empty($holidaysList)) {
             </div>
             <div style="text-align:right;">
               <div class="calc-label">Available Balance:</div>
-              <div class="calc-result" style="color:var(--accent);"><?= number_format($vlBalance, 1) ?> Days</div>
+              <div class="calc-result" id="availableBalancePreview" style="color:var(--accent);"><?= number_format($vlBalance, 1) ?> Days</div>
             </div>
           </div>
 
@@ -581,10 +581,54 @@ if (empty($holidaysList)) {
     document.getElementById('applyStartDate').value = today;
     document.getElementById('applyEndDate').value = today;
 
+    const userBalances = {
+      'SIL': <?= (float)$silBalance ?>,
+      'VL': <?= (float)$vlBalance ?>,
+      'SL': <?= (float)$slBalance ?>,
+      'SoloParent': <?= (float)$splBalance ?>
+    };
+
     function calculateWorkingDays() {
       const startStr = document.getElementById('applyStartDate').value;
       const endStr = document.getElementById('applyEndDate').value;
       const duration = document.getElementById('applyDurationMode').value;
+      const leaveType = document.getElementById('applyLeaveType').value;
+      
+      const balEl = document.getElementById('availableBalancePreview');
+      if (balEl) {
+        if (userBalances[leaveType] !== undefined) {
+          balEl.innerText = `${userBalances[leaveType].toFixed(1)} Days`;
+          balEl.style.color = 'var(--accent)';
+        } else if (leaveType === 'Bereavement') {
+          balEl.innerText = '3.0 - 5.0 Days (Paid)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'Study') {
+          balEl.innerText = 'CPA Exam / CPD Entitlement';
+          balEl.style.color = 'var(--accent)';
+        } else if (leaveType === 'Emergency') {
+          balEl.innerText = 'Calamity Assistance';
+          balEl.style.color = 'var(--warning)';
+        } else if (leaveType === 'Paternity') {
+          balEl.innerText = '7.0 Days (RA 8187)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'Maternity') {
+          balEl.innerText = '105 Days (RA 11210)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'MagnaCarta') {
+          balEl.innerText = 'Up to 60 Days (RA 9710)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'VAWC') {
+          balEl.innerText = '10 Days (RA 9262)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'Unpaid') {
+          balEl.innerText = 'Leave Without Pay';
+          balEl.style.color = 'var(--text-muted)';
+        } else {
+          balEl.innerText = 'Special Benefit';
+          balEl.style.color = 'var(--accent)';
+        }
+      }
+
       if (!startStr || !endStr) return;
       const start = new Date(startStr);
       const end = new Date(endStr);
