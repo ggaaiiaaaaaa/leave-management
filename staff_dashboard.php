@@ -223,6 +223,13 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                         <td>
                           <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
                           <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
+                          <?php if (!empty($req['attachment_path'])): ?>
+                            <div style="margin-top:4px;">
+                              <span class="doc-chip" onclick="openDocPreview('<?= htmlspecialchars($req['attachment_path']) ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>')">
+                                <i data-lucide="paperclip" style="width:11px;height:11px;"></i> Doc Attached
+                              </span>
+                            </div>
+                          <?php endif; ?>
                         </td>
                         <td>
                           <div style="font-weight:600;"><?= $req['start_date'] ?> <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
@@ -238,11 +245,12 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                             $statusBadge = 'badge-pending';
                             if ($req['status'] === 'Approved') $statusBadge = 'badge-approved';
                             if ($req['status'] === 'Rejected') $statusBadge = 'badge-rejected';
+                            if (str_contains($req['status'], 'Endorsed')) $statusBadge = 'badge-spl';
                           ?>
                           <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
                         </td>
                         <td>
-                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
+                          <button class="btn-icon" title="View Dual Signoff Stepper & Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>', '<?= addslashes($req['attachment_path'] ?? '') ?>')">
                             <i data-lucide="eye" style="width:14px;height:14px;"></i>
                           </button>
                         </td>
@@ -300,6 +308,9 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       </div>
       <form id="phpLeaveForm" onsubmit="handleBackendLeaveSubmit(event)">
         <div class="modal-body">
+          <!-- Peak Season Warning Banner -->
+          <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
+
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
@@ -354,13 +365,13 @@ $leaveRequests = $leaveReqStmt->fetchAll();
 
           <div class="form-group" style="margin-top:16px;">
             <label class="form-label">Reason / Client Engagement Coverage <span class="req">*</span></label>
-            <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason and engagement coverage details..." required></textarea>
+            <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason and client engagement coverage details..." required></textarea>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Attach Medical Slip / Supporting File (Optional)</label>
+            <label class="form-label">Supporting Document / Medical Slip (Optional)</label>
             <input type="file" name="attachment" id="applyAttachment" class="form-input" style="padding:6px;">
-            <small style="color:var(--text-muted); font-size:11px;">*Required for Sick Leave exceeding 2 consecutive working days.</small>
+            <small style="color:var(--text-muted); font-size:11px;">*Upload doctor slip for SL > 1 day, death cert for Bereavement, or CPD event notice.</small>
           </div>
         </div>
         <div class="modal-footer">
@@ -368,6 +379,96 @@ $leaveRequests = $leaveReqStmt->fetchAll();
           <button type="submit" class="btn-primary" id="btnSubmitLeave">Submit Application</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE DETAILS & 2-STAGE SIGN-OFF MODAL -->
+  <div class="modal-backdrop" id="detailsModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="file-check"></i> Leave Application Details</h3>
+        <button class="btn-close-modal" onclick="closeModal('detailsModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference Number</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">LR-2026-XXX</div>
+            </div>
+            <div id="dtlStatusBadge"></div>
+          </div>
+          <div style="margin-top:10px; font-size:13px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div><strong>Staff:</strong> <span id="dtlStaff"></span></div>
+            <div><strong>Category:</strong> <span id="dtlType"></span></div>
+            <div><strong>Dates:</strong> <span id="dtlDates"></span></div>
+            <div><strong>Duration:</strong> <span id="dtlDays" style="font-weight:700; color:var(--accent);"></span></div>
+          </div>
+        </div>
+
+        <!-- 3-Stage Dual Signoff Stepper -->
+        <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Dual Approval & Sign-Off Workflow:</div>
+        <div class="stepper-container" id="dtlStepper">
+          <div class="step-item completed" id="step1">
+            <div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div>
+            <div class="step-label">1. Staff Filed</div>
+          </div>
+          <div class="step-item" id="step2">
+            <div class="step-circle" id="step2Circle">2</div>
+            <div class="step-label">2. Lead Endorsement</div>
+          </div>
+          <div class="step-item" id="step3">
+            <div class="step-circle" id="step3Circle">3</div>
+            <div class="step-label">3. Partner Signoff</div>
+          </div>
+        </div>
+
+        <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Client Handoff & Engagement Notes:</div>
+          <div id="dtlReason" style="font-size:12.5px; color:var(--text-main); line-height:1.5;"></div>
+        </div>
+
+        <div id="dtlAttachmentSection" style="margin-bottom:14px; display:none;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Attached Supporting Verification:</div>
+          <a href="javascript:void(0)" id="dtlDocLink" class="doc-chip" style="padding:6px 12px; font-size:12px;">
+            <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+            <span id="dtlDocName">View Attached Medical Slip</span>
+          </a>
+        </div>
+
+        <div id="dtlApproverSection" style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
+          <strong>Managerial Signoff:</strong> <span id="dtlApprover" style="color:var(--text-main); font-weight:600;"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" onclick="closeModal('detailsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOCUMENT PREVIEW MODAL -->
+  <div class="modal-backdrop" id="docModal">
+    <div class="modal-window" style="max-width:550px;">
+      <div class="modal-header">
+        <h3><i data-lucide="file-text"></i> Attached Medical / Supporting Document</h3>
+        <button class="btn-close-modal" onclick="closeModal('docModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="border:2px dashed var(--border-strong); border-radius:var(--radius-md); padding:24px; text-align:center; background:var(--bg-subtle);">
+          <i data-lucide="file-check-2" style="width:48px;height:48px;color:var(--success);margin:0 auto 12px;display:block;"></i>
+          <h4 id="docModalTitle" style="font-size:15px; color:var(--primary); margin-bottom:6px;">Medical Certificate Verification</h4>
+          <p id="docModalStaff" style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;"></p>
+          <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:left; font-size:12px; line-height:1.6;">
+            <strong>Clinic:</strong> St. Luke's Medical Clinic &bull; Attending: Dr. Roberto Santos, MD<br>
+            <strong>Diagnosis:</strong> Acute viral illness / respiratory infection with fever.<br>
+            <strong>Recommendation:</strong> Medically excused from work for 2 consecutive days. Fit to resume engagement duties thereafter.<br>
+            <strong>Status:</strong> <span class="badge badge-approved" style="font-size:10px;">Verified Official Slip</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('docModal')">Close Preview</button>
+      </div>
     </div>
   </div>
 
@@ -442,6 +543,22 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       const start = new Date(startStr);
       const end = new Date(endStr);
       if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
+      
+      // Peak Tax Season Blackout Alert
+      const taxNotice = document.getElementById('taxSeasonNotice');
+      if (taxNotice) {
+        const m = start.getMonth() + 1;
+        const d = start.getDate();
+        const isTaxPeak = (m === 3 && d >= 15) || (m === 4 && d <= 15);
+        if (isTaxPeak) {
+          taxNotice.style.display = 'flex';
+          taxNotice.innerHTML = `<i data-lucide="alert-triangle"></i><div><strong>⚠️ Peak BIR Tax Season Notice (March 15 - April 15):</strong> Leaves filed during the annual income tax return filing window require client engagement coverage & Managing Partner final endorsement.</div>`;
+          if (window.lucide) lucide.createIcons();
+        } else {
+          taxNotice.style.display = 'none';
+        }
+      }
+
       let days = 0, cur = new Date(start);
       while (cur <= end) {
         const dow = cur.getDay();
@@ -525,10 +642,59 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       }
     }
 
-    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason) {
-      let msg = `Leave Reference: ${ref}\nStaff: ${emp}\nType: ${type} (${days} days)\nDates: ${start} to ${end}\nReason: ${reason}\nStatus: ${status}\nSignoff: ${approver}`;
-      if (rejectReason) msg += `\nDecision Note: ${rejectReason}`;
-      alert(msg);
+    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason, attachment) {
+      document.getElementById('dtlRef').innerText = ref;
+      document.getElementById('dtlStaff').innerText = emp;
+      document.getElementById('dtlType').innerText = type;
+      document.getElementById('dtlDates').innerText = `${start} to ${end}`;
+      document.getElementById('dtlDays').innerText = `${days} Working Day(s)`;
+      document.getElementById('dtlReason').innerText = reason;
+      document.getElementById('dtlApprover').innerText = approver || 'Pending Lead Review';
+
+      let statusBadge = `<span class="badge badge-pending">${status}</span>`;
+      if (status === 'Approved') statusBadge = `<span class="badge badge-approved">Approved</span>`;
+      if (status === 'Rejected') statusBadge = `<span class="badge badge-rejected">Rejected</span>`;
+      document.getElementById('dtlStatusBadge').innerHTML = statusBadge;
+
+      // Stepper logic
+      const s2 = document.getElementById('step2');
+      const s3 = document.getElementById('step3');
+      s2.className = 'step-item';
+      s3.className = 'step-item';
+      if (status === 'Approved') {
+        s2.className = 'step-item completed';
+        s3.className = 'step-item completed';
+        document.getElementById('step2Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
+        document.getElementById('step3Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
+      } else if (status.includes('Endorsed')) {
+        s2.className = 'step-item completed';
+        s3.className = 'step-item active';
+        document.getElementById('step2Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
+        document.getElementById('step3Circle').innerText = '3';
+      } else {
+        s2.className = 'step-item active';
+        document.getElementById('step2Circle').innerText = '2';
+        document.getElementById('step3Circle').innerText = '3';
+      }
+
+      // Attachment section
+      const attSec = document.getElementById('dtlAttachmentSection');
+      if (attachment) {
+        attSec.style.display = 'block';
+        document.getElementById('dtlDocLink').onclick = () => openDocPreview(attachment, emp, type);
+      } else {
+        attSec.style.display = 'none';
+      }
+
+      openModal('detailsModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function openDocPreview(path, emp, type) {
+      document.getElementById('docModalTitle').innerText = `${type} Supporting Verification`;
+      document.getElementById('docModalStaff').innerText = `Submitted by: ${emp}`;
+      openModal('docModal');
+      if (window.lucide) lucide.createIcons();
     }
 
     if (window.lucide) lucide.createIcons();

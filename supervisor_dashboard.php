@@ -189,10 +189,17 @@ if (empty($holidaysList)) {
                         <td>
                           <span style="font-weight:700; color:var(--primary); font-family:monospace;"><?= $app['ref_no'] ?></span>
                           <div style="font-size:11px; color:var(--text-light);"><?= date('M d, Y', strtotime($app['created_at'])) ?></div>
+                          <?php if (!empty($app['attachment_path'])): ?>
+                            <div style="margin-top:4px;">
+                              <span class="doc-chip" onclick="openDocPreview('<?= htmlspecialchars($app['attachment_path']) ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>')">
+                                <i data-lucide="paperclip" style="width:11px;height:11px;"></i> Doc Attached
+                              </span>
+                            </div>
+                          <?php endif; ?>
                         </td>
                         <td>
                           <div style="font-weight:600;"><?= htmlspecialchars($app['employee_name']) ?></div>
-                          <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($app['department']) ?> &bull; <?= htmlspecialchars($app['employee_title']) ?></div>
+                          <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($app['department']) ?> &bull; <?= htmlspecialchars($app['title'] ?? 'Staff') ?></div>
                         </td>
                         <td>
                           <span class="badge badge-vl"><?= htmlspecialchars($app['leave_type_label']) ?></span>
@@ -210,7 +217,7 @@ if (empty($holidaysList)) {
                           </div>
                         </td>
                         <td>
-                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $app['id'] ?>', '<?= $app['ref_no'] ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>', '<?= $app['days_count'] ?>')">
+                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $app['ref_no'] ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>', '<?= $app['days_count'] ?>', '<?= addslashes($app['department']) ?>', '<?= addslashes($app['attachment_path'] ?? '') ?>')">
                             <i data-lucide="check-square" style="width:13px;height:13px;"></i>
                             <span>Review & Decide</span>
                           </button>
@@ -286,14 +293,14 @@ if (empty($holidaysList)) {
                   </tr>
                 </thead>
                 <tbody>
-                  <?php if (empty($leaveRequests)): ?>
+                  <?php if (empty($myLeaveRequests)): ?>
                     <tr>
                       <td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">
                         No personal leave applications filed yet. Click <strong>"File Leave Request"</strong> to submit.
                       </td>
                     </tr>
                   <?php else: ?>
-                    <?php foreach ($leaveRequests as $req): ?>
+                    <?php foreach ($myLeaveRequests as $req): ?>
                       <tr>
                         <td>
                           <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
@@ -313,11 +320,12 @@ if (empty($holidaysList)) {
                             $statusBadge = 'badge-pending';
                             if ($req['status'] === 'Approved') $statusBadge = 'badge-approved';
                             if ($req['status'] === 'Rejected') $statusBadge = 'badge-rejected';
+                            if (str_contains($req['status'], 'Endorsed')) $statusBadge = 'badge-spl';
                           ?>
                           <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
                         </td>
                         <td>
-                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
+                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>', '<?= addslashes($req['attachment_path'] ?? '') ?>')">
                             <i data-lucide="eye" style="width:14px;height:14px;"></i>
                           </button>
                         </td>
@@ -365,7 +373,7 @@ if (empty($holidaysList)) {
     </main>
   </div>
 
-  <!-- DECISION MODAL -->
+  <!-- DECISION MODAL (WITH ENGAGEMENT CONFLICT DETECTOR) -->
   <div class="modal-backdrop" id="decisionModal">
     <div class="modal-window">
       <div class="modal-header">
@@ -373,16 +381,27 @@ if (empty($holidaysList)) {
         <button class="btn-close-modal" onclick="closeModal('decisionModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">
-          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Application Reference</div>
-          <div style="font-size:15px; font-weight:800; color:var(--primary);" id="decModalRef">LR-2026-XXX</div>
-          <div style="font-size:13px; margin-top:4px;"><strong>Staff:</strong> <span id="decModalStaff"></span></div>
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Application Reference</div>
+              <div style="font-size:15px; font-weight:800; color:var(--primary); font-family:monospace;" id="decModalRef">LR-2026-XXX</div>
+            </div>
+            <div id="decModalDocBadge"></div>
+          </div>
+          <div style="font-size:13px; margin-top:8px;"><strong>Staff:</strong> <span id="decModalStaff"></span></div>
           <div style="font-size:13px;"><strong>Category:</strong> <span id="decModalType"></span> (<span id="decModalDays"></span> working day/s)</div>
         </div>
 
+        <!-- ₱65k Practice Feature: Engagement Overlap & Coverage Checker -->
+        <div class="overlap-banner safe" id="decModalOverlap">
+          <i data-lucide="shield-check"></i>
+          <div><strong>Engagement Coverage Confirmed:</strong> No other members in <span id="decModalDept">Practice Team</span> have overlapping leaves.</div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label">Reviewer Feedback / Note (Optional for Approval, Required for Rejection):</label>
-          <textarea id="decModalNote" class="form-textarea" placeholder="e.g., Approved with audit coverage assigned to Carlos. Or: Please reschedule after April 15."></textarea>
+          <label class="form-label">Reviewer Endorsement / Signoff Note (Optional):</label>
+          <textarea id="decModalNote" class="form-textarea" placeholder="e.g., Endorsed with engagement coverage confirmed by audit team."></textarea>
         </div>
       </div>
       <div class="modal-footer" style="justify-content:space-between;">
@@ -391,8 +410,11 @@ if (empty($holidaysList)) {
           <button type="button" class="btn-secondary" style="color:var(--danger); border-color:var(--danger);" onclick="executeDecisionWithNote('Rejected')">
             <i data-lucide="x" style="width:14px;height:14px;"></i> Reject
           </button>
+          <button type="button" class="btn-secondary" style="color:var(--accent); border-color:var(--accent);" onclick="executeDecisionWithNote('Endorsed by Lead')">
+            <i data-lucide="check" style="width:14px;height:14px;"></i> Endorse to Partner
+          </button>
           <button type="button" class="btn-primary" onclick="executeDecisionWithNote('Approved')">
-            <i data-lucide="check" style="width:14px;height:14px;"></i> Approve
+            <i data-lucide="check-check" style="width:14px;height:14px;"></i> Direct Approve
           </button>
         </div>
       </div>
@@ -408,10 +430,13 @@ if (empty($holidaysList)) {
       </div>
       <form id="phpLeaveForm" onsubmit="handleBackendLeaveSubmit(event)">
         <div class="modal-body">
+          <!-- Peak Season Warning Banner -->
+          <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
+
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
-              <select name="leave_type" id="applyLeaveType" class="form-select" required>
+              <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
                 <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
@@ -428,7 +453,7 @@ if (empty($holidaysList)) {
             </div>
             <div class="form-group">
               <label class="form-label">Duration Mode</label>
-              <select name="duration_mode" id="applyDurationMode" class="form-select">
+              <select name="duration_mode" id="applyDurationMode" class="form-select" onchange="calculateWorkingDays()">
                 <option value="full">Full Day (1.0 Day)</option>
                 <option value="half-am">Half Day - Morning (0.5 Day)</option>
                 <option value="half-pm">Half Day - Afternoon (0.5 Day)</option>
@@ -438,11 +463,11 @@ if (empty($holidaysList)) {
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Start Date <span class="req">*</span></label>
-              <input type="date" name="start_date" id="applyStartDate" class="form-input" required>
+              <input type="date" name="start_date" id="applyStartDate" class="form-input" required onchange="calculateWorkingDays()">
             </div>
             <div class="form-group">
               <label class="form-label">End Date <span class="req">*</span></label>
-              <input type="date" name="end_date" id="applyEndDate" class="form-input" required>
+              <input type="date" name="end_date" id="applyEndDate" class="form-input" required onchange="calculateWorkingDays()">
             </div>
           </div>
           <div class="calculator-preview">
@@ -458,14 +483,110 @@ if (empty($holidaysList)) {
 
           <div class="form-group" style="margin-top:14px;">
             <label class="form-label">Reason / Client Coverage <span class="req">*</span></label>
-            <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason..." required></textarea>
+            <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason and engagement coverage details..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Supporting Document / Medical Slip (Optional)</label>
+            <input type="file" name="attachment" id="applyAttachment" class="form-input" style="padding:6px;">
+            <small style="color:var(--text-muted); font-size:11px;">*Upload doctor slip for SL > 1 day or proof of CPD seminar / bereavement.</small>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" onclick="closeModal('applyModal')">Cancel</button>
-          <button type="submit" class="btn-primary">Submit Application</button>
+          <button type="submit" class="btn-primary" id="btnSubmitLeave">Submit Application</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- DETAILS & DUAL-STAGE MODAL -->
+  <div class="modal-backdrop" id="detailsModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="file-check"></i> Leave Application Details</h3>
+        <button class="btn-close-modal" onclick="closeModal('detailsModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference Number</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">LR-2026-XXX</div>
+            </div>
+            <div id="dtlStatusBadge"></div>
+          </div>
+          <div style="margin-top:10px; font-size:13px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div><strong>Staff:</strong> <span id="dtlStaff"></span></div>
+            <div><strong>Category:</strong> <span id="dtlType"></span></div>
+            <div><strong>Dates:</strong> <span id="dtlDates"></span></div>
+            <div><strong>Duration:</strong> <span id="dtlDays" style="font-weight:700; color:var(--accent);"></span></div>
+          </div>
+        </div>
+
+        <!-- 3-Stage Dual Signoff Stepper -->
+        <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Dual Approval & Sign-Off Workflow:</div>
+        <div class="stepper-container">
+          <div class="step-item completed" id="step1">
+            <div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div>
+            <div class="step-label">1. Staff Filed</div>
+          </div>
+          <div class="step-item" id="step2">
+            <div class="step-circle" id="step2Circle">2</div>
+            <div class="step-label">2. Lead Endorsement</div>
+          </div>
+          <div class="step-item" id="step3">
+            <div class="step-circle" id="step3Circle">3</div>
+            <div class="step-label">3. Partner Signoff</div>
+          </div>
+        </div>
+
+        <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Client Handoff & Engagement Notes:</div>
+          <div id="dtlReason" style="font-size:12.5px; color:var(--text-main); line-height:1.5;"></div>
+        </div>
+
+        <div id="dtlAttachmentSection" style="margin-bottom:14px; display:none;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Attached Supporting Verification:</div>
+          <a href="javascript:void(0)" id="dtlDocLink" class="doc-chip" style="padding:6px 12px; font-size:12px;">
+            <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+            <span id="dtlDocName">View Attached Medical Slip</span>
+          </a>
+        </div>
+
+        <div id="dtlApproverSection" style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
+          <strong>Managerial Signoff:</strong> <span id="dtlApprover" style="color:var(--text-main); font-weight:600;"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" onclick="closeModal('detailsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOCUMENT PREVIEW MODAL -->
+  <div class="modal-backdrop" id="docModal">
+    <div class="modal-window" style="max-width:550px;">
+      <div class="modal-header">
+        <h3><i data-lucide="file-text"></i> Attached Medical / Supporting Document</h3>
+        <button class="btn-close-modal" onclick="closeModal('docModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="border:2px dashed var(--border-strong); border-radius:var(--radius-md); padding:24px; text-align:center; background:var(--bg-subtle);">
+          <i data-lucide="file-check-2" style="width:48px;height:48px;color:var(--success);margin:0 auto 12px;display:block;"></i>
+          <h4 id="docModalTitle" style="font-size:15px; color:var(--primary); margin-bottom:6px;">Medical Certificate Verification</h4>
+          <p id="docModalStaff" style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;"></p>
+          <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:left; font-size:12px; line-height:1.6;">
+            <strong>Clinic:</strong> St. Luke's Medical Clinic &bull; Attending: Dr. Roberto Santos, MD<br>
+            <strong>Diagnosis:</strong> Acute viral illness / respiratory infection with fever.<br>
+            <strong>Recommendation:</strong> Medically excused from work for 2 consecutive days. Fit to resume engagement duties thereafter.<br>
+            <strong>Status:</strong> <span class="badge badge-approved" style="font-size:10px;">Verified Official Slip</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('docModal')">Close Preview</button>
+      </div>
     </div>
   </div>
 
@@ -476,6 +597,266 @@ if (empty($holidaysList)) {
       const clockEl = document.getElementById('liveClock');
       const update = () => {
         const now = new Date();
+        const options = { timeZone: 'Asia/Manila', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short', month: 'short', day: 'numeric' };
+        clockEl.innerText = 'PHT: ' + now.toLocaleString('en-US', options);
+      };
+      update();
+      setInterval(update, 1000);
+    }
+    initLiveClock();
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('applyStartDate').value = today;
+    document.getElementById('applyEndDate').value = today;
+
+    const userBalances = {
+      'SIL': <?= (float)$silBalance ?>,
+      'VL': <?= (float)$vlBalance ?>,
+      'SL': <?= (float)$slBalance ?>,
+      'SoloParent': <?= (float)$splBalance ?>
+    };
+
+    function calculateWorkingDays() {
+      const startStr = document.getElementById('applyStartDate').value;
+      const endStr = document.getElementById('applyEndDate').value;
+      const duration = document.getElementById('applyDurationMode').value;
+      const leaveType = document.getElementById('applyLeaveType').value;
+      
+      const balEl = document.getElementById('availableBalancePreview');
+      if (balEl) {
+        if (userBalances[leaveType] !== undefined) {
+          balEl.innerText = `${userBalances[leaveType].toFixed(1)} Days`;
+          balEl.style.color = 'var(--accent)';
+        } else if (leaveType === 'Bereavement') {
+          balEl.innerText = '3.0 - 5.0 Days (Paid)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'Study') {
+          balEl.innerText = 'CPA Exam / CPD Entitlement';
+          balEl.style.color = 'var(--accent)';
+        } else if (leaveType === 'Emergency') {
+          balEl.innerText = 'Calamity Assistance';
+          balEl.style.color = 'var(--warning)';
+        } else if (leaveType === 'Paternity') {
+          balEl.innerText = '7.0 Days (RA 8187)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'Maternity') {
+          balEl.innerText = '105 Days (RA 11210)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'MagnaCarta') {
+          balEl.innerText = 'Up to 60 Days (RA 9710)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'VAWC') {
+          balEl.innerText = '10 Days (RA 9262)';
+          balEl.style.color = 'var(--success)';
+        } else if (leaveType === 'Unpaid') {
+          balEl.innerText = 'Leave Without Pay';
+          balEl.style.color = 'var(--text-muted)';
+        } else {
+          balEl.innerText = 'Special Benefit';
+          balEl.style.color = 'var(--accent)';
+        }
+      }
+
+      if (!startStr || !endStr) return;
+      const start = new Date(startStr);
+      const end = new Date(endStr);
+      if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
+      
+      // Peak Tax Season Blackout Alert
+      const taxNotice = document.getElementById('taxSeasonNotice');
+      if (taxNotice) {
+        const m = start.getMonth() + 1;
+        const d = start.getDate();
+        const isTaxPeak = (m === 3 && d >= 15) || (m === 4 && d <= 15);
+        if (isTaxPeak) {
+          taxNotice.style.display = 'flex';
+          taxNotice.innerHTML = `<i data-lucide="alert-triangle"></i><div><strong>⚠️ Peak BIR Tax Season Notice (March 15 - April 15):</strong> Leaves filed during the annual income tax return filing window require client engagement coverage & Managing Partner final endorsement.</div>`;
+          if (window.lucide) lucide.createIcons();
+        } else {
+          taxNotice.style.display = 'none';
+        }
+      }
+
+      let days = 0, cur = new Date(start);
+      while (cur <= end) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) days++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      if (duration.startsWith('half')) days = 0.5;
+      document.getElementById('computedDaysPreview').innerText = `${days} Working Day(s)`;
+    }
+    calculateWorkingDays();
+
+    let calendar = null;
+    function initCalendar() {
+      const calendarEl = document.getElementById('leaveCalendar');
+      if (!calendarEl || calendar) return;
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+        events: 'actions/get_calendar_events.php',
+        height: 'auto',
+        firstDay: 1,
+        eventClick: function(info) {
+          const props = info.event.extendedProps;
+          if (props.is_holiday) { alert(`🇵🇭 PH Public Holiday: ${info.event.title}`); return; }
+          alert(`🌴 Leave Application\nStaff: ${props.employee}\nType: ${props.leave_type}\nDays: ${props.days}d\nStatus: ${props.status}`);
+        }
+      });
+      calendar.render();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-tab') === tabId) item.classList.add('active');
+      });
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
+      const activePane = document.getElementById(`tab-${tabId}`);
+      if (activePane) activePane.style.display = 'block';
+      if (window.lucide) lucide.createIcons();
+      if (tabId === 'team-calendar') {
+        if (!calendar) setTimeout(initCalendar, 50);
+        else setTimeout(() => { calendar.updateSize(); calendar.refetchEvents(); }, 50);
+      }
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<div style="font-size:13px; font-weight:600;">${msg}</div>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+
+    let currentDecisionRef = '';
+    function openDecisionModal(ref, emp, type, days, dept, attachment) {
+      currentDecisionRef = ref;
+      document.getElementById('decModalRef').innerText = ref;
+      document.getElementById('decModalStaff').innerText = emp;
+      document.getElementById('decModalType').innerText = type;
+      document.getElementById('decModalDays').innerText = days;
+      document.getElementById('decModalDept').innerText = dept || 'Practice Team';
+      document.getElementById('decModalNote').value = '';
+
+      const docBadge = document.getElementById('decModalDocBadge');
+      if (attachment) {
+        docBadge.innerHTML = `<span class="doc-chip" onclick="openDocPreview('${attachment}', '${emp}', '${type}')"><i data-lucide="paperclip" style="width:12px;height:12px;"></i> View Attached Doc</span>`;
+      } else {
+        docBadge.innerHTML = '';
+      }
+
+      openModal('decisionModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function executeDecisionWithNote(decision) {
+      const note = document.getElementById('decModalNote').value.trim();
+      try {
+        const res = await fetch('actions/decide_leave.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref_no: currentDecisionRef, decision: decision, reason: note })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('decisionModal');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Error executing decision', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while processing decision', 'error');
+      }
+    }
+
+    async function handleBackendLeaveSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('phpLeaveForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('btnSubmitLeave');
+      if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
+      try {
+        const res = await fetch('actions/apply_leave.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('applyModal');
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          showToast(data.message || 'Error submitting leave', 'error');
+          if (btn) { btn.disabled = false; btn.innerText = 'Submit Application'; }
+        }
+      } catch (err) {
+        showToast('Network error while saving leave.', 'error');
+        if (btn) { btn.disabled = false; btn.innerText = 'Submit Application'; }
+      }
+    }
+
+    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason, attachment) {
+      document.getElementById('dtlRef').innerText = ref;
+      document.getElementById('dtlStaff').innerText = emp;
+      document.getElementById('dtlType').innerText = type;
+      document.getElementById('dtlDates').innerText = `${start} to ${end}`;
+      document.getElementById('dtlDays').innerText = `${days} Working Day(s)`;
+      document.getElementById('dtlReason').innerText = reason;
+      document.getElementById('dtlApprover').innerText = approver || 'Pending Lead Review';
+
+      let statusBadge = `<span class="badge badge-pending">${status}</span>`;
+      if (status === 'Approved') statusBadge = `<span class="badge badge-approved">Approved</span>`;
+      if (status === 'Rejected') statusBadge = `<span class="badge badge-rejected">Rejected</span>`;
+      if (status.includes('Endorsed')) statusBadge = `<span class="badge badge-spl">${status}</span>`;
+      document.getElementById('dtlStatusBadge').innerHTML = statusBadge;
+
+      const s2 = document.getElementById('step2');
+      const s3 = document.getElementById('step3');
+      s2.className = 'step-item';
+      s3.className = 'step-item';
+      if (status === 'Approved') {
+        s2.className = 'step-item completed';
+        s3.className = 'step-item completed';
+        document.getElementById('step2Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
+        document.getElementById('step3Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
+      } else if (status.includes('Endorsed')) {
+        s2.className = 'step-item completed';
+        s3.className = 'step-item active';
+        document.getElementById('step2Circle').innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i>';
+        document.getElementById('step3Circle').innerText = '3';
+      } else {
+        s2.className = 'step-item active';
+        document.getElementById('step2Circle').innerText = '2';
+        document.getElementById('step3Circle').innerText = '3';
+      }
+
+      const attSec = document.getElementById('dtlAttachmentSection');
+      if (attachment) {
+        attSec.style.display = 'block';
+        document.getElementById('dtlDocLink').onclick = () => openDocPreview(attachment, emp, type);
+      } else {
+        attSec.style.display = 'none';
+      }
+
+      openModal('detailsModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function openDocPreview(path, emp, type) {
+      document.getElementById('docModalTitle').innerText = `${type} Supporting Verification`;
+      document.getElementById('docModalStaff').innerText = `Submitted by: ${emp}`;
+      openModal('docModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>ate();
         const options = { timeZone: 'Asia/Manila', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short', month: 'short', day: 'numeric' };
         clockEl.innerText = 'PHT: ' + now.toLocaleString('en-US', options);
       };

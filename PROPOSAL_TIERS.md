@@ -9,59 +9,49 @@
 For an accounting and auditing firm in the Philippines, workforce scheduling, billable hour tracking, and DOLE-compliant leave governance are critical to maintaining client deliverables during peak tax and audit seasons. 
 
 This proposal outlines three strategic implementation tiers:
-- **Tier 1 (₱50,000) — Core DOLE-Ready Leave Management System (Current Mockup Base)**
-- **Tier 2 (₱70,000) — Advanced Accounting Workflow & Automated Notifications Tier (Recommended Sweet Spot)**
-- **Tier 3 (₱85,000) — Enterprise Firm Edition (Payroll/Timesheet Integration & Multi-Branch Auditing)**
+- **Tier 1 (₱50,000) — Core DOLE-Ready Leave Management System (Basic Base)**
+- **Tier 2 (₱65,000) — Professional CPA Practice Suite (Current Upgraded Live System)** ⭐
+- **Tier 3 (₱85,000) — Enterprise Firm Edition (Direct Payroll Sync & Multi-Branch Auditing)**
 
 ---
 
 ## Detailed Tier Comparison Matrix
 
-| Feature / Capability | Tier 1: Core (₱50,000) | Tier 2: Pro Suite (₱70,000) ⭐ | Tier 3: Enterprise Suite (₱85,000) 🏆 |
+| Feature / Capability | Tier 1: Core (₱50,000) | Tier 2: Pro Suite (₱65,000) ⭐ | Tier 3: Enterprise Suite (₱85,000) 🏆 |
 | :--- | :---: | :---: | :---: |
 | **Core Leave Tracking & Balances** | Included | Included | Included |
-| **Philippine Statutory & CPA Practice Leaves** *(DOLE SIL, VL, SL, Bereavement, Emergency/Calamity, CPA Board Exam/CPD Study Leave, Solo Parent, Maternity/Paternity, Magna Carta, VAWC, LWOP)* | Included | Included | Included |
-| **Role-Based Access** *(Staff Accountant, Team Lead, HR/Partner)* | Standard (2 Levels) | Multi-Level Hierarchical (3+ Levels) | Multi-Level + Partner Override & Multi-Department |
-| **Philippine Holiday Calendar Integration** | Standard list | Dynamic DOLE/Proclamation Sync + Special Working/Non-Working rules | Dynamic DOLE + Custom Firm Year-End Closure Periods |
-| **Leave Approval Engine** | Single-step (Lead/Admin) | 2-Step Approval (Supervisor -> Partner/HR) + Delegate Approver | Multi-stage dynamic routing with matrix approval |
-| **Automated Email Notifications** | Basic confirmation | Full Email Templates (Apply, Approve, Reject, Reminder) | Instant Email + MS Teams / Viber / Slack Webhook Alerts |
-| **Tax Season "Leave Freeze" Management** | Manual rejection | Automated Peak-Season "Blackout Period" Warnings & Quotas | Smart Quota Controls with partner exemption tokens |
-| **Document / Medical Certificate Attachment** | Basic file upload | Secure Cloud Storage + preview & size optimization | Cloud storage + Medical certificate verification workflow |
-| **Payroll & Timesheet Ready Exports** | Basic CSV export | Formatted Excel/CSV with Philippine Payroll coding | Direct API/CSV integration ready for Sprout, PayMongo, QuickBooks, or custom ERP |
-| **Annual Leave Monetization / Conversion Calculator** | — | Included (DOLE SIL conversion computation) | Included + Taxable/Non-taxable monetization ledger |
+| **Philippine Statutory & CPA Practice Leaves** *(SIL, VL, SL, Bereavement, Emergency, CPA Study, Solo Parent, Maternity/Paternity, Magna Carta, VAWC, LWOP)* | Included | Included | Included |
+| **Role-Based Access** *(Staff Accountant, Senior Lead, Partner/HR)* | Standard (2 Levels) | Multi-Level Hierarchical (3 Levels) | Multi-Level + Partner Override & Multi-Department |
+| **Philippine Holiday Calendar Integration** | Standard list | Dynamic Sync + Special Working/Non-Working rules | Dynamic Sync + Custom Firm Year-End Closure Periods |
+| **Leave Approval Engine** | Single-step | 2-Step Approval (Senior Lead Endorsement -> Partner Final Signoff) | Multi-stage dynamic routing with matrix approval |
+| **Tax Season "Leave Freeze" Management** | Manual | Automated Peak-Season (March 15 - April 15) Blackout Warnings | Smart Quota Controls with partner exemption tokens |
+| **Document / Medical Certificate Attachment** | Basic | In-App Preview & Verification Workflow | Cloud storage + Medical certificate verification workflow |
+| **Department Engagement Coverage & Overlap Checker** | — | Included (Prevents team understaffing during client audits) | Included + Automated Resource Reallocation |
+| **Annual SIL Cash Monetization Calculator** | — | Included (Real-Time Year-End Cash Liability Ledger) | Included + Taxable/Non-taxable monetization ledger |
+| **Payroll & Timesheet Ready Exports** | Basic CSV export | Formatted CSV with Philippine Payroll Coding | Direct API/CSV integration ready for Sprout, QuickBooks, or custom ERP |
 | **Audit Trail & System Logs** | Standard timestamps | Detailed user activity logs (Who approved/modified and when) | Immutable BIR-ready audit logs with IP logging & report stamping |
-| **Deployment, Hosting Setup & Training** | XAMPP/Cloud deploy + 1 training session | Cloud hosting setup + 2 training sessions + User manual PDF | Turnkey deployment + 3 training sessions + Video walkthroughs + 3 months priority SLA |
+| **Deployment, Hosting Setup & Training** | XAMPP/Cloud deploy + 1 session | Cloud setup + 2 training sessions + User manual PDF | Turnkey deployment + 3 training sessions + 3 months priority SLA |
 
 ---
 
 ## Tier Breakdown & Sales Pitch Guide
 
-### 🥉 Tier 1: Essential Leave Portal — ₱50,000 (Base Proposal)
+### 🥉 Tier 1: Essential Leave Portal — ₱50,000
 *Target: Getting the firm organized, eliminating paper leave forms and spreadsheets.*
-
-#### Scope of Deliverables:
-1. **Interactive Web Dashboard**: Modern responsive UI accessible via desktop and mobile browser.
-2. **Standard DOLE Statutory Leaves**: Configured for 5-day SIL, Vacation Leave, Sick Leave, Maternity/Paternity, and Solo Parent.
-3. **Role Architecture**:
-   - **Employee (Staff)**: Apply for leave, view personal balance, track status history.
-   - **HR / Admin**: Review pending requests, approve/reject, adjust leave credits manually.
-4. **Philippine Holiday Widget**: Tracks regular and special non-working days.
-5. **Basic Reporting**: Summary data table with standard CSV download.
-6. **Delivery Timeline**: 2–3 weeks.
 
 ---
 
-### 🥈 Tier 2: Professional Accounting Practice Suite — ₱70,000 (Recommended Sweet Spot)
-*Target: Designed specifically for CPA firms with seasonal workload pressure, project teams, and dual-signoff requirements.*
+### 🥈 Tier 2: Professional Accounting Practice Suite — ₱65,000 (Recommended Package)
+*Target: Tailored for CPA practices with peak tax filing deadlines, dual audit signoffs, and cash conversion tracking.*
 
-#### Why Upgrade from Tier 1 (+₱20,000 value):
-1. **Two-Stage Approval Workflow**: Senior Auditor / Manager signs off on staff availability first, followed by HR/Managing Partner confirmation.
-2. **Automated Email Notifications**: Real-time email alerts with 1-click quick-approve links for busy partners on the go.
-3. **Tax Season Leave Freeze (Blackout Dates)**: Configure custom lockout windows (e.g., March 15 to April 15 BIR filing peak) where leaves trigger managerial review warnings.
-4. **DOLE SIL Monetization & Carry-Over Engine**: Automatically computes unused leave cash conversions at year-end in compliance with Philippine labor standards.
-5. **Medical Certificate & Document Uploader**: Employees can attach sick leave doctor slips with secure in-app preview for HR.
-6. **Detailed Audit Trail**: Track timestamped records of every approval, adjustment, and cancellation for compliance transparency.
-7. **Delivery Timeline**: 3–4 weeks.
+#### What is Included in the ₱65,000 Live Build:
+1. **Two-Stage Approval Workflow**: Senior Audit Lead endorses staff availability first, followed by Managing Partner final confirmation.
+2. **Tax & Audit Season Blackout Warning**: Automated alerts when filing during March 15 – April 15 peak BIR tax filing windows.
+3. **Medical Certificate & Document Uploader**: In-app document preview for medical doctor slips, CPD seminar notices, and death certificates.
+4. **Engagement Team Overlap Checker**: Real-time team conflict detection to ensure client engagements always have adequate audit staff.
+5. **Annual SIL Cash Monetization Ledger**: Live computation of accrued SIL cash conversions for year-end financial reserve planning.
+6. **Payroll Leave Deduction CSV**: Clean export mapped for standard Philippine payroll deductions.
+7. **Comprehensive Audit Trail**: Timestamped and IP-logged records of every application, approval, and balance adjustment.
 
 ---
 
