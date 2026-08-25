@@ -42,9 +42,16 @@ $leaveReqStmt = $pdo->query("
 ");
 $leaveRequests = $leaveReqStmt->fetchAll();
 
-// Fetch upcoming holidays
-$holidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC LIMIT 6");
+// Fetch all Philippine official holidays for full annual DOLE view
+$allHolidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC");
+$allHolidays = $allHolidaysStmt->fetchAll();
+
+// Fetch upcoming holidays for dashboard preview
+$holidaysStmt = $pdo->query("SELECT * FROM holidays WHERE holiday_date >= date('now') ORDER BY holiday_date ASC LIMIT 6");
 $holidaysList = $holidaysStmt->fetchAll();
+if (empty($holidaysList)) {
+    $holidaysList = array_slice($allHolidays, 0, 6);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -355,12 +362,38 @@ $holidaysList = $holidaysStmt->fetchAll();
             </div>
           </div>
 
-          <div class="dashboard-card">
-            <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory Leave Entitlements</h3></div>
-            <div class="card-body">
-              <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle); margin-bottom:12px;">
-                <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
-                <p style="font-size:12px; color:var(--text-muted);">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+            <div class="dashboard-card">
+              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory Leave Entitlements</h3></div>
+              <div class="card-body">
+                <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle); margin-bottom:12px;">
+                  <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
+                  <p style="font-size:12px; color:var(--text-muted);">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
+                </div>
+                <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle); margin-bottom:12px;">
+                  <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Solo Parent Leave — 7 Days (RA 8972)</h4>
+                  <p style="font-size:12px; color:var(--text-muted);">Paid parental leave for solo parents with valid Solo Parent ID.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-head">
+                <h3><i data-lucide="calendar" style="color:var(--accent);"></i> Philippine Official Holidays 2026/2027</h3>
+                <span class="firm-badge" style="font-size:10.5px;"><?= count($allHolidays) ?> National Holidays</span>
+              </div>
+              <div class="card-body">
+                <div class="holiday-list" style="max-height: 480px; overflow-y: auto; padding-right: 4px;">
+                  <?php foreach ($allHolidays as $h): ?>
+                    <div class="holiday-item">
+                      <div class="holiday-info">
+                        <h5><?= htmlspecialchars($h['title']) ?></h5>
+                        <span><?= $h['holiday_date'] ?> &bull; <?= htmlspecialchars($h['description'] ?? 'PH Holiday') ?></span>
+                      </div>
+                      <span class="holiday-tag <?= strtolower($h['holiday_type']) ?>"><?= $h['holiday_type'] ?></span>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
               </div>
             </div>
           </div>

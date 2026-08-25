@@ -28,9 +28,16 @@ $leaveReqStmt = $pdo->prepare("
 $leaveReqStmt->execute([$user['id']]);
 $leaveRequests = $leaveReqStmt->fetchAll();
 
-// Fetch upcoming holidays
-$holidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC LIMIT 6");
+// Fetch all Philippine official holidays for full annual DOLE view
+$allHolidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC");
+$allHolidays = $allHolidaysStmt->fetchAll();
+
+// Fetch upcoming holidays for dashboard preview widget
+$holidaysStmt = $pdo->query("SELECT * FROM holidays WHERE holiday_date >= date('now') ORDER BY holiday_date ASC LIMIT 6");
 $holidaysList = $holidaysStmt->fetchAll();
+if (empty($holidaysList)) {
+    $holidaysList = array_slice($allHolidays, 0, 6);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -418,10 +425,13 @@ $holidaysList = $holidaysStmt->fetchAll();
             </div>
 
             <div class="dashboard-card">
-              <div class="card-head"><h3><i data-lucide="calendar" style="color:var(--accent);"></i> Philippine Official Holidays</h3></div>
+              <div class="card-head">
+                <h3><i data-lucide="calendar" style="color:var(--accent);"></i> Philippine Official Holidays 2026/2027</h3>
+                <span class="firm-badge" style="font-size:10.5px;"><?= count($allHolidays) ?> National Holidays</span>
+              </div>
               <div class="card-body">
-                <div class="holiday-list">
-                  <?php foreach ($holidaysList as $h): ?>
+                <div class="holiday-list" style="max-height: 480px; overflow-y: auto; padding-right: 4px;">
+                  <?php foreach ($allHolidays as $h): ?>
                     <div class="holiday-item">
                       <div class="holiday-info">
                         <h5><?= htmlspecialchars($h['title']) ?></h5>
