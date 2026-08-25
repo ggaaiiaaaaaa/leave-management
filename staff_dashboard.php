@@ -1,9 +1,8 @@
 <?php
 // staff_dashboard.php - Dedicated Staff CPA Self-Service Portal
 require_once __DIR__ . '/auth.php';
-requireLogin();
+$user = requireLogin();
 
-$user = getCurrentUser();
 $userRole = $user['role'];
 
 // Fetch user's personal leave balances

@@ -1,14 +1,13 @@
 <?php
 // admin_dashboard.php - Dedicated Managing Partner & HR Executive Dashboard
 require_once __DIR__ . '/auth.php';
-requireLogin();
+$user = requireLogin();
 
 if (!hasRole('admin')) {
     header('Location: staff_dashboard.php');
     exit;
 }
 
-$user = getCurrentUser();
 $userRole = $user['role'];
 
 // Fetch user's personal leave balances
