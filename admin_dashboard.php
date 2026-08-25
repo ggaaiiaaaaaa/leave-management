@@ -91,7 +91,7 @@ $allUsers = $allUsersStmt->fetchAll();
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Managing Partner & HR Portal | JTYeo CPA Accounting Office</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="lucide.js"></script>
   <!-- FullCalendar 5 CDN -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
@@ -743,6 +743,7 @@ $allUsers = $allUsersStmt->fetchAll();
     }
 
     if (window.lucide) lucide.createIcons();
+    document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
   </script>
 </body>
 </html>

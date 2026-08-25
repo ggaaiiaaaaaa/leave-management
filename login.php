@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | JTYeo CPA Accounting Office Leave Portal</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="lucide.js"></script>
   <style>
     .login-body {
       background: linear-gradient(135deg, #091728 0%, #0f2744 50%, #1e3e62 100%);

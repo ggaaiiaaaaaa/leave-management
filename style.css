@@ -569,6 +569,11 @@ body {
   justify-content: center;
 }
 
+.kpi-icon svg, .kpi-icon i {
+  width: 18px;
+  height: 18px;
+}
+
 .kpi-card.blue .kpi-icon { background: var(--accent-soft); color: var(--accent); }
 .kpi-card.green .kpi-icon { background: var(--success-soft); color: var(--success); }
 .kpi-card.amber .kpi-icon { background: var(--warning-soft); color: var(--warning); }
