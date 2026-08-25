@@ -91,26 +91,21 @@ if (empty($holidaysList)) {
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-category">Lead Reviewer Portal</div>
+        <div class="nav-category">Management</div>
         <a class="nav-item active" data-tab="approvals" onclick="switchTab('approvals')">
-          <i data-lucide="check-circle-2"></i>
-          <span>Review Approvals</span>
+          <i data-lucide="inbox"></i>
+          <span>Approvals Queue</span>
           <?php if ($pendingCount > 0): ?>
-            <span class="nav-badge" id="pendingApprovalsBadge"><?= $pendingCount ?></span>
+            <span class="nav-badge"><?= $pendingCount ?></span>
           <?php endif; ?>
         </a>
         <a class="nav-item" data-tab="my-portal" onclick="switchTab('my-portal')">
           <i data-lucide="layout-dashboard"></i>
-          <span>Team Oversight & Balances</span>
+          <span>My Balances & History</span>
         </a>
         <a class="nav-item" data-tab="team-calendar" onclick="switchTab('team-calendar')">
           <i data-lucide="calendar-days"></i>
           <span>Team Schedule & Calendar</span>
-        </a>
-        <div class="nav-category">Policies & Reference</div>
-        <a class="nav-item" data-tab="ph-holidays" onclick="switchTab('ph-holidays')">
-          <i data-lucide="scale"></i>
-          <span>Leave Policies & Holidays</span>
         </a>
       </nav>
     </aside>
@@ -361,93 +356,6 @@ if (empty($holidaysList)) {
                 <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
                 <div class="legend-chip"><span class="dot" style="background:#f59e0b;"></span> Pending Approval</div>
                 <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 4: LEAVE POLICIES & HOLIDAYS -->
-        <div id="tab-ph-holidays" class="tab-pane" style="display:none;">
-          <div class="page-header">
-            <div class="page-title">
-              <h1>Firm Leave Policies & Official Holidays</h1>
-              <p>Official statutory allowances, company benefits, and Philippine public holidays.</p>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
-            <div class="dashboard-card">
-              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Leave Guidelines & Allowances</h3></div>
-              <div class="card-body">
-                <div style="display:flex; flex-direction:column; gap:12px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
-                    <span class="badge badge-sil">Mandatory SIL</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Bereavement Leave — 3 to 5 Days</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Paid compassionate leave granted upon the passing of an immediate family member.</p>
-                    <span class="badge badge-approved">Firm Benefit</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">CPA Board Exam & CPD Study Leave</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Special leave for staff sitting for CPA licensure exams or attending mandatory BOA CPD seminars.</p>
-                    <span class="badge badge-vl">Professional Development</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Emergency / Calamity Leave</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Leave for natural calamities, flooding, or severe personal domestic emergencies.</p>
-                    <span class="badge badge-pending">Emergency Assistance</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Solo Parent Leave — 7 Days (RA 8972 / RA 11861)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Paid parental leave for solo parents with valid Solo Parent ID from DSWD/LGU.</p>
-                    <span class="badge badge-spl">Statutory Paid</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Maternity (105 Days) & Paternity Leave (7 Days)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">RA 11210 (105 days paid maternity for female staff) & RA 8187 (7 days paid paternity for married male staff).</p>
-                    <span class="badge badge-approved">Statutory Paid</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Magna Carta for Women — Up to 60 Days (RA 9710)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Special paid leave for gynecological surgery recovery.</p>
-                    <span class="badge badge-approved">Paid Leave</span>
-                  </div>
-
-                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
-                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">VAWC Leave — 10 Days (RA 9262)</h4>
-                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Paid leave for victims of violence against women and their children. Confidential.</p>
-                    <span class="badge badge-sil">Statutory Paid</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="dashboard-card">
-              <div class="card-head">
-                <h3><i data-lucide="calendar" style="color:var(--accent);"></i> Philippine Official Holidays 2026/2027</h3>
-                <span class="firm-badge" style="font-size:10.5px;"><?= count($allHolidays) ?> National Holidays</span>
-              </div>
-              <div class="card-body">
-                <div class="holiday-list" style="max-height: 480px; overflow-y: auto; padding-right: 4px;">
-                  <?php foreach ($allHolidays as $h): ?>
-                    <div class="holiday-item">
-                      <div class="holiday-info">
-                        <h5><?= htmlspecialchars($h['title']) ?></h5>
-                        <span><?= $h['holiday_date'] ?> &bull; <?= htmlspecialchars($h['description'] ?? 'PH Holiday') ?></span>
-                      </div>
-                      <span class="holiday-tag <?= strtolower($h['holiday_type']) ?>"><?= $h['holiday_type'] ?></span>
-                    </div>
-                  <?php endforeach; ?>
-                </div>
               </div>
             </div>
           </div>

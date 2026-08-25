@@ -533,7 +533,7 @@ function openTierModal() {
 }
 
 function openStatutoryInfo() {
-  switchTab('ph-holidays');
+  switchTab('team-calendar');
 }
 
 function openTierPitchScript() {
