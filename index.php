@@ -17,11 +17,7 @@ $role = $user['role'] ?? 'staff';
 
 if ($role === 'admin') {
     header('Location: admin_dashboard.php');
-    exit;
-} elseif ($role === 'supervisor') {
-    header('Location: supervisor_dashboard.php');
-    exit;
 } else {
     header('Location: staff_dashboard.php');
-    exit;
 }
+exit;

@@ -4,7 +4,7 @@ require_once __DIR__ . '/auth.php';
 requireLogin();
 
 if (!hasRole('admin')) {
-    header('Location: supervisor_dashboard.php');
+    header('Location: staff_dashboard.php');
     exit;
 }
 

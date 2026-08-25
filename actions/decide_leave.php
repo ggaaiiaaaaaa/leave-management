@@ -5,8 +5,8 @@ requireLogin();
 
 header('Content-Type: application/json');
 
-if (!hasRole(['supervisor', 'admin'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized: Only Senior Leads and Partners can decide on leave requests.']);
+if (!hasRole('admin')) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized: Only Managing Partner can decide on leave requests.']);
     exit;
 }
 
