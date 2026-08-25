@@ -91,7 +91,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
           <div class="role-switcher-container">
             <span class="role-switcher-label">Switch View:</span>
             <a href="actions/switch_role.php?role=staff" class="role-btn active">Staff CPA</a>
-            <a href="actions/switch_role.php?role=supervisor" class="role-btn">Senior Lead</a>
             <a href="actions/switch_role.php?role=admin" class="role-btn">Partner / HR</a>
           </div>
 

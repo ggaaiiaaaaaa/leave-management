@@ -213,14 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <span class="role-pill">Staff View</span>
           </button>
 
-          <button type="submit" name="quick_login" value="mark@jtyeocpa.ph" class="quick-btn">
-            <div>
-              <div><strong>Mark Castillo, CPA</strong></div>
-              <div style="font-size:11px; color:var(--text-muted);">Senior Audit Lead</div>
-            </div>
-            <span class="role-pill">Supervisor</span>
-          </button>
-
           <button type="submit" name="quick_login" value="admin@jtyeocpa.ph" class="quick-btn">
             <div>
               <div><strong>Atty. Jonathan Yeo, CPA</strong></div>

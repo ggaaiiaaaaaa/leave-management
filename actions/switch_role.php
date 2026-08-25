@@ -1,12 +1,10 @@
 <?php
-// actions/switch_role.php - Instant demo role switcher for Saturday presentation
+// actions/switch_role.php - Instant demo role switcher
 require_once __DIR__ . '/../config/db.php';
 
 $role = $_GET['role'] ?? 'staff';
 
-$email = 'jessica@jtyeocpa.ph';
-if ($role === 'supervisor') $email = 'mark@jtyeocpa.ph';
-if ($role === 'admin') $email = 'admin@jtyeocpa.ph';
+$email = ($role === 'admin') ? 'admin@jtyeocpa.ph' : 'jessica@jtyeocpa.ph';
 
 $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
 $stmt->execute([$email]);
@@ -23,8 +21,6 @@ if ($user) {
 
 if ($role === 'admin') {
     header('Location: ../admin_dashboard.php');
-} elseif ($role === 'supervisor') {
-    header('Location: ../supervisor_dashboard.php');
 } else {
     header('Location: ../staff_dashboard.php');
 }

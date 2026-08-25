@@ -90,28 +90,14 @@ try {
         $stmt->execute(['Jessica Alcantara, CPA', 'jessica@jtyeocpa.ph', $defaultPassword, 'staff', 'Taxation & Compliance', 'Senior Tax Associate', 'JA']);
         $jessicaId = $pdo->lastInsertId();
 
-        // 2. Supervisor / Audit Lead
-        $stmt->execute(['Mark Castillo, CPA', 'mark@jtyeocpa.ph', $defaultPassword, 'supervisor', 'Audit & Assurance', 'Senior Audit Lead / Reviewer', 'MC']);
-        $markId = $pdo->lastInsertId();
-
-        // 3. Managing Partner & HR Admin
+        // 2. Managing Partner & HR Admin
         $stmt->execute(['Atty. Jonathan Yeo, CPA', 'admin@jtyeocpa.ph', $defaultPassword, 'admin', 'Management & HR', 'Managing Partner & HR Head', 'JY']);
         $adminId = $pdo->lastInsertId();
-
-        // 4. Additional Staff
-        $stmt->execute(['Elena Lim', 'elena@jtyeocpa.ph', $defaultPassword, 'staff', 'Taxation & Compliance', 'Junior Tax Associate', 'EL']);
-        $elenaId = $pdo->lastInsertId();
-
-        $stmt->execute(['Rico Tolentino', 'rico@jtyeocpa.ph', $defaultPassword, 'staff', 'Bookkeeping & Advisory', 'Bookkeeper', 'RT']);
-        $ricoId = $pdo->lastInsertId();
 
         // Seed Default Leave Balances (Full annual entitlements)
         $balStmt = $pdo->prepare("INSERT INTO leave_balances (user_id, sil_balance, vl_balance, sl_balance, solo_parent_balance) VALUES (?, ?, ?, ?, ?)");
         $balStmt->execute([$jessicaId, 5.0, 12.0, 10.0, 7.0]);
-        $balStmt->execute([$markId, 5.0, 12.0, 10.0, 0.0]);
         $balStmt->execute([$adminId, 5.0, 12.0, 10.0, 0.0]);
-        $balStmt->execute([$elenaId, 5.0, 12.0, 10.0, 0.0]);
-        $balStmt->execute([$ricoId, 5.0, 12.0, 10.0, 0.0]);
 
         // Seed Philippine Holidays
         $holStmt = $pdo->prepare("INSERT INTO holidays (title, holiday_date, holiday_type, description) VALUES (?, ?, ?, ?)");
