@@ -378,6 +378,8 @@ $holidaysList = $holidaysStmt->fetchAll();
                 <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave (SL)</div>
                 <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> DOLE SIL (Art. 95)</div>
                 <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
+                <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
+              </div>
             </div>
           </div>
         </div>
