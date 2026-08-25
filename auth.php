@@ -9,7 +9,13 @@ function isLoggedIn() {
 
 function requireLogin() {
     if (!isLoggedIn()) {
-        header('Location: login.php');
+        if (str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/actions/')) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthenticated']);
+            exit;
+        }
+        $root = (str_contains($_SERVER['REQUEST_URI'] ?? '', '/leave-jtyeo/')) ? '/leave-jtyeo/login.php' : 'login.php';
+        header("Location: {$root}");
         exit;
     }
 }

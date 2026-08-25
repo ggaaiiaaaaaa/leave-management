@@ -21,5 +21,11 @@ if ($user) {
     $_SESSION['avatar'] = $user['avatar_initials'];
 }
 
-header('Location: ../index.php');
+if ($role === 'admin') {
+    header('Location: ../admin_dashboard.php');
+} elseif ($role === 'supervisor') {
+    header('Location: ../supervisor_dashboard.php');
+} else {
+    header('Location: ../staff_dashboard.php');
+}
 exit;
