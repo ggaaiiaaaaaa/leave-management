@@ -91,7 +91,7 @@ if (empty($holidaysList)) {
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-category">Management</div>
+        <div class="nav-category">Team Engagement</div>
         <a class="nav-item active" data-tab="approvals" onclick="switchTab('approvals')">
           <i data-lucide="inbox"></i>
           <span>Approvals Queue</span>
@@ -102,10 +102,6 @@ if (empty($holidaysList)) {
         <a class="nav-item" data-tab="my-portal" onclick="switchTab('my-portal')">
           <i data-lucide="layout-dashboard"></i>
           <span>My Balances & History</span>
-        </a>
-        <a class="nav-item" data-tab="team-calendar" onclick="switchTab('team-calendar')">
-          <i data-lucide="calendar-days"></i>
-          <span>Team Schedule & Calendar</span>
         </a>
       </nav>
     </aside>
@@ -189,13 +185,6 @@ if (empty($holidaysList)) {
                         <td>
                           <span style="font-weight:700; color:var(--primary); font-family:monospace;"><?= $app['ref_no'] ?></span>
                           <div style="font-size:11px; color:var(--text-light);"><?= date('M d, Y', strtotime($app['created_at'])) ?></div>
-                          <?php if (!empty($app['attachment_path'])): ?>
-                            <div style="margin-top:4px;">
-                              <span class="doc-chip" onclick="openDocPreview('<?= htmlspecialchars($app['attachment_path']) ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>')">
-                                <i data-lucide="paperclip" style="width:11px;height:11px;"></i> Doc Attached
-                              </span>
-                            </div>
-                          <?php endif; ?>
                         </td>
                         <td>
                           <div style="font-weight:600;"><?= htmlspecialchars($app['employee_name']) ?></div>
@@ -217,7 +206,7 @@ if (empty($holidaysList)) {
                           </div>
                         </td>
                         <td>
-                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $app['ref_no'] ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>', '<?= $app['days_count'] ?>', '<?= addslashes($app['department']) ?>', '<?= addslashes($app['attachment_path'] ?? '') ?>')">
+                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $app['ref_no'] ?>', '<?= addslashes($app['employee_name']) ?>', '<?= addslashes($app['leave_type_label']) ?>', '<?= $app['days_count'] ?>', '<?= addslashes($app['department']) ?>')">
                             <i data-lucide="check-square" style="width:13px;height:13px;"></i>
                             <span>Review & Decide</span>
                           </button>
@@ -260,7 +249,7 @@ if (empty($holidaysList)) {
             <div class="kpi-card blue">
               <div class="kpi-header"><span class="kpi-label">Service Incentive (SIL)</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
               <div class="kpi-value-row"><span class="kpi-value"><?= number_format($silBalance, 1) ?></span><span class="kpi-sub">/ 5.0 Days</span></div>
-              <div class="kpi-footer positive"><i data-lucide="info" style="width:14px;height:14px;"></i><span>Year-End Cash Convertible</span></div>
+              <div class="kpi-footer positive"><i data-lucide="info" style="width:14px;height:14px;"></i><span>DOLE Art. 95</span></div>
             </div>
 
             <div class="kpi-card green">
@@ -325,7 +314,7 @@ if (empty($holidaysList)) {
                           <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
                         </td>
                         <td>
-                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>', '<?= addslashes($req['attachment_path'] ?? '') ?>')">
+                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
                             <i data-lucide="eye" style="width:14px;height:14px;"></i>
                           </button>
                         </td>
@@ -334,37 +323,6 @@ if (empty($holidaysList)) {
                   <?php endif; ?>
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 3: TEAM CALENDAR & SCHEDULE -->
-        <div id="tab-team-calendar" class="tab-pane" style="display:none;">
-          <div class="page-header">
-            <div class="page-title">
-              <h1>Firm Team Roster & Interactive Leave Calendar</h1>
-              <p>Visual monthly schedule of staff leaves, departmental engagement coverage, and official holidays.</p>
-            </div>
-            <button class="btn-primary" onclick="openModal('applyModal')">
-              <i data-lucide="calendar-plus"></i> File Leave Request
-            </button>
-          </div>
-
-          <div class="dashboard-card" style="margin-bottom:24px;">
-            <div class="card-head">
-              <h3><i data-lucide="calendar-days" style="color:var(--accent);"></i> Firm Leave & Absence Calendar</h3>
-              <span class="firm-badge" style="font-size:10.5px;">Live Database Sync</span>
-            </div>
-            <div class="card-body">
-              <div id="leaveCalendar"></div>
-              <div class="calendar-legend-bar">
-                <div class="legend-chip"><span class="dot" style="background:#059669;"></span> Vacation Leave (VL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave (SL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> Service Incentive (SIL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
-                <div class="legend-chip"><span class="dot" style="background:#f59e0b;"></span> Pending Approval</div>
-                <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
-              </div>
             </div>
           </div>
         </div>
@@ -382,18 +340,12 @@ if (empty($holidaysList)) {
       </div>
       <div class="modal-body">
         <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:14px;">
-          <div style="display:flex; justify-content:space-between;">
-            <div>
-              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Application Reference</div>
-              <div style="font-size:15px; font-weight:800; color:var(--primary); font-family:monospace;" id="decModalRef">LR-2026-XXX</div>
-            </div>
-            <div id="decModalDocBadge"></div>
-          </div>
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Application Reference</div>
+          <div style="font-size:15px; font-weight:800; color:var(--primary); font-family:monospace;" id="decModalRef">LR-2026-XXX</div>
           <div style="font-size:13px; margin-top:8px;"><strong>Staff:</strong> <span id="decModalStaff"></span></div>
           <div style="font-size:13px;"><strong>Category:</strong> <span id="decModalType"></span> (<span id="decModalDays"></span> working day/s)</div>
         </div>
 
-        <!-- ₱65k Practice Feature: Engagement Overlap & Coverage Checker -->
         <div class="overlap-banner safe" id="decModalOverlap">
           <i data-lucide="shield-check"></i>
           <div><strong>Engagement Coverage Confirmed:</strong> No other members in <span id="decModalDept">Practice Team</span> have overlapping leaves.</div>
@@ -430,7 +382,6 @@ if (empty($holidaysList)) {
       </div>
       <form id="phpLeaveForm" onsubmit="handleBackendLeaveSubmit(event)">
         <div class="modal-body">
-          <!-- Peak Season Warning Banner -->
           <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
 
           <div class="form-grid">
@@ -484,12 +435,6 @@ if (empty($holidaysList)) {
           <div class="form-group" style="margin-top:14px;">
             <label class="form-label">Reason / Client Coverage <span class="req">*</span></label>
             <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason and engagement coverage details..." required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Supporting Document / Medical Slip (Optional)</label>
-            <input type="file" name="attachment" id="applyAttachment" class="form-input" style="padding:6px;">
-            <small style="color:var(--text-muted); font-size:11px;">*Upload doctor slip for SL > 1 day or proof of CPD seminar / bereavement.</small>
           </div>
         </div>
         <div class="modal-footer">
@@ -546,46 +491,12 @@ if (empty($holidaysList)) {
           <div id="dtlReason" style="font-size:12.5px; color:var(--text-main); line-height:1.5;"></div>
         </div>
 
-        <div id="dtlAttachmentSection" style="margin-bottom:14px; display:none;">
-          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Attached Supporting Verification:</div>
-          <a href="javascript:void(0)" id="dtlDocLink" class="doc-chip" style="padding:6px 12px; font-size:12px;">
-            <i data-lucide="file-text" style="width:14px;height:14px;"></i>
-            <span id="dtlDocName">View Attached Medical Slip</span>
-          </a>
-        </div>
-
         <div id="dtlApproverSection" style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
           <strong>Managerial Signoff:</strong> <span id="dtlApprover" style="color:var(--text-main); font-weight:600;"></span>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-primary" onclick="closeModal('detailsModal')">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DOCUMENT PREVIEW MODAL -->
-  <div class="modal-backdrop" id="docModal">
-    <div class="modal-window" style="max-width:550px;">
-      <div class="modal-header">
-        <h3><i data-lucide="file-text"></i> Attached Medical / Supporting Document</h3>
-        <button class="btn-close-modal" onclick="closeModal('docModal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div style="border:2px dashed var(--border-strong); border-radius:var(--radius-md); padding:24px; text-align:center; background:var(--bg-subtle);">
-          <i data-lucide="file-check-2" style="width:48px;height:48px;color:var(--success);margin:0 auto 12px;display:block;"></i>
-          <h4 id="docModalTitle" style="font-size:15px; color:var(--primary); margin-bottom:6px;">Medical Certificate Verification</h4>
-          <p id="docModalStaff" style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;"></p>
-          <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:left; font-size:12px; line-height:1.6;">
-            <strong>Clinic:</strong> St. Luke's Medical Clinic &bull; Attending: Dr. Roberto Santos, MD<br>
-            <strong>Diagnosis:</strong> Acute viral illness / respiratory infection with fever.<br>
-            <strong>Recommendation:</strong> Medically excused from work for 2 consecutive days. Fit to resume engagement duties thereafter.<br>
-            <strong>Status:</strong> <span class="badge badge-approved" style="font-size:10px;">Verified Official Slip</span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="closeModal('docModal')">Close Preview</button>
       </div>
     </div>
   </div>
@@ -662,7 +573,6 @@ if (empty($holidaysList)) {
       const end = new Date(endStr);
       if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
       
-      // Peak Tax Season Blackout Alert
       const taxNotice = document.getElementById('taxSeasonNotice');
       if (taxNotice) {
         const m = start.getMonth() + 1;
@@ -688,25 +598,6 @@ if (empty($holidaysList)) {
     }
     calculateWorkingDays();
 
-    let calendar = null;
-    function initCalendar() {
-      const calendarEl = document.getElementById('leaveCalendar');
-      if (!calendarEl || calendar) return;
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-        events: 'actions/get_calendar_events.php',
-        height: 'auto',
-        firstDay: 1,
-        eventClick: function(info) {
-          const props = info.event.extendedProps;
-          if (props.is_holiday) { alert(`🇵🇭 PH Public Holiday: ${info.event.title}`); return; }
-          alert(`🌴 Leave Application\nStaff: ${props.employee}\nType: ${props.leave_type}\nDays: ${props.days}d\nStatus: ${props.status}`);
-        }
-      });
-      calendar.render();
-    }
-
     function switchTab(tabId) {
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.classList.remove('active');
@@ -716,10 +607,6 @@ if (empty($holidaysList)) {
       const activePane = document.getElementById(`tab-${tabId}`);
       if (activePane) activePane.style.display = 'block';
       if (window.lucide) lucide.createIcons();
-      if (tabId === 'team-calendar') {
-        if (!calendar) setTimeout(initCalendar, 50);
-        else setTimeout(() => { calendar.updateSize(); calendar.refetchEvents(); }, 50);
-      }
     }
 
     function openModal(id) { document.getElementById(id).classList.add('show'); }
@@ -735,7 +622,7 @@ if (empty($holidaysList)) {
     }
 
     let currentDecisionRef = '';
-    function openDecisionModal(ref, emp, type, days, dept, attachment) {
+    function openDecisionModal(ref, emp, type, days, dept) {
       currentDecisionRef = ref;
       document.getElementById('decModalRef').innerText = ref;
       document.getElementById('decModalStaff').innerText = emp;
@@ -743,13 +630,6 @@ if (empty($holidaysList)) {
       document.getElementById('decModalDays').innerText = days;
       document.getElementById('decModalDept').innerText = dept || 'Practice Team';
       document.getElementById('decModalNote').value = '';
-
-      const docBadge = document.getElementById('decModalDocBadge');
-      if (attachment) {
-        docBadge.innerHTML = `<span class="doc-chip" onclick="openDocPreview('${attachment}', '${emp}', '${type}')"><i data-lucide="paperclip" style="width:12px;height:12px;"></i> View Attached Doc</span>`;
-      } else {
-        docBadge.innerHTML = '';
-      }
 
       openModal('decisionModal');
       if (window.lucide) lucide.createIcons();
@@ -799,7 +679,7 @@ if (empty($holidaysList)) {
       }
     }
 
-    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason, attachment) {
+    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason) {
       document.getElementById('dtlRef').innerText = ref;
       document.getElementById('dtlStaff').innerText = emp;
       document.getElementById('dtlType').innerText = type;
@@ -834,210 +714,8 @@ if (empty($holidaysList)) {
         document.getElementById('step3Circle').innerText = '3';
       }
 
-      const attSec = document.getElementById('dtlAttachmentSection');
-      if (attachment) {
-        attSec.style.display = 'block';
-        document.getElementById('dtlDocLink').onclick = () => openDocPreview(attachment, emp, type);
-      } else {
-        attSec.style.display = 'none';
-      }
-
       openModal('detailsModal');
       if (window.lucide) lucide.createIcons();
-    }
-
-    function openDocPreview(path, emp, type) {
-      document.getElementById('docModalTitle').innerText = `${type} Supporting Verification`;
-      document.getElementById('docModalStaff').innerText = `Submitted by: ${emp}`;
-      openModal('docModal');
-      if (window.lucide) lucide.createIcons();
-    }
-
-    if (window.lucide) lucide.createIcons();
-  </script>
-</body>
-</html>ate();
-        const options = { timeZone: 'Asia/Manila', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short', month: 'short', day: 'numeric' };
-        clockEl.innerText = 'PHT: ' + now.toLocaleString('en-US', options);
-      };
-      update();
-      setInterval(update, 1000);
-    }
-    initLiveClock();
-
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('applyStartDate').value = today;
-    document.getElementById('applyEndDate').value = today;
-
-    const userBalances = {
-      'SIL': <?= (float)$silBalance ?>,
-      'VL': <?= (float)$vlBalance ?>,
-      'SL': <?= (float)$slBalance ?>,
-      'SoloParent': <?= (float)$splBalance ?>
-    };
-
-    function calculateWorkingDays() {
-      const startStr = document.getElementById('applyStartDate').value;
-      const endStr = document.getElementById('applyEndDate').value;
-      const duration = document.getElementById('applyDurationMode').value;
-      const leaveType = document.getElementById('applyLeaveType').value;
-      
-      const balEl = document.getElementById('availableBalancePreview');
-      if (balEl) {
-        if (userBalances[leaveType] !== undefined) {
-          balEl.innerText = `${userBalances[leaveType].toFixed(1)} Days`;
-          balEl.style.color = 'var(--accent)';
-        } else if (leaveType === 'Bereavement') {
-          balEl.innerText = '3.0 - 5.0 Days (Paid)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Study') {
-          balEl.innerText = 'CPA Exam / CPD Entitlement';
-          balEl.style.color = 'var(--accent)';
-        } else if (leaveType === 'Emergency') {
-          balEl.innerText = 'Calamity Assistance';
-          balEl.style.color = 'var(--warning)';
-        } else if (leaveType === 'Paternity') {
-          balEl.innerText = '7.0 Days (RA 8187)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Maternity') {
-          balEl.innerText = '105 Days (RA 11210)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'MagnaCarta') {
-          balEl.innerText = 'Up to 60 Days (RA 9710)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'VAWC') {
-          balEl.innerText = '10 Days (RA 9262)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Unpaid') {
-          balEl.innerText = 'Leave Without Pay';
-          balEl.style.color = 'var(--text-muted)';
-        } else {
-          balEl.innerText = 'Special Benefit';
-          balEl.style.color = 'var(--accent)';
-        }
-      }
-
-      if (!startStr || !endStr) return;
-      const start = new Date(startStr);
-      const end = new Date(endStr);
-      if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
-      let days = 0, cur = new Date(start);
-      while (cur <= end) {
-        const dow = cur.getDay();
-        if (dow !== 0 && dow !== 6) days++;
-        cur.setDate(cur.getDate() + 1);
-      }
-      if (duration.startsWith('half')) days = 0.5;
-      document.getElementById('computedDaysPreview').innerText = `${days} Working Day(s)`;
-    }
-    calculateWorkingDays();
-
-    document.getElementById('applyLeaveType').addEventListener('change', calculateWorkingDays);
-    document.getElementById('applyDurationMode').addEventListener('change', calculateWorkingDays);
-    document.getElementById('applyStartDate').addEventListener('change', calculateWorkingDays);
-    document.getElementById('applyEndDate').addEventListener('change', calculateWorkingDays);
-
-    let calendar = null;
-    function initCalendar() {
-      const calendarEl = document.getElementById('leaveCalendar');
-      if (!calendarEl || calendar) return;
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-        events: 'actions/get_calendar_events.php',
-        height: 'auto',
-        firstDay: 1,
-        eventClick: function(info) {
-          const props = info.event.extendedProps;
-          if (props.is_holiday) { alert(`🇵🇭 PH Holiday: ${info.event.title}`); return; }
-          alert(`🌴 Leave Application\nStaff: ${props.employee}\nType: ${props.leave_type}\nDays: ${props.days}d\nStatus: ${props.status}`);
-        }
-      });
-      calendar.render();
-    }
-
-    function switchTab(tabId) {
-      document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.getAttribute('data-tab') === tabId) item.classList.add('active');
-      });
-      document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
-      const activePane = document.getElementById(`tab-${tabId}`);
-      if (activePane) activePane.style.display = 'block';
-      if (window.lucide) lucide.createIcons();
-      if (tabId === 'team-calendar') {
-        if (!calendar) setTimeout(initCalendar, 50);
-        else setTimeout(() => { calendar.updateSize(); calendar.refetchEvents(); }, 50);
-      }
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('show'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-
-    function showToast(msg, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.innerHTML = `<div style="font-size:13px; font-weight:600;">${msg}</div>`;
-      container.appendChild(toast);
-      setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; setTimeout(() => toast.remove(), 300); }, 3500);
-    }
-
-    let currentDecRef = '';
-    function openDecisionModal(refNo, empName, leaveType, days, preferredDecision) {
-      currentDecRef = refNo;
-      document.getElementById('decModalRef').innerText = refNo;
-      document.getElementById('decModalStaff').innerText = empName;
-      document.getElementById('decModalType').innerText = leaveType;
-      document.getElementById('decModalDays').innerText = days;
-      document.getElementById('decModalNote').value = '';
-      openModal('decisionModal');
-    }
-
-    async function executeDecisionWithNote(decision) {
-      const note = document.getElementById('decModalNote').value.trim();
-      try {
-        const res = await fetch('actions/decide_leave.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ref_no: currentDecRef, decision: decision, reason: note })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast(data.message, 'success');
-          closeModal('decisionModal');
-          setTimeout(() => window.location.reload(), 600);
-        } else {
-          showToast(data.message || 'Error recording decision.', 'error');
-        }
-      } catch (err) {
-        showToast('Network error while recording decision.', 'error');
-      }
-    }
-
-    async function handleBackendLeaveSubmit(e) {
-      e.preventDefault();
-      const form = document.getElementById('phpLeaveForm');
-      const formData = new FormData(form);
-      try {
-        const res = await fetch('actions/apply_leave.php', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success) {
-          showToast(data.message, 'success');
-          closeModal('applyModal');
-          setTimeout(() => window.location.reload(), 800);
-        } else {
-          showToast(data.message || 'Error submitting leave', 'error');
-        }
-      } catch (err) {
-        showToast('Network error while saving leave.', 'error');
-      }
-    }
-
-    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason) {
-      let msg = `Leave Reference: ${ref}\nStaff: ${emp}\nType: ${type} (${days} days)\nDates: ${start} to ${end}\nReason: ${reason}\nStatus: ${status}\nSignoff: ${approver}`;
-      if (rejectReason) msg += `\nDecision Note: ${rejectReason}`;
-      alert(msg);
     }
 
     if (window.lucide) lucide.createIcons();

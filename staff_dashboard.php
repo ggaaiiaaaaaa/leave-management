@@ -66,14 +66,10 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-category">My Workspace</div>
+        <div class="nav-category">Self-Service</div>
         <a class="nav-item active" data-tab="my-portal" onclick="switchTab('my-portal')">
           <i data-lucide="layout-dashboard"></i>
           <span>My Balances & Leaves</span>
-        </a>
-        <a class="nav-item" data-tab="team-calendar" onclick="switchTab('team-calendar')">
-          <i data-lucide="calendar-days"></i>
-          <span>Team Roster & Calendar</span>
         </a>
       </nav>
     </aside>
@@ -142,8 +138,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                 <span class="kpi-sub">/ 5.0 Days</span>
               </div>
               <div class="kpi-footer positive">
-                <i data-lucide="info" style="width:14px;height:14px;"></i>
-                <span>Year-End Cash Convertible</span>
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                <span>DOLE Art. 95</span>
               </div>
             </div>
 
@@ -157,12 +153,12 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                 <span class="kpi-sub">/ 12.0 Days</span>
               </div>
               <div class="kpi-footer positive">
-                <i data-lucide="check" style="width:14px;height:14px;"></i>
+                <i data-lucide="check" style="width: 14px; height: 14px;"></i>
                 <span>Company Benefit</span>
               </div>
             </div>
 
-            <div class="kpi-card amber">
+            <div class="kpi-card purple">
               <div class="kpi-header">
                 <span class="kpi-label">Sick Leave (SL)</span>
                 <div class="kpi-icon"><i data-lucide="heart-pulse"></i></div>
@@ -172,41 +168,41 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                 <span class="kpi-sub">/ 10.0 Days</span>
               </div>
               <div class="kpi-footer neutral">
-                <i data-lucide="file-text" style="width:14px;height:14px;"></i>
-                <span>Med Cert for >2 consecutive days</span>
+                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
+                <span>Medical Policy</span>
               </div>
             </div>
 
-            <div class="kpi-card purple">
+            <div class="kpi-card amber">
               <div class="kpi-header">
-                <span class="kpi-label">Special Statutory Leaves</span>
-                <div class="kpi-icon"><i data-lucide="sparkle"></i></div>
+                <span class="kpi-label">Solo Parent Leave</span>
+                <div class="kpi-icon"><i data-lucide="user-check"></i></div>
               </div>
               <div class="kpi-value-row">
-                <span class="kpi-value">Active</span>
-                <span class="kpi-sub">On-Demand</span>
+                <span class="kpi-value"><?= number_format($splBalance, 1) ?></span>
+                <span class="kpi-sub">/ 7.0 Days</span>
               </div>
               <div class="kpi-footer neutral">
-                <i data-lucide="scale" style="width:14px;height:14px;"></i>
-                <span>Solo Parent, Magna Carta, VAWC</span>
+                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                <span>RA 8972 Eligible</span>
               </div>
             </div>
           </div>
 
-          <!-- Leave Requests Table Card -->
+          <!-- Leave History Table Card -->
           <div class="dashboard-card">
             <div class="card-head">
-              <h3><i data-lucide="clock" style="color:var(--accent);"></i> My Submitted Leave Applications</h3>
+              <h3><i data-lucide="clock" style="color:var(--accent);"></i> My Submitted Leave History</h3>
             </div>
             <div class="table-responsive">
               <table class="custom-table">
                 <thead>
                   <tr>
-                    <th>Category</th>
-                    <th>Dates & Duration</th>
-                    <th>Reason / Client Coverage</th>
+                    <th>Leave Category</th>
+                    <th>Requested Dates</th>
+                    <th>Reason / Engagement Details</th>
                     <th>Status</th>
-                    <th>Signoff Details</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,13 +219,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                         <td>
                           <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
                           <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
-                          <?php if (!empty($req['attachment_path'])): ?>
-                            <div style="margin-top:4px;">
-                              <span class="doc-chip" onclick="openDocPreview('<?= htmlspecialchars($req['attachment_path']) ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>')">
-                                <i data-lucide="paperclip" style="width:11px;height:11px;"></i> Doc Attached
-                              </span>
-                            </div>
-                          <?php endif; ?>
                         </td>
                         <td>
                           <div style="font-weight:600;"><?= $req['start_date'] ?> <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
@@ -250,7 +239,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                           <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
                         </td>
                         <td>
-                          <button class="btn-icon" title="View Dual Signoff Stepper & Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>', '<?= addslashes($req['attachment_path'] ?? '') ?>')">
+                          <button class="btn-icon" title="View Dual Signoff Stepper & Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
                             <i data-lucide="eye" style="width:14px;height:14px;"></i>
                           </button>
                         </td>
@@ -259,38 +248,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                   <?php endif; ?>
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 2: TEAM CALENDAR & ROSTER -->
-        <div id="tab-team-calendar" class="tab-pane" style="display:none;">
-          <div class="page-header">
-            <div class="page-title">
-              <h1>Firm Team Roster & Interactive Leave Calendar</h1>
-              <p>Check team availability to avoid engagement scheduling conflicts.</p>
-            </div>
-            <button class="btn-primary" onclick="openModal('applyModal')">
-              <i data-lucide="calendar-plus"></i> File Leave Request
-            </button>
-          </div>
-
-          <!-- Calendar Card -->
-          <div class="dashboard-card" style="margin-bottom: 24px;">
-            <div class="card-head">
-              <h3><i data-lucide="calendar-days" style="color:var(--accent);"></i> Firm Leave & Absence Calendar</h3>
-              <span class="firm-badge" style="font-size:10.5px;">Live Database Sync</span>
-            </div>
-            <div class="card-body">
-              <div id="leaveCalendar"></div>
-
-              <div class="calendar-legend-bar">
-                <div class="legend-chip"><span class="dot" style="background:#059669;"></span> Vacation Leave (VL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave (SL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#4338ca;"></span> Service Incentive (SIL)</div>
-                <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent / Special</div>
-                <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> 🇵🇭 Philippine Public Holiday</div>
-              </div>
             </div>
           </div>
         </div>
@@ -308,7 +265,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       </div>
       <form id="phpLeaveForm" onsubmit="handleBackendLeaveSubmit(event)">
         <div class="modal-body">
-          <!-- Peak Season Warning Banner -->
           <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
 
           <div class="form-grid">
@@ -318,15 +274,15 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                 <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
-                <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
+                <option value="Bereavement">Bereavement Leave</option>
                 <option value="Emergency">Emergency / Calamity Leave</option>
                 <option value="Study">CPA Board Exam / CPD Study Leave</option>
-                <option value="SoloParent">Solo Parent Leave (RA 8972 / RA 11861 - 7 days)</option>
-                <option value="Paternity">Paternity Leave (RA 8187 - 7 days)</option>
-                <option value="Maternity">Maternity Leave (RA 11210 - 105 days)</option>
+                <option value="SoloParent">Solo Parent Leave (RA 8972)</option>
+                <option value="Paternity">Paternity Leave (RA 8187)</option>
+                <option value="Maternity">Maternity Leave (RA 11210)</option>
                 <option value="MagnaCarta">Magna Carta of Women (RA 9710)</option>
-                <option value="VAWC">VAWC Leave (RA 9262 - 10 days)</option>
-                <option value="Unpaid">Leave Without Pay (LWOP / Unpaid)</option>
+                <option value="VAWC">VAWC Leave (RA 9262)</option>
+                <option value="Unpaid">Leave Without Pay (LWOP)</option>
               </select>
             </div>
 
@@ -357,21 +313,11 @@ $leaveRequests = $leaveReqStmt->fetchAll();
               <div class="calc-label">Total Working Days:</div>
               <div class="calc-result" id="computedDaysPreview">1.0 Working Day</div>
             </div>
-            <div style="text-align:right;">
-              <div class="calc-label">Available Balance:</div>
-              <div class="calc-result" id="availableBalancePreview" style="color:var(--accent);"><?= number_format($vlBalance, 1) ?> Days</div>
-            </div>
           </div>
 
           <div class="form-group" style="margin-top:16px;">
             <label class="form-label">Reason / Client Engagement Coverage <span class="req">*</span></label>
             <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason and client engagement coverage details..." required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Supporting Document / Medical Slip (Optional)</label>
-            <input type="file" name="attachment" id="applyAttachment" class="form-input" style="padding:6px;">
-            <small style="color:var(--text-muted); font-size:11px;">*Upload doctor slip for SL > 1 day, death cert for Bereavement, or CPD event notice.</small>
           </div>
         </div>
         <div class="modal-footer">
@@ -382,7 +328,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
     </div>
   </div>
 
-  <!-- INTERACTIVE DETAILS & 2-STAGE SIGN-OFF MODAL -->
+  <!-- DETAILS MODAL -->
   <div class="modal-backdrop" id="detailsModal">
     <div class="modal-window">
       <div class="modal-header">
@@ -394,7 +340,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
               <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference Number</div>
-              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">LR-2026-XXX</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef"></div>
             </div>
             <div id="dtlStatusBadge"></div>
           </div>
@@ -406,34 +352,16 @@ $leaveRequests = $leaveReqStmt->fetchAll();
           </div>
         </div>
 
-        <!-- 3-Stage Dual Signoff Stepper -->
         <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Dual Approval & Sign-Off Workflow:</div>
         <div class="stepper-container" id="dtlStepper">
-          <div class="step-item completed" id="step1">
-            <div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div>
-            <div class="step-label">1. Staff Filed</div>
-          </div>
-          <div class="step-item" id="step2">
-            <div class="step-circle" id="step2Circle">2</div>
-            <div class="step-label">2. Lead Endorsement</div>
-          </div>
-          <div class="step-item" id="step3">
-            <div class="step-circle" id="step3Circle">3</div>
-            <div class="step-label">3. Partner Signoff</div>
-          </div>
+          <div class="step-item completed" id="step1"><div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div><div class="step-label">1. Staff Filed</div></div>
+          <div class="step-item" id="step2"><div class="step-circle" id="step2Circle">2</div><div class="step-label">2. Lead Endorsement</div></div>
+          <div class="step-item" id="step3"><div class="step-circle" id="step3Circle">3</div><div class="step-label">3. Partner Signoff</div></div>
         </div>
 
         <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
           <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Client Handoff & Engagement Notes:</div>
           <div id="dtlReason" style="font-size:12.5px; color:var(--text-main); line-height:1.5;"></div>
-        </div>
-
-        <div id="dtlAttachmentSection" style="margin-bottom:14px; display:none;">
-          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Attached Supporting Verification:</div>
-          <a href="javascript:void(0)" id="dtlDocLink" class="doc-chip" style="padding:6px 12px; font-size:12px;">
-            <i data-lucide="file-text" style="width:14px;height:14px;"></i>
-            <span id="dtlDocName">View Attached Medical Slip</span>
-          </a>
         </div>
 
         <div id="dtlApproverSection" style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
@@ -442,32 +370,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-primary" onclick="closeModal('detailsModal')">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- DOCUMENT PREVIEW MODAL -->
-  <div class="modal-backdrop" id="docModal">
-    <div class="modal-window" style="max-width:550px;">
-      <div class="modal-header">
-        <h3><i data-lucide="file-text"></i> Attached Medical / Supporting Document</h3>
-        <button class="btn-close-modal" onclick="closeModal('docModal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div style="border:2px dashed var(--border-strong); border-radius:var(--radius-md); padding:24px; text-align:center; background:var(--bg-subtle);">
-          <i data-lucide="file-check-2" style="width:48px;height:48px;color:var(--success);margin:0 auto 12px;display:block;"></i>
-          <h4 id="docModalTitle" style="font-size:15px; color:var(--primary); margin-bottom:6px;">Medical Certificate Verification</h4>
-          <p id="docModalStaff" style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;"></p>
-          <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:left; font-size:12px; line-height:1.6;">
-            <strong>Clinic:</strong> St. Luke's Medical Clinic &bull; Attending: Dr. Roberto Santos, MD<br>
-            <strong>Diagnosis:</strong> Acute viral illness / respiratory infection with fever.<br>
-            <strong>Recommendation:</strong> Medically excused from work for 2 consecutive days. Fit to resume engagement duties thereafter.<br>
-            <strong>Status:</strong> <span class="badge badge-approved" style="font-size:10px;">Verified Official Slip</span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="closeModal('docModal')">Close Preview</button>
       </div>
     </div>
   </div>
@@ -491,60 +393,16 @@ $leaveRequests = $leaveReqStmt->fetchAll();
     document.getElementById('applyStartDate').value = today;
     document.getElementById('applyEndDate').value = today;
 
-    const userBalances = {
-      'SIL': <?= (float)$silBalance ?>,
-      'VL': <?= (float)$vlBalance ?>,
-      'SL': <?= (float)$slBalance ?>,
-      'SoloParent': <?= (float)$splBalance ?>
-    };
-
     function calculateWorkingDays() {
       const startStr = document.getElementById('applyStartDate').value;
       const endStr = document.getElementById('applyEndDate').value;
       const duration = document.getElementById('applyDurationMode').value;
-      const leaveType = document.getElementById('applyLeaveType').value;
       
-      const balEl = document.getElementById('availableBalancePreview');
-      if (balEl) {
-        if (userBalances[leaveType] !== undefined) {
-          balEl.innerText = `${userBalances[leaveType].toFixed(1)} Days`;
-          balEl.style.color = 'var(--accent)';
-        } else if (leaveType === 'Bereavement') {
-          balEl.innerText = '3.0 - 5.0 Days (Paid)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Study') {
-          balEl.innerText = 'CPA Exam / CPD Entitlement';
-          balEl.style.color = 'var(--accent)';
-        } else if (leaveType === 'Emergency') {
-          balEl.innerText = 'Calamity Assistance';
-          balEl.style.color = 'var(--warning)';
-        } else if (leaveType === 'Paternity') {
-          balEl.innerText = '7.0 Days (RA 8187)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Maternity') {
-          balEl.innerText = '105 Days (RA 11210)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'MagnaCarta') {
-          balEl.innerText = 'Up to 60 Days (RA 9710)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'VAWC') {
-          balEl.innerText = '10 Days (RA 9262)';
-          balEl.style.color = 'var(--success)';
-        } else if (leaveType === 'Unpaid') {
-          balEl.innerText = 'Leave Without Pay';
-          balEl.style.color = 'var(--text-muted)';
-        } else {
-          balEl.innerText = 'Special Benefit';
-          balEl.style.color = 'var(--accent)';
-        }
-      }
-
       if (!startStr || !endStr) return;
       const start = new Date(startStr);
       const end = new Date(endStr);
       if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
       
-      // Peak Tax Season Blackout Alert
       const taxNotice = document.getElementById('taxSeasonNotice');
       if (taxNotice) {
         const m = start.getMonth() + 1;
@@ -552,7 +410,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
         const isTaxPeak = (m === 3 && d >= 15) || (m === 4 && d <= 15);
         if (isTaxPeak) {
           taxNotice.style.display = 'flex';
-          taxNotice.innerHTML = `<i data-lucide="alert-triangle"></i><div><strong>⚠️ Peak BIR Tax Season Notice (March 15 - April 15):</strong> Leaves filed during the annual income tax return filing window require client engagement coverage & Managing Partner final endorsement.</div>`;
+          taxNotice.innerHTML = `<i data-lucide="alert-triangle"></i><div><strong>⚠️ Peak Tax Season:</strong> Leaves require partner endorsement.</div>`;
           if (window.lucide) lucide.createIcons();
         } else {
           taxNotice.style.display = 'none';
@@ -570,25 +428,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
     }
     calculateWorkingDays();
 
-    let calendar = null;
-    function initCalendar() {
-      const calendarEl = document.getElementById('leaveCalendar');
-      if (!calendarEl || calendar) return;
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-        events: 'actions/get_calendar_events.php',
-        height: 'auto',
-        firstDay: 1,
-        eventClick: function(info) {
-          const props = info.event.extendedProps;
-          if (props.is_holiday) { alert(`🇵🇭 PH Public Holiday: ${info.event.title}`); return; }
-          alert(`🌴 Leave Application\nStaff: ${props.employee}\nType: ${props.leave_type}\nDays: ${props.days}d\nStatus: ${props.status}`);
-        }
-      });
-      calendar.render();
-    }
-
     function switchTab(tabId) {
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.classList.remove('active');
@@ -598,10 +437,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       const activePane = document.getElementById(`tab-${tabId}`);
       if (activePane) activePane.style.display = 'block';
       if (window.lucide) lucide.createIcons();
-      if (tabId === 'team-calendar') {
-        if (!calendar) setTimeout(initCalendar, 50);
-        else setTimeout(() => { calendar.updateSize(); calendar.refetchEvents(); }, 50);
-      }
     }
 
     function openModal(id) { document.getElementById(id).classList.add('show'); }
@@ -642,7 +477,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       }
     }
 
-    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason, attachment) {
+    function viewDetailsModal(ref, emp, type, days, start, end, reason, status, approver, rejectReason) {
       document.getElementById('dtlRef').innerText = ref;
       document.getElementById('dtlStaff').innerText = emp;
       document.getElementById('dtlType').innerText = type;
@@ -656,7 +491,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       if (status === 'Rejected') statusBadge = `<span class="badge badge-rejected">Rejected</span>`;
       document.getElementById('dtlStatusBadge').innerHTML = statusBadge;
 
-      // Stepper logic
       const s2 = document.getElementById('step2');
       const s3 = document.getElementById('step3');
       s2.className = 'step-item';
@@ -677,23 +511,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
         document.getElementById('step3Circle').innerText = '3';
       }
 
-      // Attachment section
-      const attSec = document.getElementById('dtlAttachmentSection');
-      if (attachment) {
-        attSec.style.display = 'block';
-        document.getElementById('dtlDocLink').onclick = () => openDocPreview(attachment, emp, type);
-      } else {
-        attSec.style.display = 'none';
-      }
-
       openModal('detailsModal');
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function openDocPreview(path, emp, type) {
-      document.getElementById('docModalTitle').innerText = `${type} Supporting Verification`;
-      document.getElementById('docModalStaff').innerText = `Submitted by: ${emp}`;
-      openModal('docModal');
       if (window.lucide) lucide.createIcons();
     }
 
