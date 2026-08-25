@@ -20,10 +20,15 @@ $colors = [
     'SIL' => ['bg' => '#4338ca', 'border' => '#3730a3'],          // DOLE SIL - Indigo
     'VL' => ['bg' => '#059669', 'border' => '#047857'],           // Vacation Leave - Emerald
     'SL' => ['bg' => '#e11d48', 'border' => '#be123c'],           // Sick Leave - Rose
+    'Bereavement' => ['bg' => '#334155', 'border' => '#1e293b'],  // Bereavement - Slate Gray
+    'Emergency' => ['bg' => '#ea580c', 'border' => '#c2410c'],    // Emergency - Orange
+    'Study' => ['bg' => '#0284c7', 'border' => '#0369a1'],        // CPA / Study - Sky Blue
     'SoloParent' => ['bg' => '#d97706', 'border' => '#b45309'],   // Solo Parent - Amber
+    'Paternity' => ['bg' => '#0891b2', 'border' => '#0e7490'],    // Paternity - Cyan
+    'Maternity' => ['bg' => '#db2777', 'border' => '#be185d'],    // Maternity - Pink
     'MagnaCarta' => ['bg' => '#7c3aed', 'border' => '#6d28d9'],   // Magna Carta - Purple
     'VAWC' => ['bg' => '#9333ea', 'border' => '#7e22ce'],         // VAWC - Violet
-    'Emergency' => ['bg' => '#ea580c', 'border' => '#c2410c']     // Emergency - Orange
+    'Unpaid' => ['bg' => '#64748b', 'border' => '#475569']        // LWOP - Slate
 ];
 
 foreach ($leaves as $l) {

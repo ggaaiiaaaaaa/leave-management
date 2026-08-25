@@ -20,7 +20,7 @@ This proposal outlines three strategic implementation tiers:
 | Feature / Capability | Tier 1: Core (₱50,000) | Tier 2: Pro Suite (₱70,000) ⭐ | Tier 3: Enterprise Suite (₱85,000) 🏆 |
 | :--- | :---: | :---: | :---: |
 | **Core Leave Tracking & Balances** | Included | Included | Included |
-| **Philippine Statutory Leave Types** *(SIL, SL, VL, Solo Parent, Magna Carta, VAWC, Maternity/Paternity)* | Included | Included | Included |
+| **Philippine Statutory & CPA Practice Leaves** *(DOLE SIL, VL, SL, Bereavement, Emergency/Calamity, CPA Board Exam/CPD Study Leave, Solo Parent, Maternity/Paternity, Magna Carta, VAWC, LWOP)* | Included | Included | Included |
 | **Role-Based Access** *(Staff Accountant, Team Lead, HR/Partner)* | Standard (2 Levels) | Multi-Level Hierarchical (3+ Levels) | Multi-Level + Partner Override & Multi-Department |
 | **Philippine Holiday Calendar Integration** | Standard list | Dynamic DOLE/Proclamation Sync + Special Working/Non-Working rules | Dynamic DOLE + Custom Firm Year-End Closure Periods |
 | **Leave Approval Engine** | Single-step (Lead/Admin) | 2-Step Approval (Supervisor -> Partner/HR) + Delegate Approver | Multi-stage dynamic routing with matrix approval |

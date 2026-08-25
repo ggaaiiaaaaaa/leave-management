@@ -364,15 +364,56 @@ if (empty($holidaysList)) {
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
             <div class="dashboard-card">
-              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory Leave Entitlements</h3></div>
+              <div class="card-head"><h3><i data-lucide="book-open" style="color:var(--accent);"></i> Statutory & Firm Leave Entitlements</h3></div>
               <div class="card-body">
-                <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle); margin-bottom:12px;">
-                  <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
-                  <p style="font-size:12px; color:var(--text-muted);">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
-                </div>
-                <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle); margin-bottom:12px;">
-                  <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Solo Parent Leave — 7 Days (RA 8972)</h4>
-                  <p style="font-size:12px; color:var(--text-muted);">Paid parental leave for solo parents with valid Solo Parent ID.</p>
+                <div style="display:flex; flex-direction:column; gap:12px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Service Incentive Leave (SIL) — 5 Days</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Art. 95 Labor Code: Mandatory for employees with ≥ 1 year service. Commutable to cash at year-end.</p>
+                    <span class="badge badge-sil">DOLE Statutory</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Bereavement Leave — 3 to 5 Days</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Paid compassionate leave granted upon the passing of an immediate family member.</p>
+                    <span class="badge badge-approved">Firm Benefit</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">CPA Board Exam & CPD Study Leave</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Special leave for staff sitting for CPA licensure exams or attending mandatory BOA CPD seminars.</p>
+                    <span class="badge badge-vl">Professional Development</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Emergency / Calamity Leave</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Leave for natural calamities, flooding, or severe personal domestic emergencies.</p>
+                    <span class="badge badge-pending">Emergency Assistance</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Solo Parent Leave — 7 Days (RA 8972 / RA 11861)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Paid parental leave for solo parents with valid Solo Parent ID from DSWD/LGU.</p>
+                    <span class="badge badge-spl">Statutory Paid</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Maternity (105 Days) & Paternity Leave (7 Days)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">RA 11210 (105 days paid maternity for female staff) & RA 8187 (7 days paid paternity for married male staff).</p>
+                    <span class="badge badge-approved">Statutory Paid</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">Magna Carta for Women — Up to 60 Days (RA 9710)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Special paid leave for gynecological surgery recovery.</p>
+                    <span class="badge badge-approved">Paid Leave</span>
+                  </div>
+
+                  <div style="padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:var(--bg-subtle);">
+                    <h4 style="font-size:13.5px; color:var(--primary); font-weight:700;">VAWC Leave — 10 Days (RA 9262)</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:4px 0;">Paid leave for victims of violence against women and their children. Confidential.</p>
+                    <span class="badge badge-sil">Statutory Paid</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -453,7 +494,15 @@ if (empty($holidaysList)) {
                 <option value="SIL">DOLE Service Incentive Leave (5 days/yr)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
-                <option value="SoloParent">Solo Parent Leave (RA 8972 - 7 days)</option>
+                <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
+                <option value="Emergency">Emergency / Calamity Leave</option>
+                <option value="Study">CPA Board Exam / CPD Study Leave</option>
+                <option value="SoloParent">Solo Parent Leave (RA 8972 / RA 11861 - 7 days)</option>
+                <option value="Paternity">Paternity Leave (RA 8187 - 7 days)</option>
+                <option value="Maternity">Maternity Leave (RA 11210 - 105 days)</option>
+                <option value="MagnaCarta">Magna Carta of Women (RA 9710)</option>
+                <option value="VAWC">VAWC Leave (RA 9262 - 10 days)</option>
+                <option value="Unpaid">Leave Without Pay (LWOP / Unpaid)</option>
               </select>
             </div>
             <div class="form-group">

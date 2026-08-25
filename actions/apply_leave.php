@@ -29,10 +29,15 @@ $typeLabels = [
     'SIL' => 'Service Incentive Leave (DOLE)',
     'VL' => 'Vacation Leave',
     'SL' => 'Sick Leave',
+    'Bereavement' => 'Bereavement Leave (3-5 Days)',
+    'Emergency' => 'Emergency / Calamity Leave',
+    'Study' => 'CPA Board Exam / CPD Study Leave',
     'SoloParent' => 'Solo Parent Leave (RA 8972)',
+    'Paternity' => 'Paternity Leave (RA 8187 - 7 Days)',
+    'Maternity' => 'Maternity Leave (RA 11210 - 105 Days)',
     'MagnaCarta' => 'Magna Carta for Women (RA 9710)',
     'VAWC' => 'VAWC Leave (RA 9262)',
-    'Emergency' => 'Emergency / Bereavement Leave'
+    'Unpaid' => 'Leave Without Pay (LWOP)'
 ];
 $leaveTypeLabel = $typeLabels[$leaveType] ?? $leaveType;
 
