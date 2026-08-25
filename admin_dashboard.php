@@ -403,32 +403,22 @@ $allUsers = $allUsersStmt->fetchAll();
             </select>
           </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Leave Category <span class="req">*</span></label>
-              <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
-                <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
-                <option value="VL" selected>Vacation Leave (VL)</option>
-                <option value="SL">Sick Leave (SL)</option>
-                <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
-                <option value="Emergency">Emergency / Calamity Leave</option>
-                <option value="Study">CPA Board Exam / CPD Study Leave</option>
-                <option value="SoloParent">Solo Parent Leave (RA 8972 / RA 11861 - 7 days)</option>
-                <option value="Paternity">Paternity Leave (RA 8187 - 7 days)</option>
-                <option value="Maternity">Maternity Leave (RA 11210 - 105 days)</option>
-                <option value="MagnaCarta">Magna Carta of Women (RA 9710)</option>
-                <option value="VAWC">VAWC Leave (RA 9262 - 10 days)</option>
-                <option value="Unpaid">Leave Without Pay (LWOP / Unpaid)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Duration Mode</label>
-              <select name="duration_mode" id="applyDurationMode" class="form-select" onchange="calculateWorkingDays()">
-                <option value="full">Full Day (1.0 Day)</option>
-                <option value="half-am">Half Day - Morning (0.5 Day)</option>
-                <option value="half-pm">Half Day - Afternoon (0.5 Day)</option>
-              </select>
-            </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Leave Category <span class="req">*</span></label>
+            <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
+              <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
+              <option value="VL" selected>Vacation Leave (VL)</option>
+              <option value="SL">Sick Leave (SL)</option>
+              <option value="Bereavement">Bereavement Leave (Immediate Family Loss - 3-5d)</option>
+              <option value="Emergency">Emergency / Calamity Leave</option>
+              <option value="Study">CPA Board Exam / CPD Study Leave</option>
+              <option value="SoloParent">Solo Parent Leave (RA 8972 / RA 11861 - 7 days)</option>
+              <option value="Paternity">Paternity Leave (RA 8187 - 7 days)</option>
+              <option value="Maternity">Maternity Leave (RA 11210 - 105 days)</option>
+              <option value="MagnaCarta">Magna Carta of Women (RA 9710)</option>
+              <option value="VAWC">VAWC Leave (RA 9262 - 10 days)</option>
+              <option value="Unpaid">Leave Without Pay (LWOP / Unpaid)</option>
+            </select>
           </div>
           <div class="form-grid">
             <div class="form-group">
@@ -628,7 +618,6 @@ $allUsers = $allUsersStmt->fetchAll();
         if (dow !== 0 && dow !== 6) days++;
         cur.setDate(cur.getDate() + 1);
       }
-      if (duration.startsWith('half')) days = 0.5;
       document.getElementById('computedDaysPreview').innerText = `${days} Working Day(s)`;
     }
     calculateWorkingDays();

@@ -14,7 +14,7 @@ $user = getCurrentUser();
 $userId = $user['id'];
 
 $leaveType = $_POST['leave_type'] ?? 'VL';
-$durationMode = $_POST['duration_mode'] ?? 'full';
+$durationMode = 'full';
 $startDate = $_POST['start_date'] ?? '';
 $endDate = $_POST['end_date'] ?? '';
 $reason = trim($_POST['reason'] ?? '');
@@ -63,10 +63,6 @@ while ($curr <= $end) {
         $workingDays += 1.0;
     }
     $curr->modify('+1 day');
-}
-
-if ($durationMode === 'half-am' || $durationMode === 'half-pm') {
-    $workingDays = min($workingDays, 1.0) * 0.5;
 }
 
 if ($workingDays <= 0) {
