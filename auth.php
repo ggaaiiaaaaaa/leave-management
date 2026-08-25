@@ -3,8 +3,12 @@
 
 require_once __DIR__ . '/config/db.php';
 
+function isLoggedIn() {
+    return isset($_SESSION['user_id']);
+}
+
 function requireLogin() {
-    if (!isset($_SESSION['user_id'])) {
+    if (!isLoggedIn()) {
         header('Location: login.php');
         exit;
     }

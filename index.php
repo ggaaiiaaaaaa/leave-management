@@ -8,6 +8,11 @@ if (!isLoggedIn()) {
 }
 
 $user = getCurrentUser();
+if (!$user) {
+    header('Location: login.php');
+    exit;
+}
+
 $role = $user['role'] ?? 'staff';
 
 if ($role === 'admin') {
