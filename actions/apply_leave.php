@@ -74,19 +74,44 @@ if ($workingDays <= 0) {
     exit;
 }
 
-// Check balance for SIL, VL, SL
+// Determine target employee (Admin can file for any employee)
+$targetUserId = $userId;
+$isAdminFiling = false;
+
+if (hasRole('admin') && !empty($_POST['target_user_id'])) {
+    $targetUserId = (int)$_POST['target_user_id'];
+    $isAdminFiling = true;
+}
+
+// Fetch target user and their balance
+$targetStmt = $pdo->prepare("
+    SELECT u.*, b.sil_balance, b.vl_balance, b.sl_balance, b.solo_parent_balance
+    FROM users u
+    LEFT JOIN leave_balances b ON u.id = b.user_id
+    WHERE u.id = ?
+");
+$targetStmt->execute([$targetUserId]);
+$targetUser = $targetStmt->fetch();
+
+if (!$targetUser) {
+    echo json_encode(['success' => false, 'message' => 'Target employee not found.']);
+    exit;
+}
+
+// Check balance for SIL, VL, SL, Solo Parent
 $balanceCol = null;
 if ($leaveType === 'SIL') $balanceCol = 'sil_balance';
 if ($leaveType === 'VL') $balanceCol = 'vl_balance';
 if ($leaveType === 'SL') $balanceCol = 'sl_balance';
 if ($leaveType === 'SoloParent') $balanceCol = 'solo_parent_balance';
 
-if ($balanceCol && isset($user[$balanceCol])) {
-    $currentBal = (float)$user[$balanceCol];
+if ($balanceCol && isset($targetUser[$balanceCol])) {
+    $currentBal = (float)$targetUser[$balanceCol];
     if ($currentBal < $workingDays) {
+        $empName = htmlspecialchars($targetUser['name']);
         echo json_encode([
             'success' => false, 
-            'message' => "Insufficient {$leaveTypeLabel} balance. Available: {$currentBal} day(s), Requested: {$workingDays} day(s)."
+            'message' => "Insufficient {$leaveTypeLabel} balance for {$empName}. Available: {$currentBal} day(s), Requested: {$workingDays} day(s)."
         ]);
         exit;
     }
@@ -109,26 +134,40 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ER
     }
 }
 
+// Status: If admin files it, it is immediately Approved by the Managing Partner
+$initialStatus = hasRole('admin') ? 'Approved' : 'Pending';
+$approverName = hasRole('admin') ? $user['name'] : null;
+$decidedAt = hasRole('admin') ? date('Y-m-d H:i:s') : null;
+
 // Insert into DB
 $stmt = $pdo->prepare("
-    INSERT INTO leave_requests (ref_no, user_id, leave_type, leave_type_label, start_date, end_date, days_count, duration_mode, reason, attachment_path, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+    INSERT INTO leave_requests (ref_no, user_id, leave_type, leave_type_label, start_date, end_date, days_count, duration_mode, reason, attachment_path, status, approver_name, decided_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
-$stmt->execute([$refNo, $userId, $leaveType, $leaveTypeLabel, $startDate, $endDate, $workingDays, $durationMode, $reason, $attachmentPath]);
+$stmt->execute([$refNo, $targetUserId, $leaveType, $leaveTypeLabel, $startDate, $endDate, $workingDays, $durationMode, $reason, $attachmentPath, $initialStatus, $approverName, $decidedAt]);
 
-// Deduct balance
+// Deduct balance from the target employee
 if ($balanceCol) {
     $deductStmt = $pdo->prepare("UPDATE leave_balances SET {$balanceCol} = {$balanceCol} - ? WHERE user_id = ?");
-    $deductStmt->execute([$workingDays, $userId]);
+    $deductStmt->execute([$workingDays, $targetUserId]);
 }
 
 // Audit log
+$logDesc = hasRole('admin') && $targetUserId !== $userId
+    ? "Partner filed & approved {$workingDays}d {$leaveTypeLabel} for {$targetUser['name']} [{$refNo}]"
+    : "Filed {$workingDays}d {$leaveTypeLabel} [{$refNo}]";
+
 $auditStmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)");
-$auditStmt->execute([$userId, 'APPLY_LEAVE', "Filed {$workingDays} day(s) {$leaveTypeLabel} [{$refNo}]", $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+$auditStmt->execute([$userId, 'APPLY_LEAVE', $logDesc, $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1']);
+
+$msg = hasRole('admin') && $targetUserId !== $userId
+    ? "Leave for {$targetUser['name']} ({$workingDays} working days) filed and approved successfully!"
+    : "Leave application ({$workingDays} working days) submitted successfully!";
 
 echo json_encode([
     'success' => true,
-    'message' => "Leave application ({$workingDays} working days) submitted successfully!",
+    'message' => $msg,
     'ref_no' => $refNo,
     'days' => $workingDays
 ]);
+

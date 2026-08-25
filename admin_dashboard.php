@@ -71,8 +71,17 @@ if (empty($holidaysList)) {
     $holidaysList = array_slice($allHolidays, 0, 6);
 }
 
-// Fetch users for HR Adjust modal & Headcount KPI
-$allUsersStmt = $pdo->query("SELECT id, name, department, title FROM users ORDER BY department ASC, name ASC");
+// Fetch users for HR leave filing & Headcount KPI with balance entitlements
+$allUsersStmt = $pdo->query("
+    SELECT u.id, u.name, u.department, u.title, 
+           COALESCE(b.sil_balance, 5.0) as sil_balance, 
+           COALESCE(b.vl_balance, 12.0) as vl_balance, 
+           COALESCE(b.sl_balance, 10.0) as sl_balance, 
+           COALESCE(b.solo_parent_balance, 7.0) as solo_parent_balance
+    FROM users u
+    LEFT JOIN leave_balances b ON u.id = b.user_id
+    ORDER BY u.id ASC
+");
 $allUsers = $allUsersStmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -383,6 +392,17 @@ $allUsers = $allUsersStmt->fetchAll();
         <div class="modal-body">
           <div id="taxSeasonNotice" class="tax-season-banner" style="display:none;"></div>
 
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label"><i data-lucide="user" style="width:13px;height:13px;color:var(--accent);"></i> File Leave For Employee <span class="req">*</span></label>
+            <select name="target_user_id" id="applyTargetUser" class="form-select" required onchange="updateSelectedUserBalances()">
+              <?php foreach ($allUsers as $u): ?>
+                <option value="<?= $u['id'] ?>" <?= $u['id'] == $user['id'] ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['title']) ?> &bull; <?= htmlspecialchars($u['department']) ?>)
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
@@ -519,12 +539,28 @@ $allUsers = $allUsersStmt->fetchAll();
     document.getElementById('applyStartDate').value = today;
     document.getElementById('applyEndDate').value = today;
 
-    const userBalances = {
+    const allUsersData = <?= json_encode(array_column($allUsers, null, 'id')) ?>;
+    
+    let currentUserBalances = {
       'SIL': <?= (float)$silBalance ?>,
       'VL': <?= (float)$vlBalance ?>,
       'SL': <?= (float)$slBalance ?>,
       'SoloParent': <?= (float)$splBalance ?>
     };
+
+    function updateSelectedUserBalances() {
+      const targetUserEl = document.getElementById('applyTargetUser');
+      if (!targetUserEl) return;
+      const selectedId = targetUserEl.value;
+      const target = allUsersData[selectedId];
+      if (target) {
+        currentUserBalances['SIL'] = parseFloat(target.sil_balance || 0);
+        currentUserBalances['VL'] = parseFloat(target.vl_balance || 0);
+        currentUserBalances['SL'] = parseFloat(target.sl_balance || 0);
+        currentUserBalances['SoloParent'] = parseFloat(target.solo_parent_balance || 0);
+      }
+      calculateWorkingDays();
+    }
 
     function calculateWorkingDays() {
       const startStr = document.getElementById('applyStartDate').value;
@@ -534,8 +570,8 @@ $allUsers = $allUsersStmt->fetchAll();
       
       const balEl = document.getElementById('availableBalancePreview');
       if (balEl) {
-        if (userBalances[leaveType] !== undefined) {
-          balEl.innerText = `${userBalances[leaveType].toFixed(1)} Days`;
+        if (currentUserBalances[leaveType] !== undefined) {
+          balEl.innerText = `${currentUserBalances[leaveType].toFixed(1)} Days`;
           balEl.style.color = 'var(--accent)';
         } else if (leaveType === 'Bereavement') {
           balEl.innerText = '3.0 - 5.0 Days (Paid)';

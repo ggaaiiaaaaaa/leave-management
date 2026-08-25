@@ -1,8 +1,9 @@
 <?php
 // staff_dashboard.php - Dedicated Staff CPA Self-Service Portal
 require_once __DIR__ . '/auth.php';
-$user = requireLogin();
+requireLogin();
 
+$user = getCurrentUser();
 $userRole = $user['role'];
 
 // Fetch user's personal leave balances
@@ -10,10 +11,10 @@ $stmt = $pdo->prepare("SELECT * FROM leave_balances WHERE user_id = ?");
 $stmt->execute([$user['id']]);
 $balances = $stmt->fetch() ?: ['sil_balance' => 5.0, 'vl_balance' => 12.0, 'sl_balance' => 10.0, 'solo_parent_balance' => 7.0];
 
-$silBalance = (float)$balances['sil_balance'];
-$vlBalance = (float)$balances['vl_balance'];
-$slBalance = (float)$balances['sl_balance'];
-$splBalance = (float)$balances['solo_parent_balance'];
+$silBalance = (float) $balances['sil_balance'];
+$vlBalance = (float) $balances['vl_balance'];
+$slBalance = (float) $balances['sl_balance'];
+$splBalance = (float) $balances['solo_parent_balance'];
 
 // Fetch Personal Leave Requests
 $leaveReqStmt = $pdo->prepare("
@@ -29,6 +30,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,18 +41,80 @@ $leaveRequests = $leaveReqStmt->fetchAll();
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
   <style>
-    #leaveCalendar { background: #fff; border-radius: var(--radius-md); padding: 16px; font-family: inherit; }
-    .fc .fc-toolbar-title { font-size: 1.15rem !important; font-weight: 800 !important; color: var(--primary) !important; }
-    .fc .fc-button-primary { background: var(--primary) !important; border-color: var(--primary) !important; font-size: 12px !important; font-weight: 600 !important; padding: 6px 12px !important; border-radius: var(--radius-sm) !important; }
-    .fc .fc-button-primary:hover { background: var(--primary-light) !important; }
-    .fc .fc-button-active { background: var(--accent) !important; border-color: var(--accent) !important; }
-    .fc .fc-daygrid-day-number { font-weight: 600; color: var(--text-main); font-size: 12px; padding: 4px 6px; }
-    .fc-event { border-radius: 4px !important; padding: 3px 6px !important; font-size: 11px !important; font-weight: 600 !important; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-    .calendar-legend-bar { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding: 12px 16px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 12px; }
-    .legend-chip { display: flex; align-items: center; gap: 6px; font-weight: 600; }
-    .legend-chip .dot { width: 10px; height: 10px; border-radius: 50%; }
+    #leaveCalendar {
+      background: #fff;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      font-family: inherit;
+    }
+
+    .fc .fc-toolbar-title {
+      font-size: 1.15rem !important;
+      font-weight: 800 !important;
+      color: var(--primary) !important;
+    }
+
+    .fc .fc-button-primary {
+      background: var(--primary) !important;
+      border-color: var(--primary) !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      padding: 6px 12px !important;
+      border-radius: var(--radius-sm) !important;
+    }
+
+    .fc .fc-button-primary:hover {
+      background: var(--primary-light) !important;
+    }
+
+    .fc .fc-button-active {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+    }
+
+    .fc .fc-daygrid-day-number {
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 12px;
+      padding: 4px 6px;
+    }
+
+    .fc-event {
+      border-radius: 4px !important;
+      padding: 3px 6px !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .calendar-legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+    }
+
+    .legend-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .legend-chip .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
   </style>
 </head>
+
 <body>
   <div class="app-container">
     <!-- Sidebar Navigation -->
@@ -100,7 +164,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
               <div class="user-name"><?= htmlspecialchars($user['name']) ?></div>
               <div class="user-role"><?= htmlspecialchars($user['title']) ?></div>
             </div>
-            <a href="logout.php" title="Sign Out" style="margin-left: 8px; color: var(--text-muted); display:flex; align-items:center;">
+            <a href="logout.php" title="Sign Out"
+              style="margin-left: 8px; color: var(--text-muted); display:flex; align-items:center;">
               <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
             </a>
           </div>
@@ -207,8 +272,10 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                   <?php if (empty($leaveRequests)): ?>
                     <tr>
                       <td colspan="5" style="text-align:center; padding:36px; color:var(--text-muted);">
-                        <i data-lucide="calendar" style="width:28px;height:28px;margin:0 auto 8px;display:block;opacity:0.4;"></i>
-                        No leave applications filed yet. Click <strong>"File Leave Request"</strong> to submit an application.
+                        <i data-lucide="calendar"
+                          style="width:28px;height:28px;margin:0 auto 8px;display:block;opacity:0.4;"></i>
+                        No leave applications filed yet. Click <strong>"File Leave Request"</strong> to submit an
+                        application.
                       </td>
                     </tr>
                   <?php else: ?>
@@ -216,28 +283,37 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                       <tr>
                         <td>
                           <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
-                          <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
+                          <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?>
+                          </div>
                         </td>
                         <td>
-                          <div style="font-weight:600;"><?= $req['start_date'] ?> <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
-                          <div style="font-size:11px; color:var(--text-muted);"><?= $req['days_count'] ?> Working Day(s)</div>
+                          <div style="font-weight:600;"><?= $req['start_date'] ?>
+                            <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
+                          <div style="font-size:11px; color:var(--text-muted);"><?= $req['days_count'] ?> Working Day(s)
+                          </div>
                         </td>
                         <td>
-                          <div style="font-size:12.5px; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($req['reason']) ?>">
+                          <div
+                            style="font-size:12.5px; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            title="<?= htmlspecialchars($req['reason']) ?>">
                             <?= htmlspecialchars($req['reason']) ?>
                           </div>
                         </td>
                         <td>
                           <?php
-                            $statusBadge = 'badge-pending';
-                            if ($req['status'] === 'Approved') $statusBadge = 'badge-approved';
-                            if ($req['status'] === 'Rejected') $statusBadge = 'badge-rejected';
-                            if (str_contains($req['status'], 'Endorsed')) $statusBadge = 'badge-spl';
+                          $statusBadge = 'badge-pending';
+                          if ($req['status'] === 'Approved')
+                            $statusBadge = 'badge-approved';
+                          if ($req['status'] === 'Rejected')
+                            $statusBadge = 'badge-rejected';
+                          if (str_contains($req['status'], 'Endorsed'))
+                            $statusBadge = 'badge-spl';
                           ?>
                           <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
                         </td>
                         <td>
-                          <button class="btn-icon" title="View Dual Signoff Stepper & Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
+                          <button class="btn-icon" title="View Dual Signoff Stepper & Details"
+                            onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
                             <i data-lucide="eye" style="width:14px;height:14px;"></i>
                           </button>
                         </td>
@@ -268,7 +344,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Leave Category <span class="req">*</span></label>
-              <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
+              <select name="leave_type" id="applyLeaveType" class="form-select" required
+                onchange="calculateWorkingDays()">
                 <option value="SIL">Service Incentive Leave (SIL - 5 Days)</option>
                 <option value="VL" selected>Vacation Leave (VL)</option>
                 <option value="SL">Sick Leave (SL)</option>
@@ -297,12 +374,14 @@ $leaveRequests = $leaveReqStmt->fetchAll();
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Start Date <span class="req">*</span></label>
-              <input type="date" name="start_date" id="applyStartDate" class="form-input" required onchange="calculateWorkingDays()">
+              <input type="date" name="start_date" id="applyStartDate" class="form-input" required
+                onchange="calculateWorkingDays()">
             </div>
 
             <div class="form-group">
               <label class="form-label">End Date <span class="req">*</span></label>
-              <input type="date" name="end_date" id="applyEndDate" class="form-input" required onchange="calculateWorkingDays()">
+              <input type="date" name="end_date" id="applyEndDate" class="form-input" required
+                onchange="calculateWorkingDays()">
             </div>
           </div>
 
@@ -315,7 +394,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
 
           <div class="form-group" style="margin-top:16px;">
             <label class="form-label">Reason / Client Engagement Coverage <span class="req">*</span></label>
-            <textarea name="reason" id="applyReason" class="form-textarea" placeholder="Enter reason and client engagement coverage details..." required></textarea>
+            <textarea name="reason" id="applyReason" class="form-textarea"
+              placeholder="Enter reason and client engagement coverage details..." required></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -334,11 +414,14 @@ $leaveRequests = $leaveReqStmt->fetchAll();
         <button class="btn-close-modal" onclick="closeModal('detailsModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:18px;">
+        <div
+          style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:18px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference Number</div>
-              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef"></div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference
+                Number</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">
+              </div>
             </div>
             <div id="dtlStatusBadge"></div>
           </div>
@@ -346,24 +429,41 @@ $leaveRequests = $leaveReqStmt->fetchAll();
             <div><strong>Staff:</strong> <span id="dtlStaff"></span></div>
             <div><strong>Category:</strong> <span id="dtlType"></span></div>
             <div><strong>Dates:</strong> <span id="dtlDates"></span></div>
-            <div><strong>Duration:</strong> <span id="dtlDays" style="font-weight:700; color:var(--accent);"></span></div>
+            <div><strong>Duration:</strong> <span id="dtlDays" style="font-weight:700; color:var(--accent);"></span>
+            </div>
           </div>
         </div>
 
-        <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Dual Approval & Sign-Off Workflow:</div>
+        <div
+          style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">
+          Dual Approval & Sign-Off Workflow:</div>
         <div class="stepper-container" id="dtlStepper">
-          <div class="step-item completed" id="step1"><div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div><div class="step-label">1. Staff Filed</div></div>
-          <div class="step-item" id="step2"><div class="step-circle" id="step2Circle">2</div><div class="step-label">2. Lead Endorsement</div></div>
-          <div class="step-item" id="step3"><div class="step-circle" id="step3Circle">3</div><div class="step-label">3. Partner Signoff</div></div>
+          <div class="step-item completed" id="step1">
+            <div class="step-circle"><i data-lucide="check" style="width:14px;height:14px;"></i></div>
+            <div class="step-label">1. Staff Filed</div>
+          </div>
+          <div class="step-item" id="step2">
+            <div class="step-circle" id="step2Circle">2</div>
+            <div class="step-label">2. Lead Endorsement</div>
+          </div>
+          <div class="step-item" id="step3">
+            <div class="step-circle" id="step3Circle">3</div>
+            <div class="step-label">3. Partner Signoff</div>
+          </div>
         </div>
 
-        <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
-          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Client Handoff & Engagement Notes:</div>
+        <div
+          style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
+          <div
+            style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">
+            Client Handoff & Engagement Notes:</div>
           <div id="dtlReason" style="font-size:12.5px; color:var(--text-main); line-height:1.5;"></div>
         </div>
 
-        <div id="dtlApproverSection" style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
-          <strong>Managerial Signoff:</strong> <span id="dtlApprover" style="color:var(--text-main); font-weight:600;"></span>
+        <div id="dtlApproverSection"
+          style="font-size:12px; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:10px;">
+          <strong>Managerial Signoff:</strong> <span id="dtlApprover"
+            style="color:var(--text-main); font-weight:600;"></span>
         </div>
       </div>
       <div class="modal-footer">
@@ -395,12 +495,12 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       const startStr = document.getElementById('applyStartDate').value;
       const endStr = document.getElementById('applyEndDate').value;
       const duration = document.getElementById('applyDurationMode').value;
-      
+
       if (!startStr || !endStr) return;
       const start = new Date(startStr);
       const end = new Date(endStr);
       if (start > end) { document.getElementById('computedDaysPreview').innerText = 'Invalid Date Range'; return; }
-      
+
       const taxNotice = document.getElementById('taxSeasonNotice');
       if (taxNotice) {
         const m = start.getMonth() + 1;
@@ -516,4 +616,5 @@ $leaveRequests = $leaveReqStmt->fetchAll();
     if (window.lucide) lucide.createIcons();
   </script>
 </body>
+
 </html>
