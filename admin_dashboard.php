@@ -204,9 +204,9 @@ $allUsers = $allUsersStmt->fetchAll();
             </div>
 
             <div class="kpi-card green">
-              <div class="kpi-header"><span class="kpi-label">Service Incentive (SIL)</span><div class="kpi-icon"><i data-lucide="shield-check"></i></div></div>
-              <div class="kpi-value-row"><span class="kpi-value">5.0d</span><span class="kpi-sub">Standard</span></div>
-              <div class="kpi-footer positive"><i data-lucide="shield-check" style="width:14px;height:14px;"></i><span>Standard Allocation</span></div>
+              <div class="kpi-header"><span class="kpi-label">Approved Applications</span><div class="kpi-icon"><i data-lucide="check-circle-2"></i></div></div>
+              <div class="kpi-value-row"><span class="kpi-value"><?= count(array_filter($leaveRequests, fn($r) => $r['status'] === 'Approved')) ?></span><span class="kpi-sub">Approved</span></div>
+              <div class="kpi-footer positive"><i data-lucide="check" style="width:14px;height:14px;"></i><span>Recorded Leaves</span></div>
             </div>
 
             <div class="kpi-card purple">

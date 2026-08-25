@@ -191,21 +191,6 @@ $leaveRequests = $leaveReqStmt->fetchAll();
 
           <!-- KPI Summary Cards -->
           <div class="kpi-grid">
-            <div class="kpi-card blue">
-              <div class="kpi-header">
-                <span class="kpi-label">Service Incentive (SIL)</span>
-                <div class="kpi-icon"><i data-lucide="shield-check"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value"><?= number_format($silBalance, 1) ?></span>
-                <span class="kpi-sub">/ 5.0 Days</span>
-              </div>
-              <div class="kpi-footer positive">
-                <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
-                <span>Standard Allocation</span>
-              </div>
-            </div>
-
             <div class="kpi-card green">
               <div class="kpi-header">
                 <span class="kpi-label">Vacation Leave (VL)</span>
@@ -217,7 +202,7 @@ $leaveRequests = $leaveReqStmt->fetchAll();
               </div>
               <div class="kpi-footer positive">
                 <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                <span>Company Benefit</span>
+                <span>Annual Entitlement</span>
               </div>
             </div>
 
@@ -232,22 +217,22 @@ $leaveRequests = $leaveReqStmt->fetchAll();
               </div>
               <div class="kpi-footer neutral">
                 <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
-                <span>Medical Policy</span>
+                <span>Medical Allocation</span>
               </div>
             </div>
 
-            <div class="kpi-card amber">
+            <div class="kpi-card blue">
               <div class="kpi-header">
-                <span class="kpi-label">Solo Parent Leave</span>
-                <div class="kpi-icon"><i data-lucide="user-check"></i></div>
+                <span class="kpi-label">Total Active Balance</span>
+                <div class="kpi-icon"><i data-lucide="shield-check"></i></div>
               </div>
               <div class="kpi-value-row">
-                <span class="kpi-value"><?= number_format($splBalance, 1) ?></span>
-                <span class="kpi-sub">/ 7.0 Days</span>
+                <span class="kpi-value"><?= number_format($vlBalance + $slBalance, 1) ?></span>
+                <span class="kpi-sub">/ 22.0 Days</span>
               </div>
-              <div class="kpi-footer neutral">
-                <i data-lucide="info" style="width: 14px; height: 14px;"></i>
-                <span>RA 8972 Eligible</span>
+              <div class="kpi-footer positive">
+                <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+                <span>Available Year Credits</span>
               </div>
             </div>
           </div>
