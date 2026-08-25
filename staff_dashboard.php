@@ -27,17 +27,6 @@ $leaveReqStmt = $pdo->prepare("
 ");
 $leaveReqStmt->execute([$user['id']]);
 $leaveRequests = $leaveReqStmt->fetchAll();
-
-// Fetch all Philippine official holidays for full annual DOLE view
-$allHolidaysStmt = $pdo->query("SELECT * FROM holidays ORDER BY holiday_date ASC");
-$allHolidays = $allHolidaysStmt->fetchAll();
-
-// Fetch upcoming holidays for dashboard preview widget
-$holidaysStmt = $pdo->query("SELECT * FROM holidays WHERE holiday_date >= date('now') ORDER BY holiday_date ASC LIMIT 6");
-$holidaysList = $holidaysStmt->fetchAll();
-if (empty($holidaysList)) {
-    $holidaysList = array_slice($allHolidays, 0, 6);
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -204,99 +193,64 @@ if (empty($holidaysList)) {
             </div>
           </div>
 
-          <!-- Main Layout Grid -->
-          <div class="dashboard-grid">
-            <!-- Left Column: My Applications -->
-            <div class="left-col">
-              <!-- Leave Requests Table Card -->
-              <div class="dashboard-card">
-                <div class="card-head">
-                  <h3><i data-lucide="clock" style="color:var(--accent);"></i> My Submitted Leave Applications</h3>
-                </div>
-                <div class="table-responsive">
-                  <table class="custom-table">
-                    <thead>
-                      <tr>
-                        <th>Category</th>
-                        <th>Dates & Duration</th>
-                        <th>Reason / Client Coverage</th>
-                        <th>Status</th>
-                        <th>Signoff Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <?php if (empty($leaveRequests)): ?>
-                        <tr>
-                          <td colspan="5" style="text-align:center; padding:36px; color:var(--text-muted);">
-                            <i data-lucide="calendar" style="width:28px;height:28px;margin:0 auto 8px;display:block;opacity:0.4;"></i>
-                            No leave applications filed yet. Click <strong>"File Leave Request"</strong> to submit an application.
-                          </td>
-                        </tr>
-                      <?php else: ?>
-                        <?php foreach ($leaveRequests as $req): ?>
-                          <tr>
-                            <td>
-                              <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
-                              <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
-                            </td>
-                            <td>
-                              <div style="font-weight:600;"><?= $req['start_date'] ?> <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
-                              <div style="font-size:11px; color:var(--text-muted);"><?= $req['days_count'] ?> Working Day(s)</div>
-                            </td>
-                            <td>
-                              <div style="font-size:12.5px; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($req['reason']) ?>">
-                                <?= htmlspecialchars($req['reason']) ?>
-                              </div>
-                            </td>
-                            <td>
-                              <?php
-                                $statusBadge = 'badge-pending';
-                                if ($req['status'] === 'Approved') $statusBadge = 'badge-approved';
-                                if ($req['status'] === 'Rejected') $statusBadge = 'badge-rejected';
-                              ?>
-                              <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
-                            </td>
-                            <td>
-                              <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
-                                <i data-lucide="eye" style="width:14px;height:14px;"></i>
-                              </button>
-                            </td>
-                          </tr>
-                        <?php endforeach; ?>
-                      <?php endif; ?>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          <!-- Leave Requests Table Card -->
+          <div class="dashboard-card">
+            <div class="card-head">
+              <h3><i data-lucide="clock" style="color:var(--accent);"></i> My Submitted Leave Applications</h3>
             </div>
-
-            <!-- Right Column: Holidays -->
-            <div class="right-col">
-              <div class="dashboard-card">
-                <div class="card-head">
-                  <h3><i data-lucide="calendar" style="color:var(--accent);"></i> Upcoming PH Holidays</h3>
-                  <span class="card-action" onclick="switchTab('team-calendar')">View Calendar</span>
-                </div>
-                <div class="card-body">
-                  <div class="holiday-list">
-                    <?php foreach ($holidaysList as $h): 
-                      $d = new DateTime($h['holiday_date']);
-                    ?>
-                      <div class="holiday-item">
-                        <div class="holiday-date">
-                          <div class="holiday-month"><?= strtoupper($d->format('M')) ?></div>
-                          <div class="holiday-day"><?= $d->format('d') ?></div>
-                        </div>
-                        <div class="holiday-info">
-                          <h5><?= htmlspecialchars($h['title']) ?></h5>
-                          <span><?= htmlspecialchars($h['description'] ?? 'PH Holiday') ?></span>
-                        </div>
-                        <span class="holiday-tag <?= strtolower($h['holiday_type']) ?>"><?= $h['holiday_type'] ?></span>
-                      </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Dates & Duration</th>
+                    <th>Reason / Client Coverage</th>
+                    <th>Status</th>
+                    <th>Signoff Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php if (empty($leaveRequests)): ?>
+                    <tr>
+                      <td colspan="5" style="text-align:center; padding:36px; color:var(--text-muted);">
+                        <i data-lucide="calendar" style="width:28px;height:28px;margin:0 auto 8px;display:block;opacity:0.4;"></i>
+                        No leave applications filed yet. Click <strong>"File Leave Request"</strong> to submit an application.
+                      </td>
+                    </tr>
+                  <?php else: ?>
+                    <?php foreach ($leaveRequests as $req): ?>
+                      <tr>
+                        <td>
+                          <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
+                          <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
+                        </td>
+                        <td>
+                          <div style="font-weight:600;"><?= $req['start_date'] ?> <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
+                          <div style="font-size:11px; color:var(--text-muted);"><?= $req['days_count'] ?> Working Day(s)</div>
+                        </td>
+                        <td>
+                          <div style="font-size:12.5px; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($req['reason']) ?>">
+                            <?= htmlspecialchars($req['reason']) ?>
+                          </div>
+                        </td>
+                        <td>
+                          <?php
+                            $statusBadge = 'badge-pending';
+                            if ($req['status'] === 'Approved') $statusBadge = 'badge-approved';
+                            if ($req['status'] === 'Rejected') $statusBadge = 'badge-rejected';
+                          ?>
+                          <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
+                        </td>
+                        <td>
+                          <button class="btn-icon" title="View Signoff Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>')">
+                            <i data-lucide="eye" style="width:14px;height:14px;"></i>
+                          </button>
+                        </td>
+                      </tr>
                     <?php endforeach; ?>
-                  </div>
-                </div>
-              </div>
+                  <?php endif; ?>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
