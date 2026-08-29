@@ -53,26 +53,3 @@ A modern, high-performance Leave Management System custom-engineered for **JTYeo
    ```
 
 ---
-
-## 💼 Implementation & Pricing Tiers
-
-Detailed commercial specifications for **JTYeo CPA Accounting Office** (see [`PROPOSAL_TIERS.md`](PROPOSAL_TIERS.md)):
-
-* **🥈 Tier 1: Boutique Practice Edition (₱75,000)**
-  - Standalone 6-user digital leave management portal
-  - 5 core leave categories, personal balance ledgers, and Managing Partner approval queue
-  - Partner proxy filing on behalf of associates
-  - Full server deployment & 60-day standard maintenance
-
-* **🥇 Tier 2: Boutique Practice Cloud Suite (₱85,000) ⭐ *(Recommended Flagship)***
-  - *Everything in Tier 1 PLUS:*
-  - **1-Click Formatted Payroll CSV Export** (JuanTax / Sprout / QuickBooks / Excel) with auto-deductions
-  - **Year-End Unused Leave Cash Conversion Ledger & Reserve Calculator** (Live payout liability forecast)
-  - **Interactive 6-Person Team Coverage Calendar** (Visual schedule preventing overlapping absences)
-  - **Digital Medical Certificate & Supporting Proof Engine** (1-click secure in-app viewer)
-  - **Immutable Enterprise Audit Trail with Client IP Tracking**
-  - **Automated Real-Time Transactional Email Alerts**
-  - **Automated Working Days Engine** (Auto-excludes weekends & official statutory holidays)
-  - **Peak Tax Season Blackout Advisory Engine** (March 15 – April 15 clearance warnings)
-  - **Automated Monthly Accruals (+1.25d/mo) & Annual Rollover Engine**
-  - **3 Months Priority SLA Support + Live Staff Onboarding & Training Session**
