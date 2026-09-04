@@ -273,7 +273,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
                         </td>
                         <td>
                           <div style="font-weight:600;"><?= $req['start_date'] ?>
-                            <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?></div>
+                            <?= $req['start_date'] !== $req['end_date'] ? 'to ' . $req['end_date'] : '' ?>
+                          </div>
                           <div style="font-size:11px; color:var(--text-muted);"><?= $req['days_count'] ?> Working Day(s)
                           </div>
                         </td>
@@ -326,7 +327,8 @@ $leaveRequests = $leaveReqStmt->fetchAll();
         <div class="modal-body">
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
-            <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDays()">
+            <select name="leave_type" id="applyLeaveType" class="form-select" required
+              onchange="calculateWorkingDays()">
               <option value="VL" selected>Vacation Leave (VL)</option>
               <option value="SL">Sick Leave (SL)</option>
               <option value="Emergency">Emergency Leave</option>
@@ -356,7 +358,11 @@ $leaveRequests = $leaveReqStmt->fetchAll();
             </div>
             <div style="text-align:right;">
               <div class="calc-label">Available Balance:</div>
-              <div class="calc-result" id="availableBalancePreview" style="color:var(--accent);"><?= number_format($vlBalance, 1) ?> Days</div>
+              <div class="calc-result" id="availableBalancePreview" style="color:var(--accent);">
+
+
+                <?= number_format($vlBalance, 1) ?> Days
+              </div>
             </div>
           </div>
 
@@ -383,31 +389,44 @@ $leaveRequests = $leaveReqStmt->fetchAll();
       </div>
       <div class="modal-body">
         <!-- Summary Box -->
-        <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+        <div
+          style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div>
-              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference Number</div>
-              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">LR-2026-XXX</div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference
+                Number</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="dtlRef">
+                LR-2026-XXX</div>
             </div>
             <div id="dtlStatusBadge"></div>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
-            <div><span style="color:var(--text-muted);">Employee:</span> <strong id="dtlStaff" style="color:var(--primary);"></strong></div>
+            <div><span style="color:var(--text-muted);">Employee:</span> <strong id="dtlStaff"
+                style="color:var(--primary);"></strong></div>
             <div><span style="color:var(--text-muted);">Category:</span> <strong id="dtlType"></strong></div>
-            <div><span style="color:var(--text-muted);">Inclusive Dates:</span> <span id="dtlDates" style="font-weight:600;"></span></div>
-            <div><span style="color:var(--text-muted);">Duration:</span> <strong id="dtlDays" style="color:var(--accent);"></strong></div>
+            <div><span style="color:var(--text-muted);">Inclusive Dates:</span> <span id="dtlDates"
+                style="font-weight:600;"></span></div>
+            <div><span style="color:var(--text-muted);">Duration:</span> <strong id="dtlDays"
+                style="color:var(--accent);"></strong></div>
           </div>
         </div>
 
         <!-- Reason / Notes -->
         <div style="margin-bottom:14px;">
-          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Reason / Notes:</div>
-          <div id="dtlReason" style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; font-size:13px; color:var(--text-main); line-height:1.5;"></div>
+          <div
+            style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">
+            Reason / Notes:</div>
+          <div id="dtlReason"
+            style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; font-size:13px; color:var(--text-main); line-height:1.5;">
+          </div>
         </div>
 
         <!-- Review Status -->
-        <div id="dtlApproverSection" style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; font-size:12.5px;">
-          <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Partner Review Status:</div>
+        <div id="dtlApproverSection"
+          style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; font-size:12.5px;">
+          <div
+            style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">
+            Partner Review Status:</div>
           <div style="font-weight:600; color:var(--primary);" id="dtlApprover"></div>
           <div id="dtlRejectionReason" style="font-size:12px; color:var(--danger); margin-top:4px; display:none;"></div>
         </div>
