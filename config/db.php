@@ -106,6 +106,8 @@ try {
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_bio_user_date ON biometric_logs(user_id, log_date);
+
         CREATE TABLE IF NOT EXISTS email_notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             recipient_email TEXT NOT NULL,

@@ -66,15 +66,18 @@ $allUsersStmt = $pdo->query("
 ");
 $allUsers = $allUsersStmt->fetchAll();
 
-// Fetch Today's Biometric Attendance Logs for Morning Widget
-$todayBioStmt = $pdo->prepare("SELECT * FROM biometric_logs WHERE log_date = ?");
+// Fetch Today's Biometric Attendance Logs for Morning Widget (Distinct Associates)
+$todayBioStmt = $pdo->prepare("SELECT DISTINCT user_id FROM biometric_logs WHERE log_date = ? AND time_in IS NOT NULL");
 $todayBioStmt->execute([$today]);
-$todayPunches = $todayBioStmt->fetchAll();
-$punchedUserIds = array_column($todayPunches, 'user_id');
+$punchedUserIds = $todayBioStmt->fetchAll(PDO::FETCH_COLUMN);
 
-$presentCount = count($punchedUserIds);
-$onLeaveCount = count($activeLeaves);
+// Exclude any associate who is currently on approved leave
+$activeLeaveUserIds = array_column($activeLeaves, 'user_id');
+$presentUserIds = array_diff($punchedUserIds, $activeLeaveUserIds);
+
 $totalStaff = count($allUsers);
+$presentCount = min(count($presentUserIds), $totalStaff);
+$onLeaveCount = count($activeLeaves);
 $expectedCount = max(0, $totalStaff - $presentCount - $onLeaveCount);
 
 // Upcoming Philippine Holidays
@@ -406,10 +409,6 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                   <span id="zktecoStatusBadge" style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
                     <i data-lucide="radio" style="width:12px;height:12px;"></i> Offline (Not Connected)
                   </span>
-                </div>
-                <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Device IP:</span>
-                  <input type="text" id="zkDeviceIp" value="192.168.100.201" placeholder="e.g. 192.168.100.xxx" style="font-size:11px; padding:3px 8px; border:1px solid var(--border-color); border-radius:4px; width:130px; font-family:monospace;" title="Enter IP address displayed on your ZKTeco device screen">
                 </div>
               </div>
             </div>
@@ -1562,22 +1561,20 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
       }
     }
 
-    // Sync Biometrics
+    // Sync Biometrics (100% Automatic)
     async function syncBiometrics() {
-      const ipInput = document.getElementById('zkDeviceIp');
-      const ip = (ipInput ? ipInput.value.trim() : '') || '192.168.100.201';
       const badge = document.getElementById('zktecoStatusBadge');
-      showToast(`Probing ZKTeco MB460 Plus at ${ip}...`, 'info');
+      showToast('Connecting to ZKTeco MB460 Plus over network...', 'info');
 
       try {
-        const res = await fetch(`actions/biometric_sync.php?action=sync_now&device_ip=${encodeURIComponent(ip)}`);
+        const res = await fetch('actions/biometric_sync.php?action=sync_now');
         const data = await res.json();
         if (data.success) {
           showToast(data.message, 'success');
           if (badge) {
             badge.style.background = '#dcfce7';
             badge.style.color = '#15803d';
-            badge.innerHTML = `<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Online (${ip})`;
+            badge.innerHTML = '<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Online (Connected)';
           }
           loadDtrLogs();
           if (data.updated_count > 0) {
@@ -1588,16 +1585,16 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
           if (badge) {
             badge.style.background = '#fee2e2';
             badge.style.color = '#991b1b';
-            badge.innerHTML = `<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (${ip})`;
+            badge.innerHTML = '<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (Not Connected)';
           }
         }
         if (window.lucide) lucide.createIcons();
       } catch (err) {
-        showToast(`Could not reach ZKTeco terminal at ${ip}. Device is Offline.`, 'error');
+        showToast('ZKTeco terminal is currently offline / unreachable.', 'error');
         if (badge) {
           badge.style.background = '#fee2e2';
           badge.style.color = '#991b1b';
-          badge.innerHTML = `<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (${ip})`;
+          badge.innerHTML = '<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (Not Connected)';
         }
         if (window.lucide) lucide.createIcons();
       }
