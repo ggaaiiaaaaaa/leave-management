@@ -10,7 +10,8 @@ function getCurrentUser() {
     }
     
     $stmt = $pdo->prepare("
-        SELECT u.*, b.sil_balance, b.vl_balance, b.sl_balance, b.solo_parent_balance
+        SELECT u.*, b.vl_balance, b.sl_balance, b.emergency_balance, b.bereavement_balance,
+               b.solo_parent_balance, b.maternity_balance, b.paternity_balance, b.special_women_balance
         FROM users u
         LEFT JOIN leave_balances b ON u.id = b.user_id
         WHERE u.id = ?
