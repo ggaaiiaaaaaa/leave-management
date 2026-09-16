@@ -150,8 +150,41 @@ if ($action === 'check_device_pin') {
     exit;
 }
 
-// 3. 1-CLICK DEVICE SYNC
+// 3. 1-CLICK DEVICE SYNC (Real Network Socket Ping)
 if ($action === 'sync_now') {
+    $deviceIp = trim($_POST['device_ip'] ?? ($_GET['device_ip'] ?? '192.168.100.201'));
+    
+    // Perform real network socket probe to ZKTeco hardware port (4370 or 80)
+    $isOnline = false;
+    $errno = 0;
+    $errstr = '';
+    
+    // 1. Probe port 4370 (Standard ZKTeco Protocol)
+    $socket = @fsockopen($deviceIp, 4370, $errno, $errstr, 1.2);
+    if ($socket) {
+        $isOnline = true;
+        fclose($socket);
+    } else {
+        // 2. Probe port 80 (ZKTeco Web Server / ADMS)
+        $socketHttp = @fsockopen($deviceIp, 80, $errno, $errstr, 0.8);
+        if ($socketHttp) {
+            $isOnline = true;
+            fclose($socketHttp);
+        }
+    }
+
+    if (!$isOnline) {
+        echo json_encode([
+            'success' => false,
+            'message' => "ZKTeco MB460 Plus is OFFLINE / Unreachable at {$deviceIp}. Please connect the device to your network.",
+            'device_ip' => $deviceIp,
+            'status' => 'Offline',
+            'sync_time' => date('Y-m-d H:i:s')
+        ]);
+        exit;
+    }
+
+    // If device is genuinely online, synchronize user templates
     $stmt = $pdo->query("SELECT id, biometric_pin, face_enrolled, fingerprint_enrolled FROM users WHERE biometric_pin IS NOT NULL AND biometric_pin != ''");
     $usersWithPins = $stmt->fetchAll();
     $updatedCount = 0;
@@ -174,8 +207,8 @@ if ($action === 'sync_now') {
 
     echo json_encode([
         'success' => true,
-        'message' => "ZKTeco MB460 Plus communication active. Terminal Online at 192.168.1.201. {$updatedCount} associate biometric statuses verified and synchronized.",
-        'device_ip' => '192.168.1.201',
+        'message' => "ZKTeco MB460 Plus is ONLINE at {$deviceIp}. Biometric communication active ({$updatedCount} records verified).",
+        'device_ip' => $deviceIp,
         'status' => 'Online',
         'sync_time' => date('Y-m-d H:i:s'),
         'updated_count' => $updatedCount

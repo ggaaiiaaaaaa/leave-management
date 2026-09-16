@@ -403,7 +403,13 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                 <div class="zkteco-title">ZKTeco MB460 Plus Multi-Biometric System</div>
                 <div class="zkteco-sub">
                   <span>Visible Light Face Recognition + SilkID Fingerprint</span>
-                  <span class="zkteco-badge-online"><i data-lucide="check" style="width:12px;height:12px;"></i> Online (LAN: 192.168.1.201)</span>
+                  <span id="zktecoStatusBadge" style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                    <i data-lucide="radio" style="width:12px;height:12px;"></i> Offline (Not Connected)
+                  </span>
+                </div>
+                <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Device IP:</span>
+                  <input type="text" id="zkDeviceIp" value="192.168.100.201" placeholder="e.g. 192.168.100.xxx" style="font-size:11px; padding:3px 8px; border:1px solid var(--border-color); border-radius:4px; width:130px; font-family:monospace;" title="Enter IP address displayed on your ZKTeco device screen">
                 </div>
               </div>
             </div>
@@ -1558,17 +1564,42 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
 
     // Sync Biometrics
     async function syncBiometrics() {
-      showToast('Connecting to ZKTeco MB460 Plus over LAN...', 'info');
+      const ipInput = document.getElementById('zkDeviceIp');
+      const ip = (ipInput ? ipInput.value.trim() : '') || '192.168.100.201';
+      const badge = document.getElementById('zktecoStatusBadge');
+      showToast(`Probing ZKTeco MB460 Plus at ${ip}...`, 'info');
+
       try {
-        const res = await fetch('actions/biometric_sync.php?action=sync_now');
+        const res = await fetch(`actions/biometric_sync.php?action=sync_now&device_ip=${encodeURIComponent(ip)}`);
         const data = await res.json();
-        showToast(data.message, 'success');
-        loadDtrLogs();
-        if (data.updated_count > 0) {
-          setTimeout(() => window.location.reload(), 1200);
+        if (data.success) {
+          showToast(data.message, 'success');
+          if (badge) {
+            badge.style.background = '#dcfce7';
+            badge.style.color = '#15803d';
+            badge.innerHTML = `<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Online (${ip})`;
+          }
+          loadDtrLogs();
+          if (data.updated_count > 0) {
+            setTimeout(() => window.location.reload(), 1200);
+          }
+        } else {
+          showToast(data.message, 'error');
+          if (badge) {
+            badge.style.background = '#fee2e2';
+            badge.style.color = '#991b1b';
+            badge.innerHTML = `<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (${ip})`;
+          }
         }
+        if (window.lucide) lucide.createIcons();
       } catch (err) {
-        showToast('ZKTeco device responded with network timeout.', 'error');
+        showToast(`Could not reach ZKTeco terminal at ${ip}. Device is Offline.`, 'error');
+        if (badge) {
+          badge.style.background = '#fee2e2';
+          badge.style.color = '#991b1b';
+          badge.innerHTML = `<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (${ip})`;
+        }
+        if (window.lucide) lucide.createIcons();
       }
     }
 
