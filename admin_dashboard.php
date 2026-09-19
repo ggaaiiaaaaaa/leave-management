@@ -89,13 +89,15 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Managing Partner & HR Portal | JTYeo CPA Accounting Office</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Managing Partner &amp; HR Portal | JTYeo CPA Accounting Office</title>
+  <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
   <script src="lucide.js"></script>
   <!-- FullCalendar 5 -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
   <style>
+    .brand-logo-frame { width: 44px !important; height: 44px !important; min-width: 44px !important; max-width: 44px !important; background: #ffffff !important; border-radius: 10px !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 4px !important; overflow: hidden !important; box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important; flex-shrink: 0 !important; }
+    .brand-logo-img { width: 36px !important; height: 36px !important; max-width: 36px !important; max-height: 36px !important; object-fit: contain !important; display: block !important; }
     #leaveCalendar { background: #fff; border-radius: var(--radius-md); padding: 16px; font-family: inherit; }
     .fc .fc-toolbar-title { font-size: 1.15rem !important; font-weight: 800 !important; color: var(--primary) !important; }
     .fc .fc-button-primary { background: var(--primary) !important; border-color: var(--primary) !important; font-size: 12px !important; font-weight: 600 !important; padding: 6px 12px !important; border-radius: var(--radius-sm) !important; }
@@ -113,11 +115,13 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
     <!-- Sidebar Navigation -->
     <aside class="sidebar no-print">
       <div class="brand-section">
-        <div class="brand-logo">JT</div>
+        <div class="brand-logo-frame">
+          <img src="JTYEO-Logo.png" alt="JTYeo CPA Logo" class="brand-logo-img">
+        </div>
         <div class="brand-info">
-          <h2>JTYeo CPA</h2>
+          <h2>J.T. YEO CPA</h2>
           <span>Accounting Office</span>
-          <div class="firm-badge">Managing Partner & HR</div>
+          <div class="firm-badge">Managing Partner &amp; HR</div>
         </div>
       </div>
 
