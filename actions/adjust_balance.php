@@ -21,7 +21,7 @@ if ($targetUserId <= 0 || $amount == 0) {
     exit;
 }
 
-$balanceColMap = [
+$legacyColMap = [
     'VL' => 'vl_balance',
     'SL' => 'sl_balance',
     'Emergency' => 'emergency_balance',
@@ -32,12 +32,15 @@ $balanceColMap = [
     'SpecialWomen' => 'special_women_balance'
 ];
 
-if (!isset($balanceColMap[$leaveType])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid leave category selected.']);
+// Verify leave type exists in leave_types
+$tStmt = $pdo->prepare("SELECT name, default_days FROM leave_types WHERE code = ?");
+$tStmt->execute([$leaveType]);
+$typeRow = $tStmt->fetch();
+
+if (!$typeRow) {
+    echo json_encode(['success' => false, 'message' => 'Invalid or unrecognized leave category selected.']);
     exit;
 }
-
-$col = $balanceColMap[$leaveType];
 
 // Fetch target user
 $uStmt = $pdo->prepare("SELECT name FROM users WHERE id = ?");
@@ -49,26 +52,44 @@ if (!$targetName) {
     exit;
 }
 
-// Ensure row exists in leave_balances
-$chkStmt = $pdo->prepare("SELECT id FROM leave_balances WHERE user_id = ?");
-$chkStmt->execute([$targetUserId]);
-if (!$chkStmt->fetch()) {
-    $pdo->prepare("INSERT INTO leave_balances (user_id) VALUES (?)")->execute([$targetUserId]);
+// Ensure row exists in user_leave_allocations
+$chkAlloc = $pdo->prepare("SELECT id, remaining_days FROM user_leave_allocations WHERE user_id = ? AND leave_type_code = ?");
+$chkAlloc->execute([$targetUserId, $leaveType]);
+$allocRow = $chkAlloc->fetch();
+
+if (!$allocRow) {
+    $def = (float)$typeRow['default_days'];
+    $pdo->prepare("INSERT INTO user_leave_allocations (user_id, leave_type_code, allocated_days, remaining_days) VALUES (?, ?, ?, ?)")
+        ->execute([$targetUserId, $leaveType, $def, $def]);
 }
 
-// Update balance (cannot drop below 0)
-$stmt = $pdo->prepare("UPDATE leave_balances SET {$col} = MAX(0, {$col} + ?), updated_at = CURRENT_TIMESTAMP WHERE user_id = ?");
-$stmt->execute([$amount, $targetUserId]);
+// Update balance in user_leave_allocations (cannot drop below 0)
+$stmt = $pdo->prepare("
+    UPDATE user_leave_allocations
+    SET remaining_days = MAX(0, remaining_days + ?), updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = ? AND leave_type_code = ?
+");
+$stmt->execute([$amount, $targetUserId, $leaveType]);
 
-// Fetch updated balance
-$newBalStmt = $pdo->prepare("SELECT {$col} FROM leave_balances WHERE user_id = ?");
-$newBalStmt->execute([$targetUserId]);
+// Fetch updated balance from user_leave_allocations
+$newBalStmt = $pdo->prepare("SELECT remaining_days FROM user_leave_allocations WHERE user_id = ? AND leave_type_code = ?");
+$newBalStmt->execute([$targetUserId, $leaveType]);
 $newBalance = (float)$newBalStmt->fetchColumn();
 
-$sign = $amount > 0 ? "+{$amount}" : "{$amount}";
+// Sync legacy leave_balances if mapped column exists
+if (isset($legacyColMap[$leaveType])) {
+    $col = $legacyColMap[$leaveType];
+    $chkStmt = $pdo->prepare("SELECT id FROM leave_balances WHERE user_id = ?");
+    $chkStmt->execute([$targetUserId]);
+    if (!$chkStmt->fetch()) {
+        $pdo->prepare("INSERT INTO leave_balances (user_id) VALUES (?)")->execute([$targetUserId]);
+    }
+    $pdo->prepare("UPDATE leave_balances SET {$col} = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?")->execute([$newBalance, $targetUserId]);
+}
 
+$sign = $amount > 0 ? "+{$amount}" : "{$amount}";
 echo json_encode([
     'success' => true,
-    'message' => "Adjusted {$leaveType} for {$targetName} by {$sign} day(s). New balance: {$newBalance} days.",
+    'message' => "Successfully adjusted {$typeRow['name']} balance by {$sign} day(s) for {$targetName}. New balance: {$newBalance} day(s).",
     'new_balance' => $newBalance
 ]);

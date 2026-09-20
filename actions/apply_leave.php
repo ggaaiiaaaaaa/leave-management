@@ -25,24 +25,16 @@ if (empty($startDate) || empty($endDate) || empty($reason)) {
     exit;
 }
 
-// 9 Clean Leave Categories (No RA citations, no custom study/firm training)
-$typeLabels = [
-    'VL' => 'Vacation Leave',
-    'SL' => 'Sick Leave',
-    'Emergency' => 'Emergency Leave',
-    'Bereavement' => 'Bereavement Leave',
-    'LWOP' => 'Leave Without Pay',
-    'SoloParent' => 'Solo Parent Leave',
-    'Maternity' => 'Maternity Leave',
-    'Paternity' => 'Paternity Leave',
-    'SpecialWomen' => 'Special Leave for Women'
-];
+// Dynamically fetch active leave category policy
+$typeStmt = $pdo->prepare("SELECT * FROM leave_types WHERE code = ? AND is_active = 1");
+$typeStmt->execute([$leaveType]);
+$typeRow = $typeStmt->fetch();
 
-if (!array_key_exists($leaveType, $typeLabels)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid leave category selected.']);
+if (!$typeRow) {
+    echo json_encode(['success' => false, 'message' => 'Invalid or inactive leave category selected.']);
     exit;
 }
-$leaveTypeLabel = $typeLabels[$leaveType];
+$leaveTypeLabel = $typeRow['name'];
 
 // Determine target employee (Admin can proxy-file for any associate)
 $targetUserId = $userId;
@@ -71,18 +63,17 @@ if (!$targetUser) {
 
 // 1. SMART GENDER VALIDATION
 $gender = strtolower(trim($targetUser['gender'] ?? 'female'));
-if ($gender === 'male' && in_array($leaveType, ['Maternity', 'SpecialWomen'])) {
+if ($typeRow['gender_restriction'] === 'Female' && $gender === 'male') {
     echo json_encode([
         'success' => false,
-        'message' => "Maternity Leave and Special Leave for Women are restricted to female associates."
+        'message' => "{$leaveTypeLabel} is restricted to female associates."
     ]);
     exit;
 }
-
-if ($gender === 'female' && $leaveType === 'Paternity') {
+if ($typeRow['gender_restriction'] === 'Male' && $gender === 'female') {
     echo json_encode([
         'success' => false,
-        'message' => "Paternity Leave is restricted to male associates."
+        'message' => "{$leaveTypeLabel} is restricted to male associates."
     ]);
     exit;
 }
@@ -151,21 +142,31 @@ if ($existingLeave) {
 }
 
 // 4. CHECK BALANCE SUFFICIENCY
-$balanceColMap = [
-    'VL' => 'vl_balance',
-    'SL' => 'sl_balance',
-    'Emergency' => 'emergency_balance',
-    'Bereavement' => 'bereavement_balance',
-    'SoloParent' => 'solo_parent_balance',
-    'Maternity' => 'maternity_balance',
-    'Paternity' => 'paternity_balance',
-    'SpecialWomen' => 'special_women_balance',
-    'LWOP' => null // Leave Without Pay has unlimited/zero deduction
-];
+if ($typeRow['is_paid'] == 1 && $leaveType !== 'LWOP') {
+    $balStmt = $pdo->prepare("SELECT remaining_days FROM user_leave_allocations WHERE user_id = ? AND leave_type_code = ?");
+    $balStmt->execute([$targetUserId, $leaveType]);
+    $allocRow = $balStmt->fetch();
 
-$balanceCol = $balanceColMap[$leaveType] ?? null;
-if ($balanceCol && isset($targetUser[$balanceCol])) {
-    $currentBal = (float)$targetUser[$balanceCol];
+    $legacyColMap = [
+        'VL' => 'vl_balance',
+        'SL' => 'sl_balance',
+        'Emergency' => 'emergency_balance',
+        'Bereavement' => 'bereavement_balance',
+        'SoloParent' => 'solo_parent_balance',
+        'Maternity' => 'maternity_balance',
+        'Paternity' => 'paternity_balance',
+        'SpecialWomen' => 'special_women_balance'
+    ];
+    $legacyCol = $legacyColMap[$leaveType] ?? null;
+
+    if ($allocRow !== false) {
+        $currentBal = (float)$allocRow['remaining_days'];
+    } elseif ($legacyCol && isset($targetUser[$legacyCol])) {
+        $currentBal = (float)$targetUser[$legacyCol];
+    } else {
+        $currentBal = 0.0;
+    }
+
     if ($currentBal < $workingDays) {
         echo json_encode([
             'success' => false,
@@ -175,25 +176,33 @@ if ($balanceCol && isset($targetUser[$balanceCol])) {
     }
 }
 
-// 5. ATTACHMENT UPLOAD (Medical Certificate / Proof - Only applicable to Sick Leave & Emergency Leave)
+// 5. ATTACHMENT UPLOAD (Supporting Document / Proof)
 $attachmentPath = null;
-if (in_array($leaveType, ['SL', 'Emergency'])) {
-    if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = __DIR__ . '/../uploads/attachments';
-        if (!file_exists($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-    
+$hasAttachment = isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK;
+
+if ((int)$typeRow['requires_attachment'] === 1 && !$hasAttachment && !hasRole('admin')) {
+    echo json_encode([
+        'success' => false,
+        'message' => "Supporting document / proof is required for {$leaveTypeLabel}. Please attach a valid file (PDF, JPG, PNG, DOC)."
+    ]);
+    exit;
+}
+
+if ($hasAttachment) {
+    $uploadDir = __DIR__ . '/../uploads/attachments';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
     $fileInfo = pathinfo($_FILES['attachment']['name']);
     $ext = strtolower($fileInfo['extension'] ?? '');
     $allowedExts = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
 
-        if (in_array($ext, $allowedExts)) {
-            $cleanFileName = 'att_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
-            $targetFile = $uploadDir . '/' . $cleanFileName;
-            if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
-                $attachmentPath = 'uploads/attachments/' . $cleanFileName;
-            }
+    if (in_array($ext, $allowedExts)) {
+        $cleanFileName = 'att_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
+        $targetFile = $uploadDir . '/' . $cleanFileName;
+        if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
+            $attachmentPath = 'uploads/attachments/' . $cleanFileName;
         }
     }
 }

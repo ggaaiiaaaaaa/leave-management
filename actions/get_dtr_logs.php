@@ -67,6 +67,12 @@ foreach ($users as $u) {
         $expectedCount++;
     }
 
+    $format12h = function($t) {
+        if (empty($t)) return null;
+        $ts = strtotime($t);
+        return $ts ? date('g:i:s A', $ts) : $t;
+    };
+
     $dtrRecords[] = [
         'user_id' => $u['id'],
         'name' => $u['name'],
@@ -74,8 +80,14 @@ foreach ($users as $u) {
         'avatar_path' => $u['avatar_path'],
         'avatar_initials' => $u['avatar_initials'],
         'biometric_pin' => $u['biometric_pin'] ?: strval($u['id']),
-        'time_in' => $bio['time_in'] ?? null,
-        'time_out' => $bio['time_out'] ?? null,
+        'time_in' => $format12h($bio['time_in'] ?? null),
+        'break_out' => $format12h($bio['break_out'] ?? null),
+        'break_in' => $format12h($bio['break_in'] ?? null),
+        'time_out' => $format12h($bio['time_out'] ?? null),
+        'raw_time_in' => $bio['time_in'] ?? null,
+        'raw_break_out' => $bio['break_out'] ?? null,
+        'raw_break_in' => $bio['break_in'] ?? null,
+        'raw_time_out' => $bio['time_out'] ?? null,
         'verification_method' => $bio['verification_method'] ?? ($isOnLeave ? 'System Record' : '—'),
         'status' => $status,
         'status_type' => $statusType,

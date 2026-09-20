@@ -51,7 +51,14 @@ $balanceColMap = [
 $balanceCol = $balanceColMap[$req['leave_type']] ?? null;
 
 if ($decision === 'Approved' && $req['status'] !== 'Approved') {
-    // Deduct leave credits from applicant's balance
+    // Deduct from dynamic user_leave_allocations table
+    $pdo->prepare("
+        UPDATE user_leave_allocations
+        SET remaining_days = MAX(0, remaining_days - ?), updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND leave_type_code = ?
+    ")->execute([$req['days_count'], $req['user_id'], $req['leave_type']]);
+
+    // Deduct leave credits from legacy balance table if applicable
     if ($balanceCol) {
         $deductStmt = $pdo->prepare("UPDATE leave_balances SET {$balanceCol} = MAX(0, {$balanceCol} - ?) WHERE user_id = ?");
         $deductStmt->execute([$req['days_count'], $req['user_id']]);

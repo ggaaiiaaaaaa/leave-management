@@ -155,7 +155,7 @@ if (!hasRole('admin')) {
 }
 
 // 2. ADD NEW ASSOCIATE
-if ($action === 'add_user') {
+if ($action === 'add_user' || $action === 'create_user') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? 'password123';
@@ -183,13 +183,13 @@ if ($action === 'add_user') {
     $pwdHash = password_hash($password, PASSWORD_DEFAULT);
 
     $stmt = $pdo->prepare("
-        INSERT INTO users (name, email, password, role, title, gender, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (name, email, password, role, title, gender, department, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials)
+        VALUES (?, ?, ?, ?, ?, ?, 'General Practice', ?, ?, ?, ?)
     ");
     $stmt->execute([$name, $email, $pwdHash, $role, $title, $gender, $biometricPin, $faceEnrolled, $fingerprintEnrolled, $initials]);
     $newUserId = $pdo->lastInsertId();
 
-    // Initialize Default Leave Balances
+    // 1. Initialize Legacy Default Leave Balances
     $maternityBal = ($gender === 'Female') ? 105.0 : 0.0;
     $specialWomenBal = ($gender === 'Female') ? 60.0 : 0.0;
     $paternityBal = ($gender === 'Male') ? 7.0 : 0.0;
@@ -201,6 +201,20 @@ if ($action === 'add_user') {
         ) VALUES (?, 15.0, 15.0, 5.0, 3.0, 7.0, ?, ?, ?)
     ");
     $balStmt->execute([$newUserId, $maternityBal, $paternityBal, $specialWomenBal]);
+
+    // 2. Initialize Dynamic Policy Allocations (user_leave_allocations)
+    $activeTypes = $pdo->query("SELECT code, default_days FROM leave_types WHERE is_active = 1")->fetchAll();
+    $insAlloc = $pdo->prepare("
+        INSERT OR IGNORE INTO user_leave_allocations (user_id, leave_type_code, allocated_days, remaining_days)
+        VALUES (?, ?, ?, ?)
+    ");
+    foreach ($activeTypes as $at) {
+        $days = (float)$at['default_days'];
+        if ($at['code'] === 'ML' && $gender !== 'Female') $days = 0;
+        if ($at['code'] === 'VAWC' && $gender !== 'Female') $days = 0;
+        if ($at['code'] === 'PL' && $gender !== 'Male') $days = 0;
+        $insAlloc->execute([$newUserId, $at['code'], $days, $days]);
+    }
 
     echo json_encode([
         'success' => true,

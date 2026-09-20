@@ -34,6 +34,13 @@ $leaveRequests = $leaveReqStmt->fetchAll();
 // All staff for calendar filtering
 $allUsersStmt = $pdo->query("SELECT id, name FROM users ORDER BY id ASC");
 $allUsers = $allUsersStmt->fetchAll();
+
+// Fetch Active Leave Types & User's Dynamic Allocations
+$activeLeaveTypes = $pdo->query("SELECT * FROM leave_types WHERE is_active = 1 ORDER BY id ASC")->fetchAll();
+
+$userAllocStmt = $pdo->prepare("SELECT leave_type_code, remaining_days FROM user_leave_allocations WHERE user_id = ?");
+$userAllocStmt->execute([$user['id']]);
+$userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -389,18 +396,19 @@ $allUsers = $allUsersStmt->fetchAll();
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
             <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDaysPreview()">
-              <option value="VL" selected>Vacation Leave</option>
-              <option value="SL">Sick Leave</option>
-              <option value="Emergency">Emergency Leave</option>
-              <option value="Bereavement">Bereavement Leave</option>
-              <option value="SoloParent">Solo Parent Leave</option>
-              <?php if ($userGender === 'Female'): ?>
-                <option value="Maternity">Maternity Leave</option>
-                <option value="SpecialWomen">Special Leave for Women</option>
-              <?php else: ?>
-                <option value="Paternity">Paternity Leave</option>
-              <?php endif; ?>
-              <option value="LWOP">Leave Without Pay</option>
+              <?php foreach ($activeLeaveTypes as $lt): 
+                $isGenderRestricted = ($lt['gender_restriction'] === 'Female' && $userGender === 'Male') || ($lt['gender_restriction'] === 'Male' && $userGender === 'Female');
+                if ($isGenderRestricted) continue;
+                $remDays = $userAllocMap[$lt['code']] ?? (float)$lt['default_days'];
+              ?>
+                <option value="<?= htmlspecialchars($lt['code']) ?>"
+                  data-gender="<?= htmlspecialchars($lt['gender_restriction']) ?>"
+                  data-paid="<?= $lt['is_paid'] ?>"
+                  data-proof="<?= $lt['requires_attachment'] ?>"
+                  <?= $lt['code'] === 'VL' ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($lt['name']) ?> (<?= $remDays ?>d available)<?= $lt['is_paid'] ? '' : ' [Unpaid]' ?>
+                </option>
+              <?php endforeach; ?>
             </select>
           </div>
 
@@ -427,11 +435,11 @@ $allUsers = $allUsersStmt->fetchAll();
             </div>
           </div>
 
-          <!-- Medical Certificate Attachment (Only visible for Emergency & Sick Leave) -->
+          <!-- Supporting Document / Proof Attachment (Dynamically shown if policy requires proof) -->
           <div class="form-group" id="attachmentGroup" style="margin-top:14px; display:none;">
-            <label class="form-label"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> Attach Medical Certificate / Proof (Optional):</label>
-            <input type="file" name="attachment" id="applyAttachment" class="form-input" accept=".pdf,.jpg,.jpeg,.png">
-            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Required for medical or urgent emergency leaves (PDF, JPG, PNG).</div>
+            <label class="form-label" id="attachmentLabel"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> Attach Supporting Document / Proof <span class="req">*</span></label>
+            <input type="file" name="attachment" id="applyAttachment" class="form-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;" id="attachmentHelpText">Supporting document is required for this policy. Supported: PDF, JPG, PNG, DOC (Max 10MB)</div>
           </div>
 
           <div class="form-group" style="margin-top:14px;">
@@ -626,6 +634,23 @@ $allUsers = $allUsersStmt->fetchAll();
     </div>
   </div>
 
+  <!-- Custom Confirmation Dialog Modal -->
+  <div class="modal-backdrop" id="customConfirmModal" style="z-index: 99999;">
+    <div class="modal-window narrow confirm-dialog-window" style="max-width: 440px;">
+      <div class="modal-body" style="padding: 32px 26px 22px;">
+        <div class="confirm-dialog-icon-wrap" id="confirmIconContainer">
+          <i data-lucide="alert-triangle" style="width: 32px; height: 32px;" id="confirmIcon"></i>
+        </div>
+        <h3 class="confirm-dialog-title" id="confirmTitle">Confirm Action</h3>
+        <p class="confirm-dialog-message" id="confirmMessage">Are you sure you want to proceed?</p>
+      </div>
+      <div class="modal-footer confirm-dialog-footer">
+        <button type="button" class="btn-secondary" id="confirmCancelBtn" style="flex: 1; padding: 11px 18px; font-weight: 600;" onclick="resolveCustomConfirm(false)">Cancel</button>
+        <button type="button" class="btn-primary" id="confirmOkBtn" style="flex: 1; padding: 11px 18px; font-weight: 700;" onclick="resolveCustomConfirm(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- JavaScript Controller -->
@@ -656,15 +681,37 @@ $allUsers = $allUsersStmt->fetchAll();
       'SpecialWomen': <?= (float)$specBalance ?>
     };
 
-    function switchTab(tabId) {
+    function switchTab(tabId, updateState = true) {
+      const activePane = document.getElementById(`tab-${tabId}`);
+      if (!activePane) tabId = 'overview';
+
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('data-tab') === tabId) item.classList.add('active');
       });
       document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
-      const activePane = document.getElementById(`tab-${tabId}`);
-      if (activePane) activePane.style.display = 'block';
+      const targetPane = document.getElementById(`tab-${tabId}`);
+      if (targetPane) targetPane.style.display = 'block';
+
+      try {
+        localStorage.setItem('jtyeo_staff_active_tab', tabId);
+        if (updateState && history.replaceState) {
+          history.replaceState(null, '', '#' + tabId);
+        }
+      } catch (e) {}
+
+      if (tabId === 'calendar' && typeof calendarInstance !== 'undefined' && calendarInstance) {
+        setTimeout(() => calendarInstance.render(), 50);
+      }
       if (window.lucide) lucide.createIcons();
+    }
+
+    function initSavedTab() {
+      const hashTab = window.location.hash.replace('#', '').trim();
+      const savedTab = hashTab || localStorage.getItem('jtyeo_staff_active_tab');
+      if (savedTab && document.getElementById(`tab-${savedTab}`)) {
+        switchTab(savedTab, false);
+      }
     }
 
     function openModal(id) { 
@@ -675,6 +722,80 @@ $allUsers = $allUsersStmt->fetchAll();
       if (window.lucide) lucide.createIcons(); 
     }
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    // Custom Modal Confirmation Promise Controller
+    let confirmResolver = null;
+    function showConfirmDialog({
+      title = 'Are you sure?',
+      message = 'Please confirm this action to proceed.',
+      confirmText = 'Confirm',
+      cancelText = 'Cancel',
+      isDanger = false,
+      icon = 'alert-triangle'
+    } = {}) {
+      return new Promise((resolve) => {
+        confirmResolver = resolve;
+        document.getElementById('confirmTitle').innerText = title;
+        document.getElementById('confirmMessage').innerText = message;
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+        okBtn.innerText = confirmText;
+        cancelBtn.innerText = cancelText;
+
+        const iconContainer = document.getElementById('confirmIconContainer');
+        if (isDanger) {
+          iconContainer.style.background = 'rgba(220, 0, 0, 0.12)';
+          iconContainer.style.color = '#dc0000';
+          okBtn.className = 'btn-primary';
+          okBtn.style.background = 'linear-gradient(135deg, #dc0000 0%, #8b0e14 100%)';
+        } else {
+          iconContainer.style.background = 'rgba(220, 0, 0, 0.08)';
+          iconContainer.style.color = 'var(--primary)';
+          okBtn.className = 'btn-primary';
+          okBtn.style.background = '';
+        }
+
+        const iconEl = document.getElementById('confirmIcon');
+        if (iconEl) {
+          iconEl.setAttribute('data-lucide', icon);
+          if (window.lucide) lucide.createIcons();
+        }
+
+        openModal('customConfirmModal');
+      });
+    }
+
+    function resolveCustomConfirm(result) {
+      closeModal('customConfirmModal');
+      if (confirmResolver) {
+        confirmResolver(result);
+        confirmResolver = null;
+      }
+    }
+
+    // Dismiss modal on backdrop click or ESC key
+    document.addEventListener('click', function(e) {
+      if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
+        if (e.target.id === 'customConfirmModal') {
+          resolveCustomConfirm(false);
+        } else {
+          e.target.classList.remove('show');
+        }
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-backdrop.show');
+        if (activeModal) {
+          if (activeModal.id === 'customConfirmModal') {
+            resolveCustomConfirm(false);
+          } else {
+            activeModal.classList.remove('show');
+          }
+        }
+      }
+    });
 
     function showToast(msg, type = 'info') {
       const container = document.getElementById('toastContainer');
@@ -690,15 +811,33 @@ $allUsers = $allUsersStmt->fetchAll();
       const endStr = document.getElementById('applyEndDate').value;
       const type = document.getElementById('applyLeaveType').value;
 
-      // Only visible for Emergency Leave and Sick Leave
+      // Dynamically display attachment field if policy requires proof
+      const selectEl = document.getElementById('applyLeaveType');
+      const selectedOpt = selectEl && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+      const requiresProof = selectedOpt ? (selectedOpt.getAttribute('data-proof') === '1') : false;
+
       const attGroup = document.getElementById('attachmentGroup');
+      const attInput = document.getElementById('applyAttachment');
+      const attLabel = document.getElementById('attachmentLabel');
+      const attHelp = document.getElementById('attachmentHelpText');
+
       if (attGroup) {
-        if (type === 'SL' || type === 'Emergency') {
+        if (requiresProof) {
           attGroup.style.display = 'block';
+          if (attInput) attInput.required = true;
+          if (attLabel) {
+            attLabel.innerHTML = `<i data-lucide="paperclip" style="width:13px;height:13px;"></i> Attach Supporting Document / Proof <span class="req">*</span>`;
+          }
+          if (attHelp) {
+            attHelp.innerText = `Supporting document is required for ${selectedOpt ? selectedOpt.innerText.split('(')[0].trim() : 'this policy'}. (PDF, JPG, PNG, DOC)`;
+          }
+          if (window.lucide) lucide.createIcons();
         } else {
           attGroup.style.display = 'none';
-          const attInput = document.getElementById('applyAttachment');
-          if (attInput) attInput.value = '';
+          if (attInput) {
+            attInput.required = false;
+            attInput.value = '';
+          }
         }
       }
 
@@ -920,8 +1059,23 @@ $allUsers = $allUsersStmt->fetchAll();
       }
     }
 
+    initSavedTab();
+    window.addEventListener('hashchange', () => {
+      const hashTab = window.location.hash.replace('#', '').trim();
+      if (hashTab && document.getElementById(`tab-${hashTab}`)) {
+        switchTab(hashTab, false);
+      }
+    });
+
     if (window.lucide) lucide.createIcons();
-    document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+    document.addEventListener('DOMContentLoaded', () => { 
+      initSavedTab();
+      if (window.lucide) lucide.createIcons(); 
+    });
+    window.addEventListener('load', () => { 
+      initSavedTab();
+      if (window.lucide) lucide.createIcons(); 
+    });
   </script>
 </body>
 </html>

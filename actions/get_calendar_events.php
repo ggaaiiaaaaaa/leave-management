@@ -35,17 +35,8 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $leaves = $stmt->fetchAll();
 
-$colors = [
-    'VL' => ['bg' => '#059669', 'border' => '#047857'],
-    'SL' => ['bg' => '#e11d48', 'border' => '#be123c'],
-    'Emergency' => ['bg' => '#ea580c', 'border' => '#c2410c'],
-    'Bereavement' => ['bg' => '#475569', 'border' => '#334155'],
-    'LWOP' => ['bg' => '#64748b', 'border' => '#475569'],
-    'SoloParent' => ['bg' => '#d97706', 'border' => '#b45309'],
-    'Maternity' => ['bg' => '#7c3aed', 'border' => '#6d28d9'],
-    'Paternity' => ['bg' => '#0284c7', 'border' => '#0369a1'],
-    'SpecialWomen' => ['bg' => '#9333ea', 'border' => '#7e22ce']
-];
+// Fetch dynamic colors from leave_types table
+$dbColors = $pdo->query("SELECT code, color FROM leave_types")->fetchAll(PDO::FETCH_KEY_PAIR);
 
 foreach ($leaves as $l) {
     // FullCalendar end date is exclusive for all-day events, so add 1 day
@@ -53,7 +44,8 @@ foreach ($leaves as $l) {
     $end->modify('+1 day');
 
     $typeKey = $l['leave_type'];
-    $colorInfo = $colors[$typeKey] ?? ['bg' => '#0284c7', 'border' => '#0369a1'];
+    $eventColor = $dbColors[$typeKey] ?? '#dc0000';
+    $colorInfo = ['bg' => $eventColor, 'border' => $eventColor];
 
     $isPending = ($l['status'] === 'Pending');
     $title = ($isPending ? '[Pending] ' : '') . $l['employee_name'] . ' - ' . $l['leave_type_label'] . ' (' . $l['days_count'] . 'd)';

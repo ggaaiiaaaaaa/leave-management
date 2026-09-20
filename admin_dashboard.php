@@ -83,6 +83,26 @@ $expectedCount = max(0, $totalStaff - $presentCount - $onLeaveCount);
 // Upcoming Philippine Holidays
 $holidaysStmt = $pdo->query("SELECT * FROM holidays WHERE holiday_date >= date('now') ORDER BY holiday_date ASC LIMIT 5");
 $upcomingHolidays = $holidaysStmt->fetchAll();
+
+// Fetch All Leave Types & Allocations for Policy Management
+$allLeaveTypes = $pdo->query("SELECT * FROM leave_types ORDER BY is_active DESC, id ASC")->fetchAll();
+$activeLeaveTypes = array_values(array_filter($allLeaveTypes, fn($t) => $t['is_active'] == 1));
+
+$allocsRaw = $pdo->query("SELECT user_id, leave_type_code, allocated_days, remaining_days FROM user_leave_allocations")->fetchAll();
+$userAllocMap = [];
+foreach ($allocsRaw as $ar) {
+    $userAllocMap[$ar['user_id']][$ar['leave_type_code']] = (float)$ar['remaining_days'];
+}
+
+// Live ZKTeco Hardware Status
+$zkStatusFile = __DIR__ . '/database/zkteco_status.json';
+$zkIsOnline = false;
+if (file_exists($zkStatusFile)) {
+    $zkData = json_decode(file_get_contents($zkStatusFile), true) ?: [];
+    if (!empty($zkData['last_seen']) && (time() - $zkData['last_seen']) < 60) {
+        $zkIsOnline = true;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -149,6 +169,10 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
         <a class="nav-item" data-tab="users" onclick="switchTab('users')">
           <i data-lucide="users"></i>
           <span>Associate Management</span>
+        </a>
+        <a class="nav-item" data-tab="leave-policies" onclick="switchTab('leave-policies')">
+          <i data-lucide="sliders"></i>
+          <span>Leave Types & Policies</span>
         </a>
       </nav>
     </aside>
@@ -289,7 +313,7 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                         </td>
                         <td>
                           <?php if (!empty($req['attachment_path'])): ?>
-                            <a href="<?= htmlspecialchars($req['attachment_path']) ?>" target="_blank" class="btn-icon" title="View Medical Certificate / Document" style="color:var(--accent);">
+                            <a href="<?= htmlspecialchars($req['attachment_path']) ?>" target="_blank" class="btn-icon" title="View Attached Supporting Document / Proof" style="color:var(--accent);">
                               <i data-lucide="paperclip" style="width:14px;height:14px;"></i>
                             </a>
                           <?php else: ?>
@@ -375,7 +399,7 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                         <td style="font-size:12.5px; max-width:260px;"><?= htmlspecialchars($p['reason']) ?></td>
                         <td>
                           <?php if (!empty($p['attachment_path'])): ?>
-                            <a href="<?= htmlspecialchars($p['attachment_path']) ?>" target="_blank" class="btn-icon" title="Inspect Attached Medical Cert">
+                            <a href="<?= htmlspecialchars($p['attachment_path']) ?>" target="_blank" class="btn-icon" title="View Attached Supporting Document / Proof">
                               <i data-lucide="paperclip" style="width:14px;height:14px;color:var(--accent);"></i>
                             </a>
                           <?php else: ?>
@@ -410,9 +434,15 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                 <div class="zkteco-title">ZKTeco MB460 Plus Multi-Biometric System</div>
                 <div class="zkteco-sub">
                   <span>Visible Light Face Recognition + SilkID Fingerprint</span>
-                  <span id="zktecoStatusBadge" style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
-                    <i data-lucide="radio" style="width:12px;height:12px;"></i> Offline (Not Connected)
-                  </span>
+                  <?php if ($zkIsOnline): ?>
+                    <span id="zktecoStatusBadge" style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                      <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Online (Connected)
+                    </span>
+                  <?php else: ?>
+                    <span id="zktecoStatusBadge" style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                      <i data-lucide="radio" style="width:12px;height:12px;"></i> Offline (Not Connected)
+                    </span>
+                  <?php endif; ?>
                 </div>
               </div>
             </div>
@@ -447,13 +477,15 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                     <th>Associate</th>
                     <th>Device PIN</th>
                     <th>Time In</th>
+                    <th>Break Out</th>
+                    <th>Break In</th>
                     <th>Time Out</th>
                     <th>Verification Method</th>
                     <th>Daily Attendance Status</th>
                   </tr>
                 </thead>
                 <tbody id="dtrTableBody">
-                  <tr><td colspan="6" style="text-align:center; padding:24px;">Loading daily time records...</td></tr>
+                  <tr><td colspan="8" style="text-align:center; padding:24px;">Loading daily time records...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -631,6 +663,155 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
           </div>
         </div>
 
+        <!-- TAB 6: LEAVE TYPES & POLICIES MANAGEMENT -->
+        <div id="tab-leave-policies" class="tab-pane" style="display:none;">
+          <div class="page-header">
+            <div class="page-title">
+              <h1>Leave Policies & Entitlement Allocation</h1>
+              <p>Configure firm-wide leave categories, establish standard annual quotas, and manage associate credit allocations.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn-secondary" onclick="openModal('bulkAllocateModal')">
+                <i data-lucide="layers"></i>
+                <span>Bulk Allocate Credits</span>
+              </button>
+              <button class="btn-primary" onclick="openModal('addLeaveTypeModal')">
+                <i data-lucide="plus-circle"></i>
+                <span>Add Leave Category</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 1: Firm Leave Categories Grid -->
+          <div class="dashboard-card" style="margin-bottom: 24px;">
+            <div class="card-head">
+              <h3><i data-lucide="sliders" style="color:var(--accent);"></i> Active Firm Leave Categories</h3>
+              <span style="font-size:12px; color:var(--text-muted);"><?= count($allLeaveTypes) ?> Configured Categories</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; padding:20px;">
+              <?php foreach ($allLeaveTypes as $lt): ?>
+                <div class="policy-card" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:18px; display:flex; flex-direction:column; justify-content:space-between; position:relative; border-left:4px solid <?= htmlspecialchars($lt['color']) ?>; box-shadow:var(--shadow-sm);">
+                  <div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:<?= htmlspecialchars($lt['color']) ?>;"></span>
+                        <strong style="font-size:15px; color:var(--primary);"><?= htmlspecialchars($lt['name']) ?></strong>
+                      </div>
+                      <span class="badge" style="background:var(--bg-subtle); color:var(--text-muted); font-family:monospace; font-weight:700;"><?= htmlspecialchars($lt['code']) ?></span>
+                    </div>
+
+                    <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px; line-height:1.4;">
+                      <?= htmlspecialchars($lt['description'] ?: 'Standard firm leave policy allocation.') ?>
+                    </p>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+                      <span class="badge" style="background:<?= $lt['is_paid'] ? 'var(--success-soft)' : 'var(--bg-subtle)' ?>; color:<?= $lt['is_paid'] ? '#065f46' : 'var(--text-muted)' ?>;">
+                        <?= $lt['is_paid'] ? 'Paid Leave' : 'Unpaid (LWOP)' ?>
+                      </span>
+                      <span class="badge" style="background:var(--bg-subtle); color:var(--text-main);">
+                        <?= $lt['gender_restriction'] === 'All' ? 'All Associates' : htmlspecialchars($lt['gender_restriction']) . ' Only' ?>
+                      </span>
+                      <?php if ($lt['requires_attachment']): ?>
+                        <span class="badge" style="background:#fee2e2; color:#b91c1c;">Proof Required</span>
+                      <?php endif; ?>
+                      <?php if (!$lt['is_active']): ?>
+                        <span class="badge" style="background:#f1f5f9; color:#64748b;">Archived</span>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+
+                  <div style="border-top:1px solid var(--border-color); padding-top:12px; display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); font-weight:700;">Standard Quota</div>
+                      <div style="font-size:18px; font-weight:800; color:var(--primary);">
+                        <?= (float)$lt['default_days'] ?> <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Days</span>
+                      </div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <button class="btn-icon" title="Edit Policy" onclick='openEditLeaveTypeModal(<?= json_encode($lt, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
+                        <i data-lucide="pencil" style="width:14px;height:14px;color:var(--text-main);"></i>
+                      </button>
+                      <button class="btn-icon" title="Bulk Apply <?= (float)$lt['default_days'] ?> days to All Staff" onclick="triggerBulkForCode('<?= htmlspecialchars($lt['code']) ?>', <?= (float)$lt['default_days'] ?>)">
+                        <i data-lucide="zap" style="width:14px;height:14px;color:var(--accent);"></i>
+                      </button>
+                      <button class="btn-icon" title="<?= $lt['is_active'] ? 'Archive Policy' : 'Activate Policy' ?>" onclick="toggleLeaveTypeStatus(<?= $lt['id'] ?>, <?= $lt['is_active'] ? 0 : 1 ?>)">
+                        <i data-lucide="<?= $lt['is_active'] ? 'archive' : 'rotate-ccw' ?>" style="width:14px;height:14px;color:<?= $lt['is_active'] ? 'var(--text-muted)' : 'var(--success)' ?>;"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+
+          <!-- Section 2: Live Associate Entitlement Matrix -->
+          <div class="dashboard-card">
+            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h3><i data-lucide="grid" style="color:var(--accent);"></i> Associate Leave Allocation Matrix</h3>
+                <span style="font-size:12px; color:var(--text-muted);">Click any balance chip to quickly adjust individual credits</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <input type="text" id="matrixSearchInput" class="form-input" placeholder="Search associate..." style="padding:6px 12px; font-size:12px; width:200px;" onkeyup="filterMatrixTable()">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table" id="matrixTable">
+                <thead>
+                  <tr>
+                    <th style="min-width:190px;">Associate</th>
+                    <th style="min-width:120px;">Department</th>
+                    <?php foreach ($activeLeaveTypes as $lt): ?>
+                      <th style="text-align:center; min-width:85px;" title="<?= htmlspecialchars($lt['name']) ?>">
+                        <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                          <span style="width:8px; height:8px; border-radius:50%; background:<?= htmlspecialchars($lt['color']) ?>; display:inline-block;"></span>
+                          <span><?= htmlspecialchars($lt['code']) ?></span>
+                        </div>
+                      </th>
+                    <?php endforeach; ?>
+                    <th style="text-align:center; min-width:80px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($allUsers as $u): 
+                    $uGender = strtolower(trim($u['gender'] ?? 'female'));
+                  ?>
+                    <tr class="matrix-row">
+                      <td>
+                        <div style="font-weight:700; color:var(--primary);"><?= htmlspecialchars($u['name']) ?></div>
+                        <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($u['title']) ?> &bull; <?= htmlspecialchars($u['gender']) ?></div>
+                      </td>
+                      <td><?= htmlspecialchars($u['department']) ?></td>
+                      <?php foreach ($activeLeaveTypes as $lt): 
+                        $code = $lt['code'];
+                        $isRestricted = ($lt['gender_restriction'] === 'Female' && $uGender === 'male') || ($lt['gender_restriction'] === 'Male' && $uGender === 'female');
+                        $bal = $userAllocMap[$u['id']][$code] ?? (float)$lt['default_days'];
+                      ?>
+                        <td style="text-align:center;">
+                          <?php if ($isRestricted): ?>
+                            <span style="color:var(--text-light); font-size:11px; font-style:italic;" title="Not eligible due to gender policy">N/A</span>
+                          <?php else: ?>
+                            <button type="button" class="btn-balance-chip"
+                              onclick="openQuickAdjustModal(<?= $u['id'] ?>, '<?= addslashes($u['name']) ?>', '<?= htmlspecialchars($code) ?>', '<?= addslashes($lt['name']) ?>', <?= $bal ?>)"
+                              title="Click to adjust <?= htmlspecialchars($lt['name']) ?> for <?= addslashes($u['name']) ?>">
+                              <?= $bal ?>d
+                            </button>
+                          <?php endif; ?>
+                        </td>
+                      <?php endforeach; ?>
+                      <td style="text-align:center;">
+                        <button class="btn-icon" title="Adjust Balances" onclick="openAdjustmentModal(<?= $u['id'] ?>)">
+                          <i data-lucide="scale" style="width:14px;height:14px;color:var(--accent);"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   </div>
@@ -701,15 +882,15 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
             <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDaysPreview()">
-              <option value="VL" selected>Vacation Leave</option>
-              <option value="SL">Sick Leave</option>
-              <option value="Emergency">Emergency Leave</option>
-              <option value="Bereavement">Bereavement Leave</option>
-              <option value="SoloParent">Solo Parent Leave</option>
-              <option value="Maternity" id="optMaternity">Maternity Leave (Female Only)</option>
-              <option value="SpecialWomen" id="optSpecialWomen">Special Leave for Women (Female Only)</option>
-              <option value="Paternity" id="optPaternity">Paternity Leave (Male Only)</option>
-              <option value="LWOP">Leave Without Pay</option>
+              <?php foreach ($activeLeaveTypes as $lt): ?>
+                <option value="<?= htmlspecialchars($lt['code']) ?>"
+                  data-gender="<?= htmlspecialchars($lt['gender_restriction']) ?>"
+                  data-paid="<?= $lt['is_paid'] ?>"
+                  data-proof="<?= $lt['requires_attachment'] ?>"
+                  <?= $lt['code'] === 'VL' ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($lt['name']) ?><?= $lt['gender_restriction'] !== 'All' ? ' (' . $lt['gender_restriction'] . ' Only)' : '' ?><?= $lt['is_paid'] ? '' : ' [Unpaid]' ?>
+                </option>
+              <?php endforeach; ?>
             </select>
           </div>
 
@@ -736,11 +917,11 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
             </div>
           </div>
 
-          <!-- Medical Certificate Attachment (Only visible for Emergency & Sick Leave) -->
+          <!-- Supporting Document / Proof Attachment (Dynamically shown if policy requires proof) -->
           <div class="form-group" id="attachmentGroup" style="margin-top:14px; display:none;">
-            <label class="form-label"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> Attach Medical Certificate / Proof (Optional):</label>
-            <input type="file" name="attachment" id="applyAttachment" class="form-input" accept=".pdf,.jpg,.jpeg,.png">
-            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Supported: PDF, JPG, PNG (Max 10MB)</div>
+            <label class="form-label" id="attachmentLabel"><i data-lucide="paperclip" style="width:13px;height:13px;"></i> Attach Supporting Document / Proof <span class="req">*</span></label>
+            <input type="file" name="attachment" id="applyAttachment" class="form-input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;" id="attachmentHelpText">Supporting document is required for this policy. Supported: PDF, JPG, PNG, DOC (Max 10MB)</div>
           </div>
 
           <div class="form-group" style="margin-top:14px;">
@@ -879,14 +1060,9 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
           <div class="form-group" style="margin-bottom:14px;">
             <label class="form-label">Leave Category <span class="req">*</span></label>
             <select name="leave_type" id="adjLeaveType" class="form-select" required>
-              <option value="VL">Vacation Leave</option>
-              <option value="SL">Sick Leave</option>
-              <option value="Emergency">Emergency Leave</option>
-              <option value="Bereavement">Bereavement Leave</option>
-              <option value="SoloParent">Solo Parent Leave</option>
-              <option value="Maternity">Maternity Leave</option>
-              <option value="Paternity">Paternity Leave</option>
-              <option value="SpecialWomen">Special Leave for Women</option>
+              <?php foreach ($activeLeaveTypes as $lt): ?>
+                <option value="<?= htmlspecialchars($lt['code']) ?>"><?= htmlspecialchars($lt['name']) ?> (<?= htmlspecialchars($lt['code']) ?>)</option>
+              <?php endforeach; ?>
             </select>
           </div>
 
@@ -926,8 +1102,10 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
             <div class="form-group">
               <label class="form-label">Punch Type <span class="req">*</span></label>
               <select name="punch_type" id="punchType" class="form-select">
-                <option value="time_in">Time In (Arrival)</option>
-                <option value="time_out">Time Out (Departure)</option>
+                <option value="time_in">Time In (Morning Arrival)</option>
+                <option value="break_out">Break Out (Lunch / Break Departure)</option>
+                <option value="break_in">Break In (Lunch / Break Return)</option>
+                <option value="time_out">Time Out (Evening Departure)</option>
               </select>
             </div>
             <div class="form-group">
@@ -1195,6 +1373,259 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
     </div>
   </div>
 
+  <!-- 7. ADD LEAVE CATEGORY MODAL -->
+  <div class="modal-backdrop" id="addLeaveTypeModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="plus-circle"></i> Create New Leave Category</h3>
+        <button class="btn-close-modal" onclick="closeModal('addLeaveTypeModal')">&times;</button>
+      </div>
+      <form id="addLeaveTypeForm" onsubmit="handleAddLeaveTypeSubmit(event)">
+        <input type="hidden" name="action" value="add_type">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Category Name <span class="req">*</span></label>
+              <input type="text" name="name" class="form-input" placeholder="e.g. Board Exam Study Leave" required onkeyup="autoGenerateCode(this.value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Short Code / Key <span class="req">*</span></label>
+              <input type="text" name="code" id="newTypeCode" class="form-input" placeholder="e.g. STUDY" style="text-transform:uppercase; font-family:monospace; font-weight:700;" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Policy Description & Guidelines</label>
+            <textarea name="description" class="form-textarea" rows="2" placeholder="Brief description of when this leave is granted..."></textarea>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Default Annual Days <span class="req">*</span></label>
+              <input type="number" step="0.5" name="default_days" class="form-input" value="5" min="0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Compensation Type <span class="req">*</span></label>
+              <select name="is_paid" class="form-select">
+                <option value="1" selected>Paid Leave (Standard Salary)</option>
+                <option value="0">Unpaid Leave (LWOP)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Gender Eligibility <span class="req">*</span></label>
+              <select name="gender_restriction" class="form-select">
+                <option value="All" selected>All Associates</option>
+                <option value="Female">Female Associates Only</option>
+                <option value="Male">Male Associates Only</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Supporting Proof / Attachment</label>
+              <select name="requires_attachment" class="form-select">
+                <option value="0" selected>Optional Supporting Proof</option>
+                <option value="1">Mandatory Supporting Document</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Calendar Event Color Theme</label>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <input type="color" name="color" id="newTypeColor" value="#dc0000" style="width:44px; height:36px; border:none; border-radius:var(--radius-sm); cursor:pointer; background:none;">
+              <span style="font-size:12px; color:var(--text-muted);">Choose a visual color for Calendar events & badges</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('addLeaveTypeModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveNewType">Create &amp; Allocate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. EDIT LEAVE CATEGORY MODAL -->
+  <div class="modal-backdrop" id="editLeaveTypeModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="pencil"></i> Edit Leave Category Policy</h3>
+        <button class="btn-close-modal" onclick="closeModal('editLeaveTypeModal')">&times;</button>
+      </div>
+      <form id="editLeaveTypeForm" onsubmit="handleEditLeaveTypeSubmit(event)">
+        <input type="hidden" name="action" value="edit_type">
+        <input type="hidden" name="id" id="editTypeId">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Category Name <span class="req">*</span></label>
+              <input type="text" name="name" id="editTypeName" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category Code</label>
+              <input type="text" id="editTypeCodeDisplay" class="form-input" disabled style="font-family:monospace; font-weight:700; background:var(--bg-subtle);">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Policy Description</label>
+            <textarea name="description" id="editTypeDescription" class="form-textarea" rows="2"></textarea>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Standard Annual Days <span class="req">*</span></label>
+              <input type="number" step="0.5" name="default_days" id="editTypeDefaultDays" class="form-input" min="0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Compensation Type <span class="req">*</span></label>
+              <select name="is_paid" id="editTypeIsPaid" class="form-select">
+                <option value="1">Paid Leave</option>
+                <option value="0">Unpaid Leave</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Gender Eligibility <span class="req">*</span></label>
+              <select name="gender_restriction" id="editTypeGender" class="form-select">
+                <option value="All">All Associates</option>
+                <option value="Female">Female Associates Only</option>
+                <option value="Male">Male Associates Only</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Supporting Proof</label>
+              <select name="requires_attachment" id="editTypeProof" class="form-select">
+                <option value="0">Optional</option>
+                <option value="1">Mandatory</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Calendar Event Color</label>
+            <input type="color" name="color" id="editTypeColor" style="width:44px; height:36px; border:none; border-radius:var(--radius-sm); cursor:pointer; background:none;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('editLeaveTypeModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveEditType">Update Policy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. BULK ALLOCATE CREDITS MODAL -->
+  <div class="modal-backdrop" id="bulkAllocateModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="layers"></i> Bulk Allocate Leave Credits</h3>
+        <button class="btn-close-modal" onclick="closeModal('bulkAllocateModal')">&times;</button>
+      </div>
+      <form id="bulkAllocateForm" onsubmit="handleBulkAllocateSubmit(event)">
+        <input type="hidden" name="action" value="bulk_allocate">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Target Leave Category <span class="req">*</span></label>
+            <select name="leave_type_code" id="bulkTypeCode" class="form-select" required>
+              <?php foreach ($activeLeaveTypes as $lt): ?>
+                <option value="<?= htmlspecialchars($lt['code']) ?>"><?= htmlspecialchars($lt['name']) ?> (<?= htmlspecialchars($lt['code']) ?>)</option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Allocation Mode <span class="req">*</span></label>
+            <select name="mode" id="bulkMode" class="form-select" required>
+              <option value="set" selected>Set Standard Quota (Replace All Associates' Balances)</option>
+              <option value="add">Add Bonus / Top-Up (Add to Current Remaining Balances)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Days to Allocate <span class="req">*</span></label>
+            <input type="number" step="0.5" name="amount" id="bulkAmount" class="form-input" min="0" placeholder="e.g. 15 or 2" required>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">This action will apply to all active firm associates simultaneously.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('bulkAllocateModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnConfirmBulk">Confirm &amp; Apply to All Staff</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10. QUICK ADJUST SINGLE CREDIT MODAL -->
+  <div class="modal-backdrop" id="quickAdjustModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="sliders-horizontal"></i> Quick Credit Adjustment</h3>
+        <button class="btn-close-modal" onclick="closeModal('quickAdjustModal')">&times;</button>
+      </div>
+      <form id="quickAdjustForm" onsubmit="handleQuickAdjustSubmit(event)">
+        <input type="hidden" name="action" value="adjust_user_credit">
+        <input type="hidden" name="user_id" id="quickAdjUserId">
+        <input type="hidden" name="leave_type_code" id="quickAdjCode">
+        <div class="modal-body">
+          <div style="background:var(--bg-subtle); padding:12px 14px; border-radius:var(--radius-md); margin-bottom:14px; border:1px solid var(--border-color);">
+            <div style="font-size:12px; color:var(--text-muted);">Associate:</div>
+            <strong style="font-size:15px; color:var(--primary);" id="quickAdjUserName">--</strong>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">Category: <span id="quickAdjCategoryName" style="font-weight:700; color:var(--text-main);">--</span></div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Current Balance: <span id="quickAdjCurrentBal" style="font-weight:800; color:var(--accent);">0</span> Days</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Adjustment Mode</label>
+            <div style="display:flex; gap:12px; margin-bottom:10px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+                <input type="radio" name="adj_mode" value="delta" checked onchange="toggleQuickAdjMode(this.value)"> Relative (+ / -)
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+                <input type="radio" name="adj_mode" value="direct" onchange="toggleQuickAdjMode(this.value)"> Set Exact Total
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group" id="quickAdjDeltaGroup">
+            <label class="form-label">Add or Deduct Days</label>
+            <input type="number" step="0.5" name="adjustment" id="quickAdjDeltaInput" class="form-input" placeholder="e.g. +2.0 or -1.0">
+          </div>
+
+          <div class="form-group" id="quickAdjDirectGroup" style="display:none;">
+            <label class="form-label">New Total Remaining Days</label>
+            <input type="number" step="0.5" name="new_remaining" id="quickAdjDirectInput" class="form-input" min="0" placeholder="e.g. 15.0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('quickAdjustModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveQuickAdj">Update Balance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Executive Confirmation Dialog Modal -->
+  <div class="modal-backdrop" id="customConfirmModal" style="z-index: 99999;">
+    <div class="modal-window narrow confirm-dialog-window" style="max-width: 440px;">
+      <div class="modal-body" style="padding: 32px 26px 22px;">
+        <div class="confirm-dialog-icon-wrap" id="confirmIconContainer">
+          <i data-lucide="alert-triangle" style="width: 32px; height: 32px;" id="confirmIcon"></i>
+        </div>
+        <h3 class="confirm-dialog-title" id="confirmTitle">Confirm Action</h3>
+        <p class="confirm-dialog-message" id="confirmMessage">Are you sure you want to proceed?</p>
+      </div>
+      <div class="modal-footer confirm-dialog-footer">
+        <button type="button" class="btn-secondary" id="confirmCancelBtn" style="flex: 1; padding: 11px 18px; font-weight: 600;" onclick="resolveCustomConfirm(false)">Cancel</button>
+        <button type="button" class="btn-primary" id="confirmOkBtn" style="flex: 1; padding: 11px 18px; font-weight: 700;" onclick="resolveCustomConfirm(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- JavaScript Application Controller -->
@@ -1214,15 +1645,45 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
 
     const allUsersData = <?= json_encode(array_column($allUsers, null, 'id')) ?>;
 
-    function switchTab(tabId) {
+    function switchTab(tabId, updateState = true) {
+      const activePane = document.getElementById(`tab-${tabId}`);
+      if (!activePane) tabId = 'overview';
+
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('data-tab') === tabId) item.classList.add('active');
       });
       document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
-      const activePane = document.getElementById(`tab-${tabId}`);
-      if (activePane) activePane.style.display = 'block';
+      const targetPane = document.getElementById(`tab-${tabId}`);
+      if (targetPane) targetPane.style.display = 'block';
+
+      try {
+        localStorage.setItem('jtyeo_admin_active_tab', tabId);
+        if (updateState && history.replaceState) {
+          history.replaceState(null, '', '#' + tabId);
+        }
+      } catch (e) {}
+
+      if (tabId === 'calendar' && typeof calendarInstance !== 'undefined' && calendarInstance) {
+        setTimeout(() => calendarInstance.render(), 50);
+      }
+      if (tabId === 'biometrics') {
+        if (typeof loadDtrLogs === 'function') loadDtrLogs();
+        if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
+      }
       if (window.lucide) lucide.createIcons();
+    }
+
+    function initSavedTab() {
+      const hashTab = window.location.hash.replace('#', '').trim();
+      const savedTab = hashTab || localStorage.getItem('jtyeo_admin_active_tab');
+      if (savedTab && document.getElementById(`tab-${savedTab}`)) {
+        switchTab(savedTab, false);
+      }
+      if (savedTab === 'biometrics') {
+        if (typeof loadDtrLogs === 'function') loadDtrLogs();
+        if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
+      }
     }
 
     function openModal(id) { 
@@ -1233,6 +1694,80 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
       if (window.lucide) lucide.createIcons(); 
     }
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    // Custom Modal Confirmation Promise Controller
+    let confirmResolver = null;
+    function showConfirmDialog({
+      title = 'Are you sure?',
+      message = 'Please confirm this action to proceed.',
+      confirmText = 'Confirm',
+      cancelText = 'Cancel',
+      isDanger = false,
+      icon = 'alert-triangle'
+    } = {}) {
+      return new Promise((resolve) => {
+        confirmResolver = resolve;
+        document.getElementById('confirmTitle').innerText = title;
+        document.getElementById('confirmMessage').innerText = message;
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+        okBtn.innerText = confirmText;
+        cancelBtn.innerText = cancelText;
+
+        const iconContainer = document.getElementById('confirmIconContainer');
+        if (isDanger) {
+          iconContainer.style.background = 'rgba(220, 0, 0, 0.12)';
+          iconContainer.style.color = '#dc0000';
+          okBtn.className = 'btn-primary';
+          okBtn.style.background = 'linear-gradient(135deg, #dc0000 0%, #8b0e14 100%)';
+        } else {
+          iconContainer.style.background = 'rgba(220, 0, 0, 0.08)';
+          iconContainer.style.color = 'var(--primary)';
+          okBtn.className = 'btn-primary';
+          okBtn.style.background = '';
+        }
+
+        const iconEl = document.getElementById('confirmIcon');
+        if (iconEl) {
+          iconEl.setAttribute('data-lucide', icon);
+          if (window.lucide) lucide.createIcons();
+        }
+
+        openModal('customConfirmModal');
+      });
+    }
+
+    function resolveCustomConfirm(result) {
+      closeModal('customConfirmModal');
+      if (confirmResolver) {
+        confirmResolver(result);
+        confirmResolver = null;
+      }
+    }
+
+    // Dismiss modal on backdrop click or ESC key
+    document.addEventListener('click', function(e) {
+      if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
+        if (e.target.id === 'customConfirmModal') {
+          resolveCustomConfirm(false);
+        } else {
+          e.target.classList.remove('show');
+        }
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-backdrop.show');
+        if (activeModal) {
+          if (activeModal.id === 'customConfirmModal') {
+            resolveCustomConfirm(false);
+          } else {
+            activeModal.classList.remove('show');
+          }
+        }
+      }
+    });
 
     function showToast(msg, type = 'info') {
       const container = document.getElementById('toastContainer');
@@ -1246,26 +1781,30 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
     // Gender rules on leave type dropdown
     function handleTargetUserChange() {
       const userSelect = document.getElementById('applyTargetUser');
+      if (!userSelect || !userSelect.options.length) return;
       const selectedOption = userSelect.options[userSelect.selectedIndex];
+      if (!selectedOption) return;
       const gender = (selectedOption.getAttribute('data-gender') || 'Female').toLowerCase();
 
-      const optMat = document.getElementById('optMaternity');
-      const optSpec = document.getElementById('optSpecialWomen');
-      const optPat = document.getElementById('optPaternity');
+      const leaveTypeSelect = document.getElementById('applyLeaveType');
+      if (leaveTypeSelect) {
+        let currentValid = true;
+        Array.from(leaveTypeSelect.options).forEach(opt => {
+          const reqGender = (opt.getAttribute('data-gender') || 'All').toLowerCase();
+          if (reqGender === 'female' && gender === 'male') {
+            opt.disabled = true;
+            if (leaveTypeSelect.value === opt.value) currentValid = false;
+          } else if (reqGender === 'male' && gender === 'female') {
+            opt.disabled = true;
+            if (leaveTypeSelect.value === opt.value) currentValid = false;
+          } else {
+            opt.disabled = false;
+          }
+        });
 
-      if (gender === 'male') {
-        optMat.disabled = true;
-        optSpec.disabled = true;
-        optPat.disabled = false;
-        if (['Maternity', 'SpecialWomen'].includes(document.getElementById('applyLeaveType').value)) {
-          document.getElementById('applyLeaveType').value = 'VL';
-        }
-      } else {
-        optMat.disabled = false;
-        optSpec.disabled = false;
-        optPat.disabled = true;
-        if (document.getElementById('applyLeaveType').value === 'Paternity') {
-          document.getElementById('applyLeaveType').value = 'VL';
+        if (!currentValid) {
+          const firstEnabled = Array.from(leaveTypeSelect.options).find(o => !o.disabled);
+          if (firstEnabled) leaveTypeSelect.value = firstEnabled.value;
         }
       }
       calculateWorkingDaysPreview();
@@ -1278,15 +1817,33 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
       const type = document.getElementById('applyLeaveType').value;
       const userId = document.getElementById('applyTargetUser').value;
 
-      // Only visible for Emergency Leave and Sick Leave
+      // Dynamically display attachment field if policy requires proof
+      const selectEl = document.getElementById('applyLeaveType');
+      const selectedOpt = selectEl && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+      const requiresProof = selectedOpt ? (selectedOpt.getAttribute('data-proof') === '1') : false;
+
       const attGroup = document.getElementById('attachmentGroup');
+      const attInput = document.getElementById('applyAttachment');
+      const attLabel = document.getElementById('attachmentLabel');
+      const attHelp = document.getElementById('attachmentHelpText');
+
       if (attGroup) {
-        if (type === 'SL' || type === 'Emergency') {
+        if (requiresProof) {
           attGroup.style.display = 'block';
+          if (attInput) attInput.required = true;
+          if (attLabel) {
+            attLabel.innerHTML = `<i data-lucide="paperclip" style="width:13px;height:13px;"></i> Attach Supporting Document / Proof <span class="req">*</span>`;
+          }
+          if (attHelp) {
+            attHelp.innerText = `Supporting document is required for ${selectedOpt ? selectedOpt.innerText.split('(')[0].trim() : 'this policy'}. (PDF, JPG, PNG, DOC)`;
+          }
+          if (window.lucide) lucide.createIcons();
         } else {
           attGroup.style.display = 'none';
-          const attInput = document.getElementById('applyAttachment');
-          if (attInput) attInput.value = '';
+          if (attInput) {
+            attInput.required = false;
+            attInput.value = '';
+          }
         }
       }
 
@@ -1497,17 +2054,264 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
       }
     }
 
+    // Leave Policies & Entitlements Management JS Handlers
+    function autoGenerateCode(name) {
+      const codeInput = document.getElementById('newTypeCode');
+      if (codeInput && !codeInput.dataset.touched) {
+        codeInput.value = name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
+      }
+    }
+    document.getElementById('newTypeCode')?.addEventListener('input', function() { this.dataset.touched = 'true'; });
+
+    async function handleAddLeaveTypeSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('addLeaveTypeForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('btnSaveNewType');
+      btn.disabled = true;
+      btn.innerText = 'Creating...';
+      try {
+        const res = await fetch('actions/manage_leave_types.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('addLeaveTypeModal');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Failed to create leave category', 'error');
+          btn.disabled = false;
+          btn.innerText = 'Create & Allocate';
+        }
+      } catch (err) {
+        showToast('Network error.', 'error');
+        btn.disabled = false;
+        btn.innerText = 'Create & Allocate';
+      }
+    }
+
+    function openEditLeaveTypeModal(lt) {
+      document.getElementById('editTypeId').value = lt.id;
+      document.getElementById('editTypeName').value = lt.name;
+      document.getElementById('editTypeCodeDisplay').value = lt.code;
+      document.getElementById('editTypeDescription').value = lt.description || '';
+      document.getElementById('editTypeDefaultDays').value = lt.default_days;
+      document.getElementById('editTypeIsPaid').value = lt.is_paid;
+      document.getElementById('editTypeGender').value = lt.gender_restriction;
+      document.getElementById('editTypeProof').value = lt.requires_attachment;
+      document.getElementById('editTypeColor').value = lt.color || '#dc0000';
+      openModal('editLeaveTypeModal');
+    }
+
+    async function handleEditLeaveTypeSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('editLeaveTypeForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('btnSaveEditType');
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+      try {
+        const res = await fetch('actions/manage_leave_types.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('editLeaveTypeModal');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Error updating policy', 'error');
+          btn.disabled = false;
+          btn.innerText = 'Update Policy';
+        }
+      } catch (err) {
+        showToast('Network error.', 'error');
+        btn.disabled = false;
+        btn.innerText = 'Update Policy';
+      }
+    }
+
+    async function toggleLeaveTypeStatus(id, newStatus) {
+      const actionName = newStatus ? 'Activate' : 'Archive';
+      const confirmed = await showConfirmDialog({
+        title: `${actionName} Leave Policy`,
+        message: `Are you sure you want to ${actionName.toLowerCase()} this leave policy? Inactive policies cannot be selected by associates when filing leave.`,
+        confirmText: `${actionName} Policy`,
+        cancelText: 'Cancel',
+        isDanger: !newStatus,
+        icon: newStatus ? 'check-circle' : 'archive'
+      });
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch('actions/manage_leave_types.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'toggle_status', id: id, is_active: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Error toggling status', 'error');
+        }
+      } catch (err) {
+        showToast('Network error', 'error');
+      }
+    }
+
+    function triggerBulkForCode(code, defaultDays) {
+      const select = document.getElementById('bulkTypeCode');
+      if (select) select.value = code;
+      const amtInput = document.getElementById('bulkAmount');
+      if (amtInput) amtInput.value = defaultDays;
+      document.getElementById('bulkMode').value = 'set';
+      openModal('bulkAllocateModal');
+    }
+
+    async function handleBulkAllocateSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('bulkAllocateForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('btnConfirmBulk');
+
+      const confirmed = await showConfirmDialog({
+        title: 'Bulk Apply Allocation',
+        message: 'Are you sure you want to apply this allocation to ALL active associates in the firm? Balances will be updated immediately.',
+        confirmText: 'Yes, Apply to All',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'users'
+      });
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      btn.innerText = 'Applying...';
+      try {
+        const res = await fetch('actions/manage_leave_types.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('bulkAllocateModal');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Failed to bulk allocate', 'error');
+          btn.disabled = false;
+          btn.innerText = 'Confirm & Apply to All Staff';
+        }
+      } catch (err) {
+        showToast('Network error.', 'error');
+        btn.disabled = false;
+        btn.innerText = 'Confirm & Apply to All Staff';
+      }
+    }
+
+    function openQuickAdjustModal(userId, userName, code, typeName, currentBal) {
+      document.getElementById('quickAdjUserId').value = userId;
+      document.getElementById('quickAdjUserName').innerText = userName;
+      document.getElementById('quickAdjCode').value = code;
+      document.getElementById('quickAdjCategoryName').innerText = typeName;
+      document.getElementById('quickAdjCurrentBal').innerText = currentBal;
+      document.getElementById('quickAdjDeltaInput').value = '';
+      document.getElementById('quickAdjDirectInput').value = currentBal;
+      openModal('quickAdjustModal');
+    }
+
+    function toggleQuickAdjMode(mode) {
+      document.getElementById('quickAdjDeltaGroup').style.display = (mode === 'delta') ? 'block' : 'none';
+      document.getElementById('quickAdjDirectGroup').style.display = (mode === 'direct') ? 'block' : 'none';
+    }
+
+    async function handleQuickAdjustSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('quickAdjustForm');
+      const mode = form.querySelector('input[name="adj_mode"]:checked').value;
+      const userId = document.getElementById('quickAdjUserId').value;
+      const code = document.getElementById('quickAdjCode').value;
+      const btn = document.getElementById('btnSaveQuickAdj');
+
+      const payload = {
+        action: 'adjust_user_credit',
+        user_id: userId,
+        leave_type_code: code
+      };
+
+      if (mode === 'delta') {
+        const delta = parseFloat(document.getElementById('quickAdjDeltaInput').value);
+        if (isNaN(delta) || delta === 0) {
+          showToast('Please enter an adjustment amount (e.g. +2 or -1).', 'error');
+          return;
+        }
+        payload.adjustment = delta;
+      } else {
+        const direct = parseFloat(document.getElementById('quickAdjDirectInput').value);
+        if (isNaN(direct)) {
+          showToast('Please enter a valid balance total.', 'error');
+          return;
+        }
+        payload.new_remaining = direct;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+      try {
+        const res = await fetch('actions/manage_leave_types.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('quickAdjustModal');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Adjustment failed', 'error');
+          btn.disabled = false;
+          btn.innerText = 'Update Balance';
+        }
+      } catch (err) {
+        showToast('Network error.', 'error');
+        btn.disabled = false;
+        btn.innerText = 'Update Balance';
+      }
+    }
+
+    function filterMatrixTable() {
+      const q = (document.getElementById('matrixSearchInput')?.value || '').toLowerCase();
+      document.querySelectorAll('#matrixTable tbody tr.matrix-row').forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
+    // Convert 24-hour military time to standard 12-hour AM/PM format
+    function format12h(timeStr) {
+      if (!timeStr) return null;
+      if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+      const parts = timeStr.trim().split(':');
+      if (parts.length < 2) return timeStr;
+      let hours = parseInt(parts[0], 10);
+      const minutes = parts[1];
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strHours = hours < 10 ? '0' + hours : hours;
+      return `${strHours}:${minutes} ${ampm}`;
+    }
+
     // DTR / Biometric Attendance Loader
-    async function loadDtrLogs() {
-      const dateVal = document.getElementById('dtrDatePicker').value || todayStr;
+    async function loadDtrLogs(silent = false) {
+      const dateVal = document.getElementById('dtrDatePicker')?.value || todayStr;
       const tbody = document.getElementById('dtrTableBody');
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;"><div style="font-size:12px; color:var(--text-muted);">Fetching ZKTeco MB460 Plus records for ${dateVal}...</div></td></tr>`;
+      if (!tbody) return;
+      if (!silent) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px;"><div style="font-size:12px; color:var(--text-muted);">Fetching ZKTeco MB460 Plus records for ${dateVal}...</div></td></tr>`;
+      }
       try {
         const res = await fetch(`actions/get_dtr_logs.php?date=${dateVal}`);
         const data = await res.json();
         if (data.success && data.records) {
           if (data.records.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No records found for ${dateVal}.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No records found for ${dateVal}.</td></tr>`;
             return;
           }
           let rowsHtml = '';
@@ -1538,6 +2342,11 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
               ? `<img src="${r.avatar_path}" alt="">` 
               : `${r.avatar_initials}`;
 
+            const formattedTimeIn = format12h(r.time_in);
+            const formattedBreakOut = format12h(r.break_out);
+            const formattedBreakIn = format12h(r.break_in);
+            const formattedTimeOut = format12h(r.time_out);
+
             rowsHtml += `
               <tr>
                 <td>
@@ -1550,8 +2359,10 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
                   </div>
                 </td>
                 <td><strong>#${r.biometric_pin}</strong></td>
-                <td>${r.time_in ? `<span style="font-weight:700; font-family:monospace; color:var(--primary);">${r.time_in}</span>` : '<span style="color:var(--text-light);">--:--:--</span>'}</td>
-                <td>${r.time_out ? `<span style="font-weight:700; font-family:monospace; color:var(--primary);">${r.time_out}</span>` : '<span style="color:var(--text-light);">--:--:--</span>'}</td>
+                <td>${formattedTimeIn ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${formattedTimeIn}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${formattedBreakOut ? `<span style="font-weight:700; font-family:monospace; color:#b45309; font-size:12px;">${formattedBreakOut}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${formattedBreakIn ? `<span style="font-weight:700; font-family:monospace; color:#15803d; font-size:12px;">${formattedBreakIn}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${formattedTimeOut ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${formattedTimeOut}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
                 <td>${methodBadge}</td>
                 <td>${statusBadge}</td>
               </tr>
@@ -1561,9 +2372,40 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
           if (window.lucide) lucide.createIcons();
         }
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--danger);">Error loading DTR records.</td></tr>`;
+        if (!silent) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--danger);">Error loading DTR records.</td></tr>`;
+        }
       }
     }
+
+    // Live Biometric Status Checker (Zero clicks needed)
+    async function checkBiometricStatus() {
+      const badge = document.getElementById('zktecoStatusBadge');
+      if (!badge) return;
+      try {
+        const res = await fetch('actions/biometric_sync.php?action=get_status');
+        const data = await res.json();
+        if (data.success && data.online) {
+          badge.style.background = '#dcfce7';
+          badge.style.color = '#15803d';
+          badge.innerHTML = '<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Online (Connected)';
+        } else {
+          badge.style.background = '#fee2e2';
+          badge.style.color = '#991b1b';
+          badge.innerHTML = '<i data-lucide="radio" style="width:12px;height:12px;"></i> Offline (Not Connected)';
+        }
+        if (window.lucide) lucide.createIcons();
+      } catch (e) {}
+    }
+
+    // Auto-update DTR logs and hardware status every 10 seconds in the background when Biometrics tab is open
+    setInterval(() => {
+      const bioPane = document.getElementById('tab-biometrics');
+      if (bioPane && bioPane.style.display !== 'none') {
+        if (typeof loadDtrLogs === 'function') loadDtrLogs(true);
+        checkBiometricStatus();
+      }
+    }, 10000);
 
     // Sync Biometrics (100% Automatic)
     async function syncBiometrics() {
@@ -1868,8 +2710,23 @@ $upcomingHolidays = $holidaysStmt->fetchAll();
       }
     }
 
+    initSavedTab();
+    window.addEventListener('hashchange', () => {
+      const hashTab = window.location.hash.replace('#', '').trim();
+      if (hashTab && document.getElementById(`tab-${hashTab}`)) {
+        switchTab(hashTab, false);
+      }
+    });
+
     if (window.lucide) lucide.createIcons();
-    document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+    document.addEventListener('DOMContentLoaded', () => { 
+      initSavedTab();
+      if (window.lucide) lucide.createIcons(); 
+    });
+    window.addEventListener('load', () => { 
+      initSavedTab();
+      if (window.lucide) lucide.createIcons(); 
+    });
   </script>
 </body>
 </html>

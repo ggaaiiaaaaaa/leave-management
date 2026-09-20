@@ -98,6 +98,8 @@ try {
             biometric_pin TEXT,
             log_date DATE NOT NULL,
             time_in TIME,
+            break_out TIME,
+            break_in TIME,
             time_out TIME,
             verification_method TEXT DEFAULT 'Face Scan', -- 'Face Scan', 'Fingerprint', 'PIN / Card'
             status TEXT DEFAULT 'On-Time', -- 'On-Time', 'Late', 'Undertime', 'Present'
@@ -117,6 +119,30 @@ try {
             notification_type TEXT, -- 'leave_filed', 'leave_approved', 'leave_rejected'
             status TEXT DEFAULT 'Sent',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS leave_types (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            default_days REAL DEFAULT 0,
+            is_paid INTEGER DEFAULT 1,
+            gender_restriction TEXT DEFAULT 'All', -- 'All', 'Female', 'Male'
+            requires_attachment INTEGER DEFAULT 0,
+            color TEXT DEFAULT '#dc0000',
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS user_leave_allocations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            leave_type_code TEXT NOT NULL,
+            allocated_days REAL NOT NULL DEFAULT 0,
+            remaining_days REAL NOT NULL DEFAULT 0,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(user_id, leave_type_code)
         );
     ");
 
@@ -138,6 +164,14 @@ try {
         $pdo->exec("ALTER TABLE users ADD COLUMN avatar_path TEXT");
     }
 
+    $bioCols = $pdo->query("PRAGMA table_info(biometric_logs)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('break_out', $bioCols)) {
+        $pdo->exec("ALTER TABLE biometric_logs ADD COLUMN break_out TIME");
+    }
+    if (!in_array('break_in', $bioCols)) {
+        $pdo->exec("ALTER TABLE biometric_logs ADD COLUMN break_in TIME");
+    }
+
     $balanceCols = $pdo->query("PRAGMA table_info(leave_balances)")->fetchAll(PDO::FETCH_COLUMN, 1);
     $requiredBalanceCols = [
         'vl_balance' => 'REAL DEFAULT 12.0',
@@ -152,6 +186,68 @@ try {
     foreach ($requiredBalanceCols as $col => $def) {
         if (!in_array($col, $balanceCols)) {
             $pdo->exec("ALTER TABLE leave_balances ADD COLUMN {$col} {$def}");
+        }
+    }
+
+    // Seed default leave types if empty
+    $typeCount = $pdo->query("SELECT COUNT(*) FROM leave_types")->fetchColumn();
+    if ($typeCount == 0) {
+        $defaultTypes = [
+            ['VL', 'Vacation Leave', 'Standard annual paid vacation time', 12.0, 1, 'All', 0, '#3b82f6'],
+            ['SL', 'Sick Leave', 'Medical care or recuperation leave', 10.0, 1, 'All', 1, '#10b981'],
+            ['Emergency', 'Emergency Leave', 'Unforeseen domestic or family emergencies', 5.0, 1, 'All', 1, '#f59e0b'],
+            ['Bereavement', 'Bereavement Leave', 'Immediate family death/grief leave', 3.0, 1, 'All', 1, '#6b7280'],
+            ['LWOP', 'Leave Without Pay', 'Authorized leave duration without salary compensation', 0.0, 0, 'All', 0, '#94a3b8'],
+            ['SoloParent', 'Solo Parent Leave', 'Parental leave under Solo Parents Welfare Act', 7.0, 1, 'All', 1, '#8b5cf6'],
+            ['Maternity', 'Maternity Leave', '105-day statutory maternity benefit for female staff', 105.0, 1, 'Female', 1, '#ec4899'],
+            ['Paternity', 'Paternity Leave', '7-day statutory paternity benefit for male staff', 7.0, 1, 'Male', 1, '#0284c7'],
+            ['SpecialWomen', 'Special Leave for Women', 'Gynecological surgery/condition recovery leave', 60.0, 1, 'Female', 1, '#f43f5e'],
+            ['Study', 'Study Leave', 'Dedicated study time for professional or academic examinations', 10.0, 1, 'All', 1, '#d97706'],
+            ['Wellness', 'Mental Health & Wellness Day', 'Self-care, rest and burnout prevention day', 2.0, 1, 'All', 0, '#06b6d4']
+        ];
+
+        $insType = $pdo->prepare("
+            INSERT INTO leave_types (code, name, description, default_days, is_paid, gender_restriction, requires_attachment, color, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ");
+        foreach ($defaultTypes as $dt) {
+            $insType->execute($dt);
+        }
+    }
+
+    // Auto-seed user_leave_allocations for any user missing records
+    $allUsers = $pdo->query("SELECT id FROM users")->fetchAll(PDO::FETCH_COLUMN);
+    $allTypes = $pdo->query("SELECT code, default_days FROM leave_types WHERE is_active = 1")->fetchAll();
+
+    $insAlloc = $pdo->prepare("
+        INSERT OR IGNORE INTO user_leave_allocations (user_id, leave_type_code, allocated_days, remaining_days)
+        VALUES (?, ?, ?, ?)
+    ");
+
+    $codeToLegacy = [
+        'VL' => 'vl_balance',
+        'SL' => 'sl_balance',
+        'Emergency' => 'emergency_balance',
+        'Bereavement' => 'bereavement_balance',
+        'SoloParent' => 'solo_parent_balance',
+        'Maternity' => 'maternity_balance',
+        'Paternity' => 'paternity_balance',
+        'SpecialWomen' => 'special_women_balance'
+    ];
+
+    foreach ($allUsers as $uid) {
+        $bStmt = $pdo->prepare("SELECT * FROM leave_balances WHERE user_id = ?");
+        $bStmt->execute([$uid]);
+        $legacy = $bStmt->fetch();
+
+        foreach ($allTypes as $t) {
+            $code = $t['code'];
+            $defaultDays = (float)$t['default_days'];
+            $rem = $defaultDays;
+            if ($legacy && isset($codeToLegacy[$code]) && isset($legacy[$codeToLegacy[$code]])) {
+                $rem = (float)$legacy[$codeToLegacy[$code]];
+            }
+            $insAlloc->execute([$uid, $code, $defaultDays, $rem]);
         }
     }
 

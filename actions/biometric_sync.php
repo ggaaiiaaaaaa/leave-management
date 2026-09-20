@@ -76,6 +76,52 @@ if ($action === 'simulate_punch') {
             'auto_enrolled' => !empty($autoEnrolledNote)
         ]);
         exit;
+    } elseif ($punchType === 'break_out') {
+        if ($existing) {
+            $stmt = $pdo->prepare("
+                UPDATE biometric_logs 
+                SET break_out = ?, verification_method = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$customTime, $verificationMethod, $existing['id']]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO biometric_logs (user_id, biometric_pin, log_date, break_out, verification_method, status, device_model)
+                VALUES (?, ?, ?, ?, ?, 'Present', 'ZKTeco MB460 Plus')
+            ");
+            $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod]);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => "ZKTeco MB460 Plus: Break Out recorded for {$u['name']} at {$customTime} via {$verificationMethod}!{$autoEnrolledNote}",
+            'break_out' => $customTime,
+            'auto_enrolled' => !empty($autoEnrolledNote)
+        ]);
+        exit;
+    } elseif ($punchType === 'break_in') {
+        if ($existing) {
+            $stmt = $pdo->prepare("
+                UPDATE biometric_logs 
+                SET break_in = ?, verification_method = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$customTime, $verificationMethod, $existing['id']]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO biometric_logs (user_id, biometric_pin, log_date, break_in, verification_method, status, device_model)
+                VALUES (?, ?, ?, ?, ?, 'Present', 'ZKTeco MB460 Plus')
+            ");
+            $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod]);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => "ZKTeco MB460 Plus: Break In recorded for {$u['name']} at {$customTime} via {$verificationMethod}!{$autoEnrolledNote}",
+            'break_in' => $customTime,
+            'auto_enrolled' => !empty($autoEnrolledNote)
+        ]);
+        exit;
     } elseif ($punchType === 'time_out') {
         $punchTimestamp = strtotime($customTime);
         $earlyThreshold = strtotime('17:00:00');
@@ -150,26 +196,45 @@ if ($action === 'check_device_pin') {
     exit;
 }
 
-// 3. 1-CLICK DEVICE SYNC (Real Network Socket Ping)
+// 2.5 GET LIVE STATUS (Heartbeat & ADMS Polling)
+if ($action === 'get_status') {
+    $statusFile = __DIR__ . '/../database/zkteco_status.json';
+    $isOnline = false;
+    $deviceData = [];
+    if (file_exists($statusFile)) {
+        $deviceData = json_decode(file_get_contents($statusFile), true) ?: [];
+        if (!empty($deviceData['last_seen']) && (time() - $deviceData['last_seen']) < 60) {
+            $isOnline = true;
+        }
+    }
+    echo json_encode([
+        'success' => true,
+        'online' => $isOnline,
+        'device' => $deviceData
+    ]);
+    exit;
+}
+
+// 3. 1-CLICK DEVICE SYNC (Real Network Socket & Ping)
 if ($action === 'sync_now') {
-    $deviceIp = trim($_POST['device_ip'] ?? ($_GET['device_ip'] ?? '192.168.100.201'));
+    $deviceIp = trim($_POST['device_ip'] ?? ($_GET['device_ip'] ?? '192.168.100.157'));
     
-    // Perform real network socket probe to ZKTeco hardware port (4370 or 80)
+    // Perform real network probe to ZKTeco hardware
     $isOnline = false;
     $errno = 0;
     $errstr = '';
     
-    // 1. Probe port 4370 (Standard ZKTeco Protocol)
-    $socket = @fsockopen($deviceIp, 4370, $errno, $errstr, 1.2);
-    if ($socket) {
+    // 1. Probe via ICMP ping (Fast & accurate across LAN)
+    $pingCmd = "ping -n 1 -w 800 " . escapeshellarg($deviceIp);
+    exec($pingCmd, $pingOut, $pingCode);
+    if ($pingCode === 0) {
         $isOnline = true;
-        fclose($socket);
     } else {
-        // 2. Probe port 80 (ZKTeco Web Server / ADMS)
-        $socketHttp = @fsockopen($deviceIp, 80, $errno, $errstr, 0.8);
-        if ($socketHttp) {
+        // 2. Probe port 4370 (Standard ZKTeco Protocol)
+        $socket = @fsockopen($deviceIp, 4370, $errno, $errstr, 0.8);
+        if ($socket) {
             $isOnline = true;
-            fclose($socketHttp);
+            fclose($socket);
         }
     }
 
