@@ -85,9 +85,17 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
       <nav class="sidebar-nav">
         <div class="nav-category">Self-Service</div>
-        <a class="nav-item active" data-tab="my-portal" onclick="switchTab('my-portal')">
-          <i data-lucide="layout-dashboard"></i>
+        <a class="nav-item active" data-tab="overall" onclick="switchTab('overall'); loadStaffOverallDashboard();">
+          <i data-lucide="layout-grid"></i>
+          <span>Overall Dashboard</span>
+        </a>
+        <a class="nav-item" data-tab="my-portal" onclick="switchTab('my-portal')">
+          <i data-lucide="layers"></i>
           <span>My Balances &amp; History</span>
+        </a>
+        <a class="nav-item" data-tab="attendance" onclick="switchTab('attendance'); loadStaffDtr();">
+          <i data-lucide="clock"></i>
+          <span>My Attendance &amp; DTR</span>
         </a>
         <a class="nav-item" data-tab="calendar" onclick="switchTab('calendar'); initCalendar();">
           <i data-lucide="calendar"></i>
@@ -132,6 +140,254 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
       <!-- Content Area -->
       <div class="content-area">
+
+        <!-- ==============================================
+             TAB 0: ASSOCIATE OVERALL DASHBOARD
+             ============================================== -->
+        <div id="tab-overall" class="tab-pane active" style="display:block;">
+          <div class="page-header">
+            <div class="page-title">
+              <h1>Welcome, <?= htmlspecialchars(explode(' ', $user['name'])[0]) ?></h1>
+              <p>Associate Overall Dashboard &bull; Attendance Today, Balances, Quick Requests &amp; Team Status</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn-primary" onclick="openModal('applyModal')">
+                <i data-lucide="plus-circle"></i>
+                <span>File Leave Request</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 1. Today's Personal Attendance Banner -->
+          <div class="dashboard-card" style="margin-bottom: 24px; border-left: 4px solid var(--primary);">
+            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3 style="display:flex; align-items:center; gap:8px;">
+                  <i data-lucide="scan-face" style="color:var(--accent);"></i>
+                  Today's Attendance Punches &bull; <span style="font-weight:normal; font-size:13px; color:var(--text-muted);"><?= date('l, F j, Y') ?></span>
+                </h3>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="status-pill active" style="font-size:11px;">
+                  <span class="status-dot"></span>
+                  <span>Biometric PIN: #<?= htmlspecialchars($user['biometric_pin'] ?: $user['id']) ?></span>
+                </span>
+                <span class="status-pill info" style="font-size:11px;">
+                  <span class="status-dot"></span>
+                  <span>Face &amp; Fingerprint Enrolled</span>
+                </span>
+              </div>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              <div class="punch-sequence-strip" style="margin-bottom: 12px;">
+                <div class="punch-slot-box" id="staffPunchInBox">
+                  <div class="punch-slot-label"><i data-lucide="log-in" style="width:11px;height:11px;"></i> 1. Time In</div>
+                  <div class="punch-slot-time" id="staffSlotTimeIn">&mdash;</div>
+                </div>
+                <div class="punch-slot-box" id="staffPunchBreakOutBox">
+                  <div class="punch-slot-label"><i data-lucide="coffee" style="width:11px;height:11px;"></i> 2. Break Out</div>
+                  <div class="punch-slot-time" id="staffSlotBreakOut">&mdash;</div>
+                </div>
+                <div class="punch-slot-box" id="staffPunchBreakInBox">
+                  <div class="punch-slot-label"><i data-lucide="utensils" style="width:11px;height:11px;"></i> 3. Break In</div>
+                  <div class="punch-slot-time" id="staffSlotBreakIn">&mdash;</div>
+                </div>
+                <div class="punch-slot-box" id="staffPunchOutBox">
+                  <div class="punch-slot-label"><i data-lucide="log-out" style="width:11px;height:11px;"></i> 4. Time Out</div>
+                  <div class="punch-slot-time" id="staffSlotTimeOut">&mdash;</div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="font-size:13px; color:var(--text-muted);">
+                  Today's Rendered Work Hours: <strong id="staffTodayRenderedText" style="color:var(--primary); font-size:14px;">0.00 hrs</strong>
+                  <span id="staffPunchStatusHelp" style="margin-left:8px; font-size:11.5px; color:var(--text-muted);">&bull; Punches automatically sync from the office ZKTeco device</span>
+                </div>
+                <button class="btn-secondary btn-sm" onclick="openModal('staffCorrectionModal')">
+                  <i data-lucide="edit-3" style="width:12px; height:12px;"></i>
+                  <span>Missed a punch today? File Correction</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Personal KPI Summary Cards -->
+          <div class="kpi-grid" style="margin-bottom: 24px;">
+            <div class="kpi-card green">
+              <div class="kpi-header">
+                <span class="kpi-label">Vacation Leave (VL)</span>
+                <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value"><?= number_format($vlBalance, 1) ?></span>
+                <span class="kpi-sub">/ 12.0 Days</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="check" style="width:14px;height:14px;"></i>
+                <span>Available Balance</span>
+              </div>
+            </div>
+
+            <div class="kpi-card purple">
+              <div class="kpi-header">
+                <span class="kpi-label">Sick Leave (SL)</span>
+                <div class="kpi-icon"><i data-lucide="heart-pulse"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value"><?= number_format($slBalance, 1) ?></span>
+                <span class="kpi-sub">/ 10.0 Days</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+                <span>Available Balance</span>
+              </div>
+            </div>
+
+            <div class="kpi-card blue">
+              <div class="kpi-header">
+                <span class="kpi-label">Month Rendered Hours</span>
+                <div class="kpi-icon"><i data-lucide="clock"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="staffOverallMonthHours">0.0</span>
+                <span class="kpi-sub">Total Hours</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
+                <span id="staffOverallMonthOt">0.0 hrs approved OT</span>
+              </div>
+            </div>
+
+            <div class="kpi-card amber">
+              <div class="kpi-header">
+                <span class="kpi-label">Pending Requests</span>
+                <div class="kpi-icon"><i data-lucide="hourglass"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="staffOverallPendingCount">0</span>
+                <span class="kpi-sub">Applications</span>
+              </div>
+              <div class="kpi-footer" style="color:var(--warning);">
+                <i data-lucide="activity" style="width:14px;height:14px;"></i>
+                <span id="staffOverallPendingBreakdown">Under HR Review</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Quick Action Launcher Tiles -->
+          <div style="margin-bottom: 24px;">
+            <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
+              Quick Actions Launcher
+            </div>
+            <div class="quick-launcher-grid">
+              <div class="quick-launcher-card" onclick="openModal('applyModal')">
+                <div class="quick-launcher-icon" style="background:#eff6ff; color:#2563eb;">
+                  <i data-lucide="calendar-plus"></i>
+                </div>
+                <div>
+                  <div class="quick-launcher-title">File Leave Request</div>
+                  <div class="quick-launcher-sub">VL, SL &amp; Special Leaves</div>
+                </div>
+              </div>
+
+              <div class="quick-launcher-card" onclick="openModal('staffCorrectionModal')">
+                <div class="quick-launcher-icon" style="background:#fef3c7; color:#b45309;">
+                  <i data-lucide="edit-3"></i>
+                </div>
+                <div>
+                  <div class="quick-launcher-title">Missed Punch Adj.</div>
+                  <div class="quick-launcher-sub">Correct DTR timestamps</div>
+                </div>
+              </div>
+
+              <div class="quick-launcher-card" onclick="openModal('staffOtModal')">
+                <div class="quick-launcher-icon" style="background:#f3e8ff; color:#7e22ce;">
+                  <i data-lucide="trending-up"></i>
+                </div>
+                <div>
+                  <div class="quick-launcher-title">Request Overtime</div>
+                  <div class="quick-launcher-sub">Pre-authorization form</div>
+                </div>
+              </div>
+
+              <div class="quick-launcher-card" onclick="switchTab('attendance'); loadStaffDtr();">
+                <div class="quick-launcher-icon" style="background:#f0fdf4; color:#15803d;">
+                  <i data-lucide="printer"></i>
+                </div>
+                <div>
+                  <div class="quick-launcher-title">Form 48 DTR Sheet</div>
+                  <div class="quick-launcher-sub">Print monthly record</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Two-Column Lower Layout -->
+          <div class="overall-layout-grid">
+            
+            <!-- Left: My Recent Requests -->
+            <div class="overall-col-main">
+              <div class="dashboard-card">
+                <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+                  <h3>
+                    <i data-lucide="history" style="color:var(--accent);"></i>
+                    My Recent Applications &amp; Status
+                  </h3>
+                  <button class="btn-link" onclick="switchTab('my-portal')" style="font-size:12px; font-weight:600; color:var(--accent); background:none; border:none; cursor:pointer;">
+                    View All &rarr;
+                  </button>
+                </div>
+                <div class="card-body" style="padding: 16px;">
+                  <div id="staffOverallRecentList" style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="text-align:center; padding: 20px; color: var(--text-muted); font-size:12px;">
+                      Loading recent applications...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Office Team Presence & Upcoming Schedule -->
+            <div class="overall-col-side">
+              
+              <!-- Team Presence Widget -->
+              <div class="dashboard-card">
+                <div class="card-head">
+                  <h3>
+                    <i data-lucide="users" style="color:var(--accent);"></i>
+                    Office Team Presence
+                  </h3>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                  <div id="staffOverallPresenceRoster" class="presence-roster-list" style="max-height: 250px;">
+                    <div style="text-align:center; padding: 16px; color: var(--text-muted); font-size:12px;">
+                      Loading office presence...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upcoming Schedule (Next 7 Days) -->
+              <div class="dashboard-card">
+                <div class="card-head">
+                  <h3>
+                    <i data-lucide="calendar" style="color:var(--accent);"></i>
+                    Upcoming Holidays &amp; Leaves
+                  </h3>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                  <div id="staffOverallScheduleList" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="text-align:center; padding: 16px; color: var(--text-muted); font-size:12px;">
+                      Loading schedule...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
 
         <!-- ==============================================
              TAB 1: MY PORTAL & BALANCES
@@ -372,6 +628,197 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <div class="legend-chip"><span class="dot" style="background:#9333ea;"></span> Special Leave for Women</div>
               <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Regular Holiday</div>
               <div class="legend-chip"><span class="dot" style="background:#7c2d12;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Special Holiday</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==============================================
+             TAB 3: MY ATTENDANCE & DTR
+             ============================================== -->
+        <div id="tab-attendance" class="tab-pane" style="display:none;">
+          <div class="page-header">
+            <div class="page-title">
+              <h1>My Attendance &amp; Daily Time Record</h1>
+              <p>Physical ZKTeco MB460 Plus records &bull; Rendered work hours &bull; Official Form 48 DTR export.</p>
+            </div>
+            <div class="header-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-primary" onclick="openStaffPrintDtr()">
+                <i data-lucide="printer"></i>
+                <span>Print Form 48 DTR</span>
+              </button>
+              <button class="btn-secondary" onclick="openModal('staffOtModal')">
+                <i data-lucide="clock"></i>
+                <span>Request Overtime</span>
+              </button>
+              <button class="btn-secondary" onclick="openModal('staffCorrectionModal')">
+                <i data-lucide="edit-3"></i>
+                <span>Missed Punch Adjustment</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Associate Attendance KPIs -->
+          <div class="kpi-grid">
+            <div class="kpi-card purple">
+              <div class="kpi-header">
+                <span class="kpi-label">Biometric Terminal Profile</span>
+                <div class="kpi-icon"><i data-lucide="fingerprint"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" style="font-size:20px;">PIN #<?= htmlspecialchars($user['biometric_pin'] ?: $user['id']) ?></span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
+                <span>Face &amp; Fingerprint Enrolled</span>
+              </div>
+            </div>
+
+            <div class="kpi-card green">
+              <div class="kpi-header">
+                <span class="kpi-label">Rendered Work Hours</span>
+                <div class="kpi-icon"><i data-lucide="activity"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="staffRenderedHours">0.0</span>
+                <span class="kpi-sub">Total Hours</span>
+              </div>
+              <div class="kpi-footer neutral">
+                <i data-lucide="clock" style="width:14px;height:14px;"></i>
+                <span id="staffRenderedFormatted">0 hrs</span>
+              </div>
+            </div>
+
+            <div class="kpi-card blue">
+              <div class="kpi-header">
+                <span class="kpi-label">Approved Overtime</span>
+                <div class="kpi-icon"><i data-lucide="award"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="staffOtHours">0.0</span>
+                <span class="kpi-sub">Hours Rendered</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+                <span>Pre-Approved Overtime</span>
+              </div>
+            </div>
+
+            <div class="kpi-card amber">
+              <div class="kpi-header">
+                <span class="kpi-label">Today's Office Status</span>
+                <div class="kpi-icon"><i data-lucide="user-check"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" style="font-size:18px;" id="staffTodayPresence">Checking...</span>
+              </div>
+              <div class="kpi-footer neutral">
+                <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
+                <span id="staffTodayPunchDesc">Real-Time Presence</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Calendar Filter Toolbar -->
+          <div class="dashboard-card" style="margin-bottom: 20px;">
+            <div class="card-head" style="flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <i data-lucide="calendar" style="color:var(--accent);"></i>
+                <h3 style="margin:0;">Attendance Calendar Period</h3>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div class="period-quick-pills">
+                  <button type="button" class="btn-period active" onclick="setStaffDatePeriod('full_month', this)">Full Month</button>
+                  <button type="button" class="btn-period" onclick="setStaffDatePeriod('first_half', this)">1st Half (1st–15th)</button>
+                  <button type="button" class="btn-period" onclick="setStaffDatePeriod('second_half', this)">2nd Half (16th–End)</button>
+                  <button type="button" class="btn-period" onclick="setStaffDatePeriod('today', this)">Today</button>
+                </div>
+                <input type="month" id="staffMonthPicker" class="form-input" style="width:auto; padding:6px 12px; font-size:12.5px;" value="<?= date('Y-m') ?>" onchange="loadStaffDtr()">
+              </div>
+            </div>
+
+            <!-- Attendance Ledger Table -->
+            <div class="table-responsive" style="margin-top:12px;">
+              <table class="custom-table" id="staffDtrTable">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time In</th>
+                    <th>Break Out</th>
+                    <th>Break In</th>
+                    <th>Time Out</th>
+                    <th>Rendered Hours</th>
+                    <th>Overtime</th>
+                    <th>Verification</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="staffDtrTbody">
+                  <tr>
+                    <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">
+                      <i data-lucide="loader-2" class="spin" style="width:20px; height:20px; display:inline-block; vertical-align:middle; margin-right:8px;"></i>
+                      Loading attendance records...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Real-Time Team Presence Roster Widget -->
+          <div class="dashboard-card" style="margin-bottom: 20px;">
+            <div class="card-head">
+              <h3><i data-lucide="users" style="color:var(--accent);"></i> Live Office Presence Board (Who's In / Who's Out)</h3>
+              <span style="font-size:12px; color:var(--text-muted);" id="presenceDateLabel">Today</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; padding:16px;" id="presenceRosterContainer">
+              <div style="color:var(--text-muted); font-size:13px;">Loading team presence...</div>
+            </div>
+          </div>
+
+          <!-- Requests History: Corrections & Overtime -->
+          <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
+            <div class="dashboard-card">
+              <div class="card-head">
+                <h4><i data-lucide="edit-3" style="color:var(--accent);"></i> My Missed Punch Adjustments</h4>
+                <button class="btn-secondary" style="font-size:11.5px; padding:4px 8px;" onclick="openModal('staffCorrectionModal')">New Adjustment</button>
+              </div>
+              <div class="table-responsive">
+                <table class="custom-table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Adjusted Times</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staffCorrectionsTbody">
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Loading requests...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-head">
+                <h4><i data-lucide="clock" style="color:var(--accent);"></i> My Overtime Pre-Approvals</h4>
+                <button class="btn-secondary" style="font-size:11.5px; padding:4px 8px;" onclick="openModal('staffOtModal')">Request OT</button>
+              </div>
+              <div class="table-responsive">
+                <table class="custom-table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>OT Date</th>
+                      <th>Hours</th>
+                      <th>Reason / Project</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staffOtTbody">
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Loading requests...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -634,6 +1081,93 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     </div>
   </div>
 
+  <!-- 4. MISSED PUNCH CORRECTION MODAL -->
+  <div class="modal-backdrop" id="staffCorrectionModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="edit-3"></i> File Missed Punch Adjustment</h3>
+        <button class="btn-close-modal" onclick="closeModal('staffCorrectionModal')">&times;</button>
+      </div>
+      <form id="staffCorrectionForm" onsubmit="handleStaffCorrectionSubmit(event)">
+        <div class="modal-body">
+          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">
+            Submit an attendance correction if you missed scanning at the ZKTeco MB460 Plus terminal or if your scan failed to register.
+          </p>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">Target Date <span class="req">*</span></label>
+            <input type="date" name="target_date" id="corrTargetDate" class="form-input" required value="<?= date('Y-m-d') ?>">
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Time In (AM Arrival)</label>
+              <input type="time" name="time_in" id="corrTimeIn" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Break Out (Lunch)</label>
+              <input type="time" name="break_out" id="corrBreakOut" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Break In (Return)</label>
+              <input type="time" name="break_in" id="corrBreakIn" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Time Out (PM Departure)</label>
+              <input type="time" name="time_out" id="corrTimeOut" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:10px;">
+            <label class="form-label">Reason for Adjustment <span class="req">*</span></label>
+            <textarea name="reason" id="corrReason" class="form-input" rows="3" placeholder="e.g. Device face scan failed due to lighting, or forgot to scan upon arrival" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('staffCorrectionModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSubmitCorr">Submit Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. REQUEST OVERTIME MODAL -->
+  <div class="modal-backdrop" id="staffOtModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="clock"></i> Request Overtime Pre-Approval</h3>
+        <button class="btn-close-modal" onclick="closeModal('staffOtModal')">&times;</button>
+      </div>
+      <form id="staffOtForm" onsubmit="handleStaffOtSubmit(event)">
+        <div class="modal-body">
+          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">
+            Request pre-authorization for extended work hours during tax filing, quarterly reporting, or audit engagements.
+          </p>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Overtime Date <span class="req">*</span></label>
+              <input type="date" name="ot_date" id="otDate" class="form-input" required value="<?= date('Y-m-d') ?>">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Estimated Hours <span class="req">*</span></label>
+              <input type="number" step="0.5" min="0.5" max="12" name="estimated_hours" id="otHours" class="form-input" placeholder="e.g. 2.5" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:12px;">
+            <label class="form-label">Engagement / Audit Purpose <span class="req">*</span></label>
+            <textarea name="reason" id="otReason" class="form-input" rows="3" placeholder="e.g. BIR Monthly VAT Return & Withholding Tax finalization for client ABC Corp." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('staffOtModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSubmitOt">Submit Overtime Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Custom Confirmation Dialog Modal -->
   <div class="modal-backdrop" id="customConfirmModal" style="z-index: 99999;">
     <div class="modal-window narrow confirm-dialog-window" style="max-width: 440px;">
@@ -683,7 +1217,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
     function switchTab(tabId, updateState = true) {
       const activePane = document.getElementById(`tab-${tabId}`);
-      if (!activePane) tabId = 'overview';
+      if (!activePane) tabId = 'overall';
 
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.classList.remove('active');
@@ -700,18 +1234,247 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
         }
       } catch (e) {}
 
+      if (tabId === 'overall') {
+        if (typeof loadStaffOverallDashboard === 'function') loadStaffOverallDashboard();
+      }
       if (tabId === 'calendar' && typeof calendarInstance !== 'undefined' && calendarInstance) {
         setTimeout(() => calendarInstance.render(), 50);
+      }
+      if (tabId === 'attendance') {
+        if (typeof loadStaffDtr === 'function') loadStaffDtr();
       }
       if (window.lucide) lucide.createIcons();
     }
 
     function initSavedTab() {
       const hashTab = window.location.hash.replace('#', '').trim();
-      const savedTab = hashTab || localStorage.getItem('jtyeo_staff_active_tab');
+      const savedTab = hashTab || localStorage.getItem('jtyeo_staff_active_tab') || 'overall';
       if (savedTab && document.getElementById(`tab-${savedTab}`)) {
         switchTab(savedTab, false);
+      } else {
+        switchTab('overall', false);
       }
+      if (savedTab === 'attendance') {
+        if (typeof loadStaffDtr === 'function') loadStaffDtr();
+      } else if (savedTab === 'overall') {
+        if (typeof loadStaffOverallDashboard === 'function') loadStaffOverallDashboard();
+      }
+    }
+
+    // ==========================================
+    // Overall Dashboard Functions (Staff Associate)
+    // ==========================================
+    function loadStaffOverallDashboard() {
+      fetch('actions/get_dashboard_summary.php')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) return;
+
+          // 1. Today's Punch Strip
+          const p = data.today_punch;
+          const inBox = document.getElementById('staffPunchInBox');
+          const boBox = document.getElementById('staffPunchBreakOutBox');
+          const biBox = document.getElementById('staffPunchBreakInBox');
+          const outBox = document.getElementById('staffPunchOutBox');
+
+          const inEl = document.getElementById('staffSlotTimeIn');
+          const boEl = document.getElementById('staffSlotBreakOut');
+          const biEl = document.getElementById('staffSlotBreakIn');
+          const outEl = document.getElementById('staffSlotTimeOut');
+          const rendEl = document.getElementById('staffTodayRenderedText');
+
+          if (p) {
+            if (p.time_in) {
+              if (inEl) inEl.innerText = p.time_in_12 || p.time_in;
+              if (inBox) inBox.classList.add('recorded');
+            }
+            if (p.break_out) {
+              if (boEl) boEl.innerText = p.break_out_12 || p.break_out;
+              if (boBox) boBox.classList.add('recorded');
+            }
+            if (p.break_in) {
+              if (biEl) biEl.innerText = p.break_in_12 || p.break_in;
+              if (biBox) biBox.classList.add('recorded');
+            }
+            if (p.time_out) {
+              if (outEl) outEl.innerText = p.time_out_12 || p.time_out;
+              if (outBox) outBox.classList.add('recorded');
+            }
+            if (rendEl) {
+              rendEl.innerText = p.rendered_formatted || '0.00 hrs';
+            }
+          }
+
+          // 2. Month Performance & Overtime
+          if (data.month_stats) {
+            const mEl = document.getElementById('staffOverallMonthHours');
+            const otEl = document.getElementById('staffOverallMonthOt');
+            if (mEl) mEl.innerText = data.month_stats.rendered_formatted || (data.month_stats.rendered_hours + ' hrs');
+            if (otEl) otEl.innerText = (data.month_stats.overtime_hours || 0) + ' hrs approved OT';
+          }
+
+          // 3. Pending counts
+          if (data.pending_counts) {
+            const pcEl = document.getElementById('staffOverallPendingCount');
+            const pbEl = document.getElementById('staffOverallPendingBreakdown');
+            if (pcEl) pcEl.innerText = data.pending_counts.total;
+            if (pbEl) {
+              pbEl.innerText = `${data.pending_counts.leaves} Leaves, ${data.pending_counts.corrections} Punches, ${data.pending_counts.ot} OT`;
+            }
+          }
+
+          // 4. Recent Requests
+          renderStaffOverallRecent(data.recent_requests || []);
+
+          // 5. Team Presence
+          renderStaffOverallPresence();
+
+          // 6. Upcoming schedule
+          renderStaffOverallSchedule(data.upcoming_holidays || [], data.upcoming_leaves || []);
+
+          if (window.lucide) lucide.createIcons();
+        })
+        .catch(err => {
+          console.error('Error loading staff overall dashboard:', err);
+        });
+    }
+
+    function renderStaffOverallRecent(requests) {
+      const container = document.getElementById('staffOverallRecentList');
+      if (!container) return;
+
+      if (!requests || requests.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12.5px;">No applications filed recently. Use the Quick Actions launcher to file leaves, adjustments, or overtime!</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(r => {
+        let pillClass = 'warning';
+        if (r.status === 'Approved') pillClass = 'active';
+        else if (r.status === 'Rejected') pillClass = 'inactive';
+
+        let typeBadge = 'Leave';
+        let iconName = 'calendar';
+        if (r.type === 'correction') {
+          typeBadge = 'Punch Adjustment';
+          iconName = 'clock';
+        } else if (r.type === 'ot') {
+          typeBadge = 'Overtime';
+          iconName = 'trending-up';
+        }
+
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg-subtle, #f8fafc); border:1px solid var(--border-color, #e2e8f0); border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:32px; height:32px; border-radius:8px; background:#fff; border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; color:var(--primary);">
+                <i data-lucide="${iconName}" style="width:16px; height:16px;"></i>
+              </div>
+              <div>
+                <div style="font-size:13px; font-weight:700; color:var(--text-main);">${r.title}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">${r.date_from}${r.date_to && r.date_to !== r.date_from ? ' to ' + r.date_to : ''} &bull; Ref: ${r.id_label}</div>
+              </div>
+            </div>
+            <div>
+              <span class="status-pill ${pillClass}">
+                <span class="status-dot"></span>
+                <span>${r.status}</span>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderStaffOverallPresence() {
+      fetch('actions/get_presence.php')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) return;
+          const container = document.getElementById('staffOverallPresenceRoster');
+          if (!container) return;
+
+          if (!data.roster || data.roster.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:12px;">No active roster available.</div>';
+            return;
+          }
+
+          container.innerHTML = data.roster.map(u => {
+            const avatarMarkup = u.avatar_path 
+              ? `<img src="${u.avatar_path}" alt="Avatar" style="width:26px; height:26px; border-radius:50%; object-fit:cover;">`
+              : `<div style="width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:10px;">${u.avatar_initials || 'A'}</div>`;
+
+            let pillClass = 'inactive';
+            if (u.state === 'present') pillClass = 'active';
+            else if (u.state === 'on_break') pillClass = 'warning';
+            else if (u.state === 'on_leave') pillClass = 'info';
+
+            return `
+              <div class="presence-roster-item" style="padding:6px 8px;">
+                <div class="presence-roster-user" style="gap:8px;">
+                  ${avatarMarkup}
+                  <div class="user-meta">
+                    <span class="name" style="font-size:12px;">${u.name}</span>
+                    <span class="title" style="font-size:10.5px;">${u.title || 'Associate'}</span>
+                  </div>
+                </div>
+                <span class="status-pill ${pillClass}" style="font-size:10px; padding: 2px 6px;">
+                  <span class="status-dot"></span>
+                  <span>${u.state_label}</span>
+                </span>
+              </div>
+            `;
+          }).join('');
+        })
+        .catch(err => {
+          console.error('Staff presence fetch error:', err);
+        });
+    }
+
+    function renderStaffOverallSchedule(holidays, leaves) {
+      const container = document.getElementById('staffOverallScheduleList');
+      if (!container) return;
+
+      const hasHolidays = holidays && holidays.length > 0;
+      const hasLeaves = leaves && leaves.length > 0;
+
+      if (!hasHolidays && !hasLeaves) {
+        container.innerHTML = '<div style="text-align:center; padding:14px; color:var(--text-muted); font-size:12px;">No upcoming leaves or Philippine statutory holidays in the next 7 days.</div>';
+        return;
+      }
+
+      let html = '';
+      if (hasHolidays) {
+        holidays.forEach(h => {
+          html += `
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border-radius:6px; background:#fef3c7; border:1px solid #fde68a;">
+              <i data-lucide="flag" style="width:13px; height:13px; color:#b45309; flex-shrink:0; margin-top:2px;"></i>
+              <div>
+                <div style="font-size:11.5px; font-weight:700; color:#92400e;">${h.title}</div>
+                <div style="font-size:10.5px; color:#b45309;">${h.holiday_date} &bull; ${h.holiday_type || 'Regular Holiday'}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      if (hasLeaves) {
+        leaves.forEach(lv => {
+          html += `
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border-radius:6px; background:#eff6ff; border:1px solid #bfdbfe;">
+              <i data-lucide="palmtree" style="width:13px; height:13px; color:#2563eb; flex-shrink:0; margin-top:2px;"></i>
+              <div>
+                <div style="font-size:11.5px; font-weight:700; color:#1e40af;">${lv.employee_name}</div>
+                <div style="font-size:10.5px; color:#2563eb;">${lv.leave_type_label} &bull; ${lv.start_date} to ${lv.end_date}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
     }
 
     function openModal(id) { 
@@ -1053,10 +1816,295 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
       calendarInstance.render();
     }
 
-    function refreshCalendarEvents() {
-      if (calendarInstance) {
-        calendarInstance.refetchEvents();
+    // Staff Attendance & DTR Controller
+    let currentStaffPeriod = 'full_month';
+    const currentUserId = <?= intval($user['id']) ?>;
+
+    function setStaffDatePeriod(period, btnEl) {
+      currentStaffPeriod = period;
+      document.querySelectorAll('.period-quick-pills .btn-period').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      loadStaffDtr();
+    }
+
+    function getStaffDateRange() {
+      const monthVal = document.getElementById('staffMonthPicker').value || '<?= date('Y-m') ?>';
+      const [yearStr, monthStr] = monthVal.split('-');
+      const y = parseInt(yearStr, 10);
+      const m = parseInt(monthStr, 10);
+      const lastDay = new Date(y, m, 0).getDate();
+
+      let sDay = '01';
+      let eDay = String(lastDay).padStart(2, '0');
+
+      if (currentStaffPeriod === 'first_half') {
+        eDay = '15';
+      } else if (currentStaffPeriod === 'second_half') {
+        sDay = '16';
+      } else if (currentStaffPeriod === 'today') {
+        const today = new Date();
+        const tY = today.getFullYear();
+        const tM = String(today.getMonth() + 1).padStart(2, '0');
+        const tD = String(today.getDate()).padStart(2, '0');
+        return { start_date: `${tY}-${tM}-${tD}`, end_date: `${tY}-${tM}-${tD}`, year: y, month: m, period: currentStaffPeriod };
       }
+
+      return {
+        start_date: `${yearStr}-${monthStr}-${sDay}`,
+        end_date: `${yearStr}-${monthStr}-${eDay}`,
+        year: y,
+        month: m,
+        period: currentStaffPeriod
+      };
+    }
+
+    function loadStaffDtr() {
+      const range = getStaffDateRange();
+      const tbody = document.getElementById('staffDtrTbody');
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin" style="width:18px;height:18px;display:inline-block;vertical-align:middle;margin-right:8px;"></i> Loading attendance records...</td></tr>`;
+      if (window.lucide) lucide.createIcons();
+
+      fetch(`actions/get_dtr_logs.php?user_id=${currentUserId}&start_date=${range.start_date}&end_date=${range.end_date}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--danger); padding:20px;">Failed to load attendance logs.</td></tr>`;
+            return;
+          }
+
+          document.getElementById('staffRenderedHours').innerText = data.total_rendered_hours ? data.total_rendered_hours.toFixed(1) : '0.0';
+          document.getElementById('staffRenderedFormatted').innerText = data.total_rendered_formatted || '0 hrs';
+
+          if (!data.records || data.records.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">No attendance or leave entries found for this period.</td></tr>`;
+            return;
+          }
+
+          let totalOt = 0;
+          let todayStatus = 'Not Yet Clocked In';
+          let todayPunchDesc = 'No punches registered today';
+          const todayIso = new Date().toISOString().slice(0, 10);
+
+          let html = '';
+          data.records.forEach(r => {
+            totalOt += (r.overtime_hours || 0);
+
+            if (r.log_date === todayIso) {
+              todayStatus = r.status_text || r.status;
+              if (r.status === 'On Break') {
+                todayPunchDesc = `Break Out at ${r.break_out || '-'}`;
+              } else if (r.time_out) {
+                todayPunchDesc = `Timed Out at ${r.time_out}`;
+              } else if (r.time_in) {
+                todayPunchDesc = `Time In at ${r.time_in}`;
+              }
+            }
+
+            let badgeClass = 'badge-neutral';
+            if (r.status_type === 'success') badgeClass = 'badge-approved';
+            else if (r.status_type === 'warning') badgeClass = 'badge-pending';
+            else if (r.status_type === 'leave') badgeClass = 'badge-secondary';
+
+            html += `
+              <tr>
+                <td><strong>${r.log_date_formatted || r.log_date}</strong></td>
+                <td>${r.time_in || '—'}</td>
+                <td>${r.break_out || '—'}</td>
+                <td>${r.break_in || '—'}</td>
+                <td>${r.time_out || '—'}</td>
+                <td><strong style="color:var(--primary);">${r.rendered_hours > 0 ? r.rendered_hours + ' hrs' : '—'}</strong></td>
+                <td>${r.overtime_hours > 0 ? `<span style="color:#0284c7; font-weight:700;">+${r.overtime_hours} hrs</span>` : '—'}</td>
+                <td><span style="font-size:11px; color:var(--text-muted);">${r.verification_method || '—'}</span></td>
+                <td><span class="badge ${badgeClass}">${r.status_text || r.status}</span></td>
+              </tr>
+            `;
+          });
+
+          document.getElementById('staffOtHours').innerText = totalOt.toFixed(1);
+          document.getElementById('staffTodayPresence').innerText = todayStatus;
+          document.getElementById('staffTodayPunchDesc').innerText = todayPunchDesc;
+          tbody.innerHTML = html;
+          if (window.lucide) lucide.createIcons();
+        })
+        .catch(err => {
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--danger); padding:20px;">Connection error loading attendance.</td></tr>`;
+        });
+
+      loadStaffPresence();
+      loadStaffCorrections();
+      loadStaffOt();
+    }
+
+    function openStaffPrintDtr() {
+      const range = getStaffDateRange();
+      const url = `print_dtr.php?user_id=${currentUserId}&year=${range.year}&month=${range.month}&period=${range.period}`;
+      window.open(url, '_blank');
+    }
+
+    function loadStaffPresence() {
+      const container = document.getElementById('presenceRosterContainer');
+      if (!container) return;
+      fetch('actions/get_presence.php')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.roster) return;
+          const labelEl = document.getElementById('presenceDateLabel');
+          if (labelEl) labelEl.innerText = data.date_formatted;
+          
+          let html = '';
+          data.roster.forEach(m => {
+            let dotColor = '#94a3b8';
+            if (m.state === 'present') dotColor = '#10b981';
+            else if (m.state === 'on_break') dotColor = '#f59e0b';
+            else if (m.state === 'on_leave') dotColor = '#3b82f6';
+            else if (m.state === 'completed') dotColor = '#059669';
+
+            html += `
+              <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; min-width:220px; flex:1 1 calc(33.333% - 12px);">
+                <div style="width:10px; height:10px; border-radius:50%; background:${dotColor}; flex-shrink:0;"></div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:700; font-size:12.5px; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.name}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${m.state_label} &bull; ${m.last_action}</div>
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        })
+        .catch(() => {});
+    }
+
+    function loadStaffCorrections() {
+      const tbody = document.getElementById('staffCorrectionsTbody');
+      if (!tbody) return;
+      fetch('actions/manage_attendance_corrections.php?action=get_corrections')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.corrections || data.corrections.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:16px;">No adjustment requests filed.</td></tr>`;
+            return;
+          }
+          let html = '';
+          data.corrections.forEach(c => {
+            let badge = 'badge-pending';
+            if (c.status === 'Approved') badge = 'badge-approved';
+            else if (c.status === 'Rejected') badge = 'badge-rejected';
+
+            let punchStr = [];
+            if (c.time_in_12 && c.time_in_12 !== '-') punchStr.push(`In: ${c.time_in_12}`);
+            if (c.break_out_12 && c.break_out_12 !== '-') punchStr.push(`B-Out: ${c.break_out_12}`);
+            if (c.break_in_12 && c.break_in_12 !== '-') punchStr.push(`B-In: ${c.break_in_12}`);
+            if (c.time_out_12 && c.time_out_12 !== '-') punchStr.push(`Out: ${c.time_out_12}`);
+
+            html += `
+              <tr>
+                <td><strong>${c.target_date_formatted}</strong></td>
+                <td><span style="font-size:11px;">${punchStr.join(' &bull; ') || 'Adjustment'}</span></td>
+                <td><span style="font-size:11.5px;" title="${c.reason}">${c.reason}</span></td>
+                <td><span class="badge ${badge}">${c.status}</span></td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+        });
+    }
+
+    function loadStaffOt() {
+      const tbody = document.getElementById('staffOtTbody');
+      if (!tbody) return;
+      fetch('actions/manage_overtime.php?action=get_ot_requests')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.requests || data.requests.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:16px;">No overtime requests filed.</td></tr>`;
+            return;
+          }
+          let html = '';
+          data.requests.forEach(r => {
+            let badge = 'badge-pending';
+            if (r.status === 'Approved') badge = 'badge-approved';
+            else if (r.status === 'Rejected') badge = 'badge-rejected';
+
+            html += `
+              <tr>
+                <td><strong>${r.ot_date_formatted}</strong></td>
+                <td><strong style="color:#0284c7;">${r.estimated_hours} hrs</strong></td>
+                <td><span style="font-size:11.5px;" title="${r.reason}">${r.reason}</span></td>
+                <td><span class="badge ${badge}">${r.status}</span></td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+        });
+    }
+
+    function handleStaffCorrectionSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('staffCorrectionForm');
+      const formData = new FormData(form);
+      formData.append('action', 'submit_correction');
+
+      const btn = document.getElementById('btnSubmitCorr');
+      btn.disabled = true;
+      btn.innerText = 'Submitting...';
+
+      fetch('actions/manage_attendance_corrections.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.disabled = false;
+        btn.innerText = 'Submit Adjustment';
+        if (res.success) {
+          showToast(res.message, 'success');
+          closeModal('staffCorrectionModal');
+          form.reset();
+          loadStaffDtr();
+        } else {
+          showToast(res.message || 'Failed to submit adjustment.', 'error');
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.innerText = 'Submit Adjustment';
+        showToast('Network error occurred.', 'error');
+      });
+    }
+
+    function handleStaffOtSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('staffOtForm');
+      const formData = new FormData(form);
+      formData.append('action', 'submit_ot');
+
+      const btn = document.getElementById('btnSubmitOt');
+      btn.disabled = true;
+      btn.innerText = 'Submitting...';
+
+      fetch('actions/manage_overtime.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.disabled = false;
+        btn.innerText = 'Submit Overtime Request';
+        if (res.success) {
+          showToast(res.message, 'success');
+          closeModal('staffOtModal');
+          form.reset();
+          loadStaffDtr();
+        } else {
+          showToast(res.message || 'Failed to request overtime.', 'error');
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.innerText = 'Submit Overtime Request';
+        showToast('Network error occurred.', 'error');
+      });
     }
 
     initSavedTab();

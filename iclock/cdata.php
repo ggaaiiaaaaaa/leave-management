@@ -1,6 +1,12 @@
 <?php
 // iclock/cdata.php - Standard ZKTeco ADMS Cloud / LAN Push Receiver
-require_once __DIR__ . '/../leave-jtyeo/config/db.php';
+if (file_exists(__DIR__ . '/../config/db.php')) {
+    require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../services/attendance_calculator.php';
+} else {
+    require_once __DIR__ . '/../leave-jtyeo/config/db.php';
+    require_once __DIR__ . '/../leave-jtyeo/services/attendance_calculator.php';
+}
 
 // Log incoming request for diagnostics
 $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -133,9 +139,8 @@ if ($method === 'POST') {
                 $existing = $chk->fetch();
 
                 $timeFormatted = date('H:i:s', strtotime($fullDatetime));
-                $lateThreshold = strtotime('08:45:00');
                 $punchTimestamp = strtotime($timeFormatted);
-                $punchStatus = ($punchTimestamp > $lateThreshold) ? 'Late' : 'On-Time';
+                $punchStatus = 'Present';
 
                 $stateCode = intval($parts[3] ?? 255); // 0: Check In, 1: Check Out, 2: Break Out, 3: Break In
 
@@ -151,6 +156,7 @@ if ($method === 'POST') {
                         VALUES (?, ?, ?, ?, ?, ?, 'ZKTeco MB460 Plus')
                     ");
                     $ins->execute([$userId, $pin, $punchDate, $timeFormatted, $methodLabel, $punchStatus]);
+                    $logId = $pdo->lastInsertId();
                 } else {
                     // Determine which slot to fill
                     $targetCol = 'time_out';
@@ -186,7 +192,25 @@ if ($method === 'POST') {
                         WHERE id = ?
                     ");
                     $up->execute([$timeFormatted, $methodLabel, $existing['id']]);
+                    $logId = $existing['id'];
                 }
+
+                // Recalculate rendered hours and dynamic presence status
+                $refetch = $pdo->prepare("SELECT time_in, break_out, break_in, time_out, overtime_hours FROM biometric_logs WHERE id = ?");
+                $refetch->execute([$logId]);
+                $curLog = $refetch->fetch();
+                if ($curLog) {
+                    $metrics = calculateAttendanceMetrics(
+                        $curLog['time_in'],
+                        $curLog['break_out'],
+                        $curLog['break_in'],
+                        $curLog['time_out'],
+                        $curLog['overtime_hours'] ?? 0
+                    );
+                    $pdo->prepare("UPDATE biometric_logs SET rendered_hours = ?, status = ? WHERE id = ?")
+                        ->execute([$metrics['rendered_hours'], $metrics['status'], $logId]);
+                }
+
                 $processedCount++;
             }
         }

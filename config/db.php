@@ -144,6 +144,34 @@ try {
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             UNIQUE(user_id, leave_type_code)
         );
+        CREATE TABLE IF NOT EXISTS attendance_corrections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            target_date DATE NOT NULL,
+            time_in TIME,
+            break_out TIME,
+            break_in TIME,
+            time_out TIME,
+            reason TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending', -- 'Pending', 'Approved', 'Rejected'
+            approved_by INTEGER,
+            decided_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS overtime_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ot_date DATE NOT NULL,
+            estimated_hours REAL NOT NULL,
+            reason TEXT NOT NULL,
+            status TEXT DEFAULT 'Pending', -- 'Pending', 'Approved', 'Rejected'
+            approved_by INTEGER,
+            decided_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     ");
 
     // Dynamic Column Migration Helper for existing databases
@@ -170,6 +198,12 @@ try {
     }
     if (!in_array('break_in', $bioCols)) {
         $pdo->exec("ALTER TABLE biometric_logs ADD COLUMN break_in TIME");
+    }
+    if (!in_array('rendered_hours', $bioCols)) {
+        $pdo->exec("ALTER TABLE biometric_logs ADD COLUMN rendered_hours REAL DEFAULT 0");
+    }
+    if (!in_array('overtime_hours', $bioCols)) {
+        $pdo->exec("ALTER TABLE biometric_logs ADD COLUMN overtime_hours REAL DEFAULT 0");
     }
 
     $balanceCols = $pdo->query("PRAGMA table_info(leave_balances)")->fetchAll(PDO::FETCH_COLUMN, 1);

@@ -7,10 +7,12 @@ header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'simulate_punch');
 
+require_once __DIR__ . '/../services/attendance_calculator.php';
+
 if ($action === 'simulate_punch') {
     // Requires login (Admin or Staff simulating a test punch)
     $targetUserId = (int)($_POST['user_id'] ?? 0);
-    $punchType = $_POST['punch_type'] ?? 'time_in'; // 'time_in' or 'time_out'
+    $punchType = $_POST['punch_type'] ?? 'time_in'; // 'time_in', 'break_out', 'break_in', 'time_out'
     $verificationMethod = $_POST['verification_method'] ?? 'Face Scan'; // 'Face Scan', 'Fingerprint', 'PIN / Card'
     $customTime = $_POST['punch_time'] ?? date('H:i:s');
     $logDate = $_POST['log_date'] ?? date('Y-m-d');
@@ -47,109 +49,56 @@ if ($action === 'simulate_punch') {
     $chkStmt->execute([$targetUserId, $logDate]);
     $existing = $chkStmt->fetch();
 
-    if ($punchType === 'time_in') {
-        // Compute On-Time vs Late (e.g. Standard 8:30 AM + 15m grace period = 8:45 AM)
-        $punchTimestamp = strtotime($customTime);
-        $lateThreshold = strtotime('08:45:00');
-        $status = ($punchTimestamp > $lateThreshold) ? 'Late' : 'On-Time';
+    $targetCol = 'time_in';
+    if ($punchType === 'break_out') $targetCol = 'break_out';
+    elseif ($punchType === 'break_in') $targetCol = 'break_in';
+    elseif ($punchType === 'time_out') $targetCol = 'time_out';
 
-        if ($existing) {
-            $stmt = $pdo->prepare("
-                UPDATE biometric_logs 
-                SET time_in = ?, verification_method = ?, status = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$customTime, $verificationMethod, $status, $existing['id']]);
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO biometric_logs (user_id, biometric_pin, log_date, time_in, verification_method, status, device_model)
-                VALUES (?, ?, ?, ?, ?, ?, 'ZKTeco MB460 Plus')
-            ");
-            $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod, $status]);
-        }
-
-        echo json_encode([
-            'success' => true,
-            'message' => "ZKTeco MB460 Plus: Time In recorded for {$u['name']} at {$customTime} via {$verificationMethod} ({$status})!{$autoEnrolledNote}",
-            'time_in' => $customTime,
-            'status' => $status,
-            'auto_enrolled' => !empty($autoEnrolledNote)
-        ]);
-        exit;
-    } elseif ($punchType === 'break_out') {
-        if ($existing) {
-            $stmt = $pdo->prepare("
-                UPDATE biometric_logs 
-                SET break_out = ?, verification_method = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$customTime, $verificationMethod, $existing['id']]);
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO biometric_logs (user_id, biometric_pin, log_date, break_out, verification_method, status, device_model)
-                VALUES (?, ?, ?, ?, ?, 'Present', 'ZKTeco MB460 Plus')
-            ");
-            $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod]);
-        }
-
-        echo json_encode([
-            'success' => true,
-            'message' => "ZKTeco MB460 Plus: Break Out recorded for {$u['name']} at {$customTime} via {$verificationMethod}!{$autoEnrolledNote}",
-            'break_out' => $customTime,
-            'auto_enrolled' => !empty($autoEnrolledNote)
-        ]);
-        exit;
-    } elseif ($punchType === 'break_in') {
-        if ($existing) {
-            $stmt = $pdo->prepare("
-                UPDATE biometric_logs 
-                SET break_in = ?, verification_method = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$customTime, $verificationMethod, $existing['id']]);
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO biometric_logs (user_id, biometric_pin, log_date, break_in, verification_method, status, device_model)
-                VALUES (?, ?, ?, ?, ?, 'Present', 'ZKTeco MB460 Plus')
-            ");
-            $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod]);
-        }
-
-        echo json_encode([
-            'success' => true,
-            'message' => "ZKTeco MB460 Plus: Break In recorded for {$u['name']} at {$customTime} via {$verificationMethod}!{$autoEnrolledNote}",
-            'break_in' => $customTime,
-            'auto_enrolled' => !empty($autoEnrolledNote)
-        ]);
-        exit;
-    } elseif ($punchType === 'time_out') {
-        $punchTimestamp = strtotime($customTime);
-        $earlyThreshold = strtotime('17:00:00');
-        $statusSuffix = ($punchTimestamp < $earlyThreshold) ? ' (Undertime)' : '';
-
-        if ($existing) {
-            $stmt = $pdo->prepare("
-                UPDATE biometric_logs 
-                SET time_out = ?, verification_method = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$customTime, $verificationMethod, $existing['id']]);
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO biometric_logs (user_id, biometric_pin, log_date, time_out, verification_method, status, device_model)
-                VALUES (?, ?, ?, ?, ?, 'Present', 'ZKTeco MB460 Plus')
-            ");
-            $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod]);
-        }
-
-        echo json_encode([
-            'success' => true,
-            'message' => "ZKTeco MB460 Plus: Time Out recorded for {$u['name']} at {$customTime} via {$verificationMethod}{$statusSuffix}!{$autoEnrolledNote}",
-            'time_out' => $customTime,
-            'auto_enrolled' => !empty($autoEnrolledNote)
-        ]);
-        exit;
+    if ($existing) {
+        $stmt = $pdo->prepare("
+            UPDATE biometric_logs 
+            SET {$targetCol} = ?, verification_method = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$customTime, $verificationMethod, $existing['id']]);
+        $logId = $existing['id'];
+    } else {
+        $stmt = $pdo->prepare("
+            INSERT INTO biometric_logs (user_id, biometric_pin, log_date, {$targetCol}, verification_method, status, device_model)
+            VALUES (?, ?, ?, ?, ?, 'Present', 'ZKTeco MB460 Plus')
+        ");
+        $stmt->execute([$targetUserId, $pin, $logDate, $customTime, $verificationMethod]);
+        $logId = $pdo->lastInsertId();
     }
+
+    // Recalculate rendered hours and status dynamically
+    $fetchLog = $pdo->prepare("SELECT * FROM biometric_logs WHERE id = ?");
+    $fetchLog->execute([$logId]);
+    $updatedRow = $fetchLog->fetch();
+
+    $metrics = calculateAttendanceMetrics(
+        $updatedRow['time_in'],
+        $updatedRow['break_out'],
+        $updatedRow['break_in'],
+        $updatedRow['time_out'],
+        $updatedRow['overtime_hours'] ?? 0
+    );
+
+    $upMetrics = $pdo->prepare("UPDATE biometric_logs SET rendered_hours = ?, status = ? WHERE id = ?");
+    $upMetrics->execute([$metrics['rendered_hours'], $metrics['status'], $logId]);
+
+    $punchLabel = ucwords(str_replace('_', ' ', $punchType));
+    echo json_encode([
+        'success' => true,
+        'message' => "ZKTeco MB460 Plus: {$punchLabel} recorded for {$u['name']} at {$customTime} via {$verificationMethod} (Status: {$metrics['status']})!{$autoEnrolledNote}",
+        'punch_type' => $punchType,
+        'punch_time' => $customTime,
+        'status' => $metrics['status'],
+        'rendered_hours' => $metrics['rendered_hours'],
+        'rendered_formatted' => $metrics['rendered_formatted'],
+        'auto_enrolled' => !empty($autoEnrolledNote)
+    ]);
+    exit;
 }
 
 // 2. CHECK DEVICE PIN (Query terminal to see if PIN has enrolled face/fingerprint)
@@ -277,6 +226,28 @@ if ($action === 'sync_now') {
         'status' => 'Online',
         'sync_time' => date('Y-m-d H:i:s'),
         'updated_count' => $updatedCount
+    ]);
+    exit;
+}
+
+// 4. SYNC HARDWARE CLOCK
+if ($action === 'sync_clock') {
+    $nowFormatted = date('Y-m-d H:i:s');
+    $cmd = "C:1:SET TIME {$nowFormatted}";
+    
+    // Write command to pending_cmd.txt for ADMS terminal polling
+    $cmdFiles = [
+        __DIR__ . '/../iclock/pending_cmd.txt',
+        __DIR__ . '/../../iclock/pending_cmd.txt'
+    ];
+    foreach ($cmdFiles as $cf) {
+        @file_put_contents($cf, $cmd);
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => "Terminal clock sync command queued: {$nowFormatted} (Philippine Standard Time). The device will synchronize on its next heartbeat.",
+        'sync_time' => $nowFormatted
     ]);
     exit;
 }

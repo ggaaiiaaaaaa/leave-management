@@ -2075,3 +2075,309 @@ body {
     padding: 0;
   }
 }
+
+/* Attendance Period Quick Pills */
+.period-quick-pills {
+  display: inline-flex;
+  background: var(--bg-subtle, #f1f5f9);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  gap: 2px;
+}
+
+.period-quick-pills .btn-period {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.period-quick-pills .btn-period:hover {
+  color: var(--primary, #0f172a);
+}
+
+.period-quick-pills .btn-period.active {
+  background: #ffffff;
+  color: var(--primary, #0f172a);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Overall Dashboard Unified Styles
+   ========================================================================== */
+.overall-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .overall-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.overall-col-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.overall-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Action Center Cards */
+.action-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-item-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.action-item-card:hover {
+  border-color: var(--accent, #0ea5e9);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.action-item-left {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.action-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action-item-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.action-item-type-badge.leave {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.action-item-type-badge.correction {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.action-item-type-badge.ot {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.action-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.action-item-desc {
+  font-size: 12.5px;
+  color: var(--text-muted, #64748b);
+  line-height: 1.4;
+}
+
+.action-item-reason {
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+  background: var(--bg-subtle, #f8fafc);
+  border-left: 3px solid var(--border-strong, #cbd5e1);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.action-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+  min-width: 130px;
+}
+
+/* 4-Punches Visual Strip */
+.punch-sequence-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  background: var(--bg-subtle, #f8fafc);
+  padding: 14px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+@media (max-width: 640px) {
+  .punch-sequence-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.punch-slot-box {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+}
+
+.punch-slot-box.recorded {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.punch-slot-box .punch-slot-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.punch-slot-box .punch-slot-time {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.punch-slot-box.recorded .punch-slot-time {
+  color: #15803d;
+}
+
+/* Quick Action Tiles */
+.quick-launcher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.quick-launcher-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.quick-launcher-card:hover {
+  border-color: var(--primary, #0f172a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.quick-launcher-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-launcher-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.quick-launcher-sub {
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+}
+
+/* Team Presence Mini Roster */
+.presence-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.presence-roster-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.presence-roster-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.presence-roster-user .user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.presence-roster-user .user-meta .name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+}
+
+.presence-roster-user .user-meta .title {
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+}
+
+/* Hardware Box */
+.hardware-widget-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  padding: 16px;
+}

@@ -147,8 +147,12 @@ if (file_exists($zkStatusFile)) {
 
       <nav class="sidebar-nav">
         <div class="nav-category">Management Navigation</div>
-        <a class="nav-item active" data-tab="overview" onclick="switchTab('overview')">
-          <i data-lucide="layout-dashboard"></i>
+        <a class="nav-item active" data-tab="overall" onclick="switchTab('overall'); loadAdminOverallDashboard();">
+          <i data-lucide="layout-grid"></i>
+          <span>Overall Dashboard</span>
+        </a>
+        <a class="nav-item" data-tab="overview" onclick="switchTab('overview')">
+          <i data-lucide="layers"></i>
           <span>Leave Overview</span>
         </a>
         <a class="nav-item" data-tab="approvals" onclick="switchTab('approvals')">
@@ -212,6 +216,221 @@ if (file_exists($zkStatusFile)) {
 
       <!-- Content Area -->
       <div class="content-area">
+
+        <!-- ==============================================
+             TAB 0: EXECUTIVE OVERALL DASHBOARD
+             ============================================== -->
+        <div id="tab-overall" class="tab-pane active" style="display:block;">
+          <div class="page-header">
+            <div class="page-title">
+              <h1>Executive Overall Dashboard</h1>
+              <p>Firm-wide Attendance, Biometric Device Status, Leave Ledger, and Decision Center</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn-secondary" onclick="triggerManualSync()" id="btnAdminOverallSync">
+                <i data-lucide="refresh-cw"></i>
+                <span>Sync ZKTeco LAN</span>
+              </button>
+              <button class="btn-secondary" onclick="switchTab('biometrics'); loadDtrLogs();">
+                <i data-lucide="printer"></i>
+                <span>Print Form 48 DTR</span>
+              </button>
+              <button class="btn-primary" onclick="openModal('applyModal')">
+                <i data-lucide="plus-circle"></i>
+                <span>File Leave Request</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Executive Firm Pulse KPI Row -->
+          <div class="kpi-grid" style="margin-bottom: 24px;">
+            <div class="kpi-card green">
+              <div class="kpi-header">
+                <span class="kpi-label">Present in Office</span>
+                <div class="kpi-icon"><i data-lucide="user-check"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="adminOverallPresent"><?= $presentCount ?></span>
+                <span class="kpi-sub">/ <?= $totalStaff ?> Associates</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="activity" style="width:14px;height:14px;"></i>
+                <span>Clocked In Today</span>
+              </div>
+            </div>
+
+            <div class="kpi-card amber">
+              <div class="kpi-header">
+                <span class="kpi-label">Currently on Break</span>
+                <div class="kpi-icon"><i data-lucide="coffee"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="adminOverallBreak">0</span>
+                <span class="kpi-sub">Associates</span>
+              </div>
+              <div class="kpi-footer" style="color:var(--warning);">
+                <i data-lucide="clock" style="width:14px;height:14px;"></i>
+                <span>Lunch / Meal Break</span>
+              </div>
+            </div>
+
+            <div class="kpi-card blue">
+              <div class="kpi-header">
+                <span class="kpi-label">On Approved Leave</span>
+                <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="adminOverallLeave"><?= $onLeaveCount ?></span>
+                <span class="kpi-sub">Active Today</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="calendar" style="width:14px;height:14px;"></i>
+                <span>Scheduled Absences</span>
+              </div>
+            </div>
+
+            <div class="kpi-card purple">
+              <div class="kpi-header">
+                <span class="kpi-label">Awaiting Your Decision</span>
+                <div class="kpi-icon"><i data-lucide="clipboard-check"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="adminOverallPending"><?= $pendingCount ?></span>
+                <span class="kpi-sub">Action Items</span>
+              </div>
+              <div class="kpi-footer" style="color:var(--purple);">
+                <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i>
+                <span id="adminPendingBreakdownText">Leaves, Punches &amp; OT</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overall Layout Grid: Main 65% + Side 35% -->
+          <div class="overall-layout-grid">
+            
+            <!-- Left Main Column -->
+            <div class="overall-col-main">
+              
+              <!-- Action Center: Items Awaiting Signature -->
+              <div class="dashboard-card">
+                <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+                  <h3>
+                    <i data-lucide="inbox" style="color:var(--accent);"></i>
+                    Action Center &mdash; Items Awaiting Your Decision
+                  </h3>
+                  <span class="badge badge-primary" id="adminActionCenterBadge">Loading...</span>
+                </div>
+                <div class="card-body" style="padding: 16px;">
+                  <div id="adminActionCenterList" class="action-items-list">
+                    <div style="text-align:center; padding: 24px; color: var(--text-muted);">
+                      <i data-lucide="loader-2" class="spin" style="width:24px; height:24px; margin-bottom:8px;"></i>
+                      <div>Loading pending action items...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Today's Biometric Punch Activity Ledger -->
+              <div class="dashboard-card">
+                <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+                  <h3>
+                    <i data-lucide="scan-face" style="color:var(--accent);"></i>
+                    Today's Attendance Punches (ZKTeco MB460 Plus)
+                  </h3>
+                  <button class="btn-link" onclick="switchTab('biometrics'); loadDtrLogs();" style="font-size:12px; font-weight:600; color:var(--accent); background:none; border:none; cursor:pointer;">
+                    View Complete Ledger &rarr;
+                  </button>
+                </div>
+                <div class="table-responsive">
+                  <table class="custom-table" style="font-size: 13px;">
+                    <thead>
+                      <tr>
+                        <th>Associate</th>
+                        <th>Time In</th>
+                        <th>Break Out</th>
+                        <th>Break In</th>
+                        <th>Time Out</th>
+                        <th>Rendered</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminTodayPunchesTableBody">
+                      <tr>
+                        <td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">
+                          Loading today's attendance logs...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Sidebar Column -->
+            <div class="overall-col-side">
+
+              <!-- ZKTeco Hardware Status Widget -->
+              <div class="hardware-widget-card">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="cpu" style="width:18px; height:18px; color:var(--primary);"></i>
+                    <strong style="font-size:13px;">ZKTeco MB460 Plus</strong>
+                  </div>
+                  <span class="status-pill <?= $zkIsOnline ? 'active' : 'inactive' ?>" id="adminZkOnlineBadge">
+                    <span class="status-dot"></span>
+                    <span id="adminZkStatusLabel"><?= $zkIsOnline ? 'Online / LAN' : 'Standby / LAN' ?></span>
+                  </span>
+                </div>
+                <div style="font-size:12px; color:var(--text-muted); display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
+                  <div><strong>IP:</strong> <code>192.168.100.157:4370</code></div>
+                  <div><strong>Serial:</strong> <code>TTQ5261200350</code></div>
+                  <div id="adminZkLastSeenText"><strong>Last Sync:</strong> <?= date('g:i A') ?></div>
+                </div>
+                <button class="btn-secondary btn-sm" onclick="triggerManualSync()" style="width:100%; justify-content:center;">
+                  <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i>
+                  <span>Sync Device Now</span>
+                </button>
+              </div>
+
+              <!-- Who's in the Office Right Now? -->
+              <div class="dashboard-card">
+                <div class="card-head">
+                  <h3>
+                    <i data-lucide="users" style="color:var(--accent);"></i>
+                    Who's in the Office Now
+                  </h3>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                  <div id="adminOverallPresenceRoster" class="presence-roster-list">
+                    <div style="text-align:center; padding: 16px; color: var(--text-muted); font-size:12px;">
+                      Loading roster...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upcoming Schedule (Next 7 Days) -->
+              <div class="dashboard-card">
+                <div class="card-head">
+                  <h3>
+                    <i data-lucide="calendar" style="color:var(--accent);"></i>
+                    Upcoming Schedule (7 Days)
+                  </h3>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                  <div id="adminUpcomingScheduleList" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="text-align:center; padding: 16px; color: var(--text-muted); font-size:12px;">
+                      Loading schedule...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
 
         <!-- ==============================================
              TAB 1: LEAVE OVERVIEW
@@ -446,7 +665,11 @@ if (file_exists($zkStatusFile)) {
                 </div>
               </div>
             </div>
-            <div class="zkteco-actions">
+            <div class="zkteco-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-secondary" onclick="syncClock()">
+                <i data-lucide="clock"></i>
+                <span>Sync Hardware Clock</span>
+              </button>
               <button class="btn-secondary" onclick="syncBiometrics()">
                 <i data-lucide="refresh-cw"></i>
                 <span>Sync Device Now</span>
@@ -458,36 +681,207 @@ if (file_exists($zkStatusFile)) {
             </div>
           </div>
 
-          <div class="dashboard-card">
-            <div class="card-head" style="flex-wrap:wrap; gap:12px;">
-              <div>
-                <h3><i data-lucide="clock" style="color:var(--accent);"></i> Daily Time Record (DTR) &amp; Attendance</h3>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Reconciled real-time biometric punches and approved leave records.</p>
+          <!-- Attendance Real-Time KPIs -->
+          <div class="kpi-grid">
+            <div class="kpi-card green">
+              <div class="kpi-header">
+                <span class="kpi-label">Present Today</span>
+                <div class="kpi-icon"><i data-lucide="user-check"></i></div>
               </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <label style="font-size:12px; font-weight:700; color:var(--text-muted);">Select Date:</label>
-                <input type="date" id="dtrDatePicker" class="form-input" style="padding:6px 10px; width:160px;" value="<?= $today ?>" onchange="loadDtrLogs()">
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiPresentCount">0</span>
+                <span class="kpi-sub" id="kpiPresentPercent">/ 0 Associates</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="check" style="width:14px;height:14px;"></i>
+                <span>Clocked into Office</span>
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div class="kpi-card amber">
+              <div class="kpi-header">
+                <span class="kpi-label">Currently on Break</span>
+                <div class="kpi-icon"><i data-lucide="coffee"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiOnBreakCount">0</span>
+                <span class="kpi-sub">On Lunch / Break</span>
+              </div>
+              <div class="kpi-footer neutral">
+                <i data-lucide="clock" style="width:14px;height:14px;"></i>
+                <span>Break Out Registered</span>
+              </div>
+            </div>
+
+            <div class="kpi-card blue">
+              <div class="kpi-header">
+                <span class="kpi-label">On Approved Leave</span>
+                <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiOnLeaveCount">0</span>
+                <span class="kpi-sub">Scheduled Absence</span>
+              </div>
+              <div class="kpi-footer positive">
+                <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+                <span>Authorized Leave</span>
+              </div>
+            </div>
+
+            <div class="kpi-card purple">
+              <div class="kpi-header">
+                <span class="kpi-label">Accumulated Rendered Hours</span>
+                <div class="kpi-icon"><i data-lucide="activity"></i></div>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiTotalRenderedHours">0.0</span>
+                <span class="kpi-sub">Productive Hours</span>
+              </div>
+              <div class="kpi-footer neutral">
+                <i data-lucide="clock" style="width:14px;height:14px;"></i>
+                <span id="kpiRenderedFormatted">0 hrs</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- DTR Filter & Ledger Card -->
+          <div class="dashboard-card">
+            <div class="card-head" style="flex-wrap:wrap; gap:12px;">
+              <div>
+                <h3><i data-lucide="clock" style="color:var(--accent);"></i> Daily Time Record (DTR) &amp; Attendance Ledger</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Reconciled physical biometric punches, actual rendered hours, and approved leaves.</p>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <button class="btn-primary" style="font-size:12px; padding:6px 12px;" onclick="openAdminPrintDtr()">
+                  <i data-lucide="printer"></i>
+                  <span>Print Form 48 DTR</span>
+                </button>
+                <button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="exportDtrCsv()">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Calendar Range Filter Bar -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--bg-subtle); padding:10px 14px; border-radius:8px; margin-top:10px; border:1px solid var(--border-color);">
+              <div class="period-quick-pills">
+                <button type="button" class="btn-period active" onclick="setAdminDatePeriod('today', this)">Today</button>
+                <button type="button" class="btn-period" onclick="setAdminDatePeriod('this_week', this)">This Week</button>
+                <button type="button" class="btn-period" onclick="setAdminDatePeriod('first_half', this)">1st Half (1st–15th)</button>
+                <button type="button" class="btn-period" onclick="setAdminDatePeriod('second_half', this)">2nd Half (16th–End)</button>
+                <button type="button" class="btn-period" onclick="setAdminDatePeriod('full_month', this)">Full Month</button>
+                <button type="button" class="btn-period" onclick="setAdminDatePeriod('custom', this)">Custom Range</button>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <!-- Month Picker (for monthly views) -->
+                <div id="adminMonthWrap" style="display:none;">
+                  <input type="month" id="adminDtrMonthPicker" class="form-input" style="padding:5px 10px; font-size:12px; width:auto;" value="<?= date('Y-m') ?>" onchange="loadDtrLogs()">
+                </div>
+
+                <!-- Custom Range Inputs (for custom view) -->
+                <div id="adminCustomRangeWrap" style="display:none; align-items:center; gap:6px;">
+                  <input type="date" id="adminCustomStartDate" class="form-input" style="padding:5px 8px; font-size:12px; width:135px;" value="<?= date('Y-m-d') ?>" onchange="loadDtrLogs()">
+                  <span style="font-size:12px; color:var(--text-muted);">&ndash;</span>
+                  <input type="date" id="adminCustomEndDate" class="form-input" style="padding:5px 8px; font-size:12px; width:135px;" value="<?= date('Y-m-d') ?>" onchange="loadDtrLogs()">
+                </div>
+
+                <!-- Associate Filter -->
+                <select id="dtrFilterUser" class="form-select" style="padding:5px 10px; font-size:12px; width:auto;" onchange="loadDtrLogs()">
+                  <option value="0">All Firm Associates</option>
+                  <?php foreach ($allUsers as $u): ?>
+                    <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['name']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top:14px;">
               <table class="custom-table" id="dtrTable">
                 <thead>
                   <tr>
                     <th>Associate</th>
-                    <th>Device PIN</th>
+                    <th>PIN</th>
+                    <th id="dtrThDate" style="display:none;">Date</th>
                     <th>Time In</th>
                     <th>Break Out</th>
                     <th>Break In</th>
                     <th>Time Out</th>
-                    <th>Verification Method</th>
-                    <th>Daily Attendance Status</th>
+                    <th>Rendered Hours</th>
+                    <th>Overtime</th>
+                    <th>Verification</th>
+                    <th>Attendance Status</th>
+                    <th style="width:70px; text-align:center;">Action</th>
                   </tr>
                 </thead>
                 <tbody id="dtrTableBody">
-                  <tr><td colspan="8" style="text-align:center; padding:24px;">Loading daily time records...</td></tr>
+                  <tr><td colspan="12" style="text-align:center; padding:24px;">Loading daily time records...</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Real-Time Team Presence Roster Widget -->
+          <div class="dashboard-card" style="margin-top: 20px;">
+            <div class="card-head">
+              <h3><i data-lucide="users" style="color:var(--accent);"></i> Live Office Presence Board (Who's In / Who's Out)</h3>
+              <span style="font-size:12px; color:var(--text-muted);" id="adminPresenceDateLabel">Today</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; padding:16px;" id="adminPresenceRosterContainer">
+              <div style="color:var(--text-muted); font-size:13px;">Loading team presence...</div>
+            </div>
+          </div>
+
+          <!-- Attendance Adjustments & Overtime Approvals Queue -->
+          <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px;">
+            <!-- Missed Punch Adjustment Queue -->
+            <div class="dashboard-card">
+              <div class="card-head">
+                <h4><i data-lucide="edit-3" style="color:var(--accent);"></i> Missed Punch Adjustment Requests</h4>
+                <span class="nav-badge" id="adminCorrectionsBadge" style="display:none;">0</span>
+              </div>
+              <div class="table-responsive">
+                <table class="custom-table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>Associate</th>
+                      <th>Date</th>
+                      <th>Adjusted Times</th>
+                      <th>Reason</th>
+                      <th>Status / Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminCorrectionsTbody">
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Loading adjustment requests...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Overtime Pre-Approvals Queue -->
+            <div class="dashboard-card">
+              <div class="card-head">
+                <h4><i data-lucide="clock" style="color:var(--accent);"></i> Overtime Pre-Approvals Queue</h4>
+                <span class="nav-badge" id="adminOtBadge" style="display:none;">0</span>
+              </div>
+              <div class="table-responsive">
+                <table class="custom-table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>Associate</th>
+                      <th>OT Date</th>
+                      <th>Hours</th>
+                      <th>Engagement / Reason</th>
+                      <th>Status / Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminOtTbody">
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Loading overtime requests...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1131,6 +1525,56 @@ if (file_exists($zkStatusFile)) {
     </div>
   </div>
 
+  <!-- 6.5 INLINE EDIT / ADJUST PUNCH MODAL -->
+  <div class="modal-backdrop" id="adminEditPunchModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="edit-3"></i> Adjust Daily Time Record</h3>
+        <button class="btn-close-modal" onclick="closeModal('adminEditPunchModal')">&times;</button>
+      </div>
+      <form id="adminEditPunchForm" onsubmit="handleAdminEditPunchSubmit(event)">
+        <input type="hidden" name="user_id" id="editPunchUserId">
+        <div class="modal-body">
+          <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:14px;">
+            <div style="font-weight:700; color:var(--primary);" id="editPunchAssociateName">Associate Name</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+              Date: <strong id="editPunchDateLabel"></strong> &bull; PIN: <strong id="editPunchPinLabel"></strong>
+            </div>
+            <input type="hidden" name="target_date" id="editPunchDateInput">
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Time In (AM Arrival)</label>
+              <input type="time" step="1" name="time_in" id="editTimeIn" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Break Out (Lunch Departure)</label>
+              <input type="time" step="1" name="break_out" id="editBreakOut" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Break In (Lunch Return)</label>
+              <input type="time" step="1" name="break_in" id="editBreakIn" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Time Out (Evening Departure)</label>
+              <input type="time" step="1" name="time_out" id="editTimeOut" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:12px;">
+            <label class="form-label">Adjustment Note / Reference</label>
+            <input type="text" name="reason" id="editPunchReason" class="form-input" placeholder="e.g. Verified manual time card adjustment by Managing Partner" value="Direct Admin Adjustment">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('adminEditPunchModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSavePunchEdit">Save DTR Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- 7. ADD ASSOCIATE MODAL -->
   <div class="modal-backdrop" id="addUserModal">
     <div class="modal-window">
@@ -1647,7 +2091,7 @@ if (file_exists($zkStatusFile)) {
 
     function switchTab(tabId, updateState = true) {
       const activePane = document.getElementById(`tab-${tabId}`);
-      if (!activePane) tabId = 'overview';
+      if (!activePane) tabId = 'overall';
 
       document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         item.classList.remove('active');
@@ -1664,6 +2108,9 @@ if (file_exists($zkStatusFile)) {
         }
       } catch (e) {}
 
+      if (tabId === 'overall') {
+        if (typeof loadAdminOverallDashboard === 'function') loadAdminOverallDashboard();
+      }
       if (tabId === 'calendar' && typeof calendarInstance !== 'undefined' && calendarInstance) {
         setTimeout(() => calendarInstance.render(), 50);
       }
@@ -1676,14 +2123,431 @@ if (file_exists($zkStatusFile)) {
 
     function initSavedTab() {
       const hashTab = window.location.hash.replace('#', '').trim();
-      const savedTab = hashTab || localStorage.getItem('jtyeo_admin_active_tab');
+      const savedTab = hashTab || localStorage.getItem('jtyeo_admin_active_tab') || 'overall';
       if (savedTab && document.getElementById(`tab-${savedTab}`)) {
         switchTab(savedTab, false);
+      } else {
+        switchTab('overall', false);
       }
       if (savedTab === 'biometrics') {
         if (typeof loadDtrLogs === 'function') loadDtrLogs();
         if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
+      } else if (savedTab === 'overall') {
+        if (typeof loadAdminOverallDashboard === 'function') loadAdminOverallDashboard();
       }
+    }
+
+    // ==========================================
+    // Overall Dashboard Functions (Admin)
+    // ==========================================
+    function loadAdminOverallDashboard() {
+      fetch('actions/get_dashboard_summary.php')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) return;
+
+          // 1. KPI Pulse counts
+          if (data.counts) {
+            const presEl = document.getElementById('adminOverallPresent');
+            const brkEl = document.getElementById('adminOverallBreak');
+            const lvEl = document.getElementById('adminOverallLeave');
+            const pndEl = document.getElementById('adminOverallPending');
+            if (presEl) presEl.innerText = data.counts.present_count;
+            if (brkEl) brkEl.innerText = data.counts.on_break_count;
+            if (lvEl) lvEl.innerText = data.counts.on_leave_count;
+            if (pndEl) pndEl.innerText = data.counts.total_pending_actions;
+
+            const badge = document.getElementById('adminActionCenterBadge');
+            if (badge) {
+              badge.innerText = data.counts.total_pending_actions + ' Pending';
+              badge.className = data.counts.total_pending_actions > 0 ? 'badge badge-warning' : 'badge badge-success';
+            }
+
+            const breakdown = document.getElementById('adminPendingBreakdownText');
+            if (breakdown) {
+              breakdown.innerText = `${data.counts.pending_leaves} Leaves, ${data.counts.pending_corrections} Punches, ${data.counts.pending_ot} OT`;
+            }
+          }
+
+          // 2. Render Action Center Items
+          renderAdminActionCenter(data.pending_actions || []);
+
+          // 3. Render Today's Punches
+          renderAdminTodayPunches(data.today_punches || []);
+
+          // 4. Update ZKTeco Hardware status
+          if (data.zk_status) {
+            const badge = document.getElementById('adminZkOnlineBadge');
+            const lbl = document.getElementById('adminZkStatusLabel');
+            if (badge && lbl) {
+              if (data.zk_status.online) {
+                badge.className = 'status-pill active';
+                lbl.innerText = 'Online / LAN';
+              } else {
+                badge.className = 'status-pill inactive';
+                lbl.innerText = 'Standby / LAN';
+              }
+            }
+            const ls = document.getElementById('adminZkLastSeenText');
+            if (ls && data.zk_status.last_seen) {
+              ls.innerHTML = `<strong>Last Sync:</strong> ${data.zk_status.last_seen}`;
+            }
+          }
+
+          // 5. Render Live Team Presence Roster
+          renderAdminOverallPresence();
+
+          // 6. Render Upcoming Schedule
+          renderAdminUpcomingSchedule(data.upcoming_holidays || [], data.upcoming_leaves || []);
+
+          if (window.lucide) lucide.createIcons();
+        })
+        .catch(err => {
+          console.error('Error loading overall dashboard:', err);
+        });
+    }
+
+    function renderAdminActionCenter(items) {
+      const container = document.getElementById('adminActionCenterList');
+      if (!container) return;
+
+      if (!items || items.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding: 32px 16px; color: var(--text-muted);">
+            <div style="width:48px; height:48px; border-radius:50%; background:#f0fdf4; display:flex; align-items:center; justify-content:center; margin: 0 auto 12px; color:#16a34a;">
+              <i data-lucide="check-check" style="width:24px; height:24px;"></i>
+            </div>
+            <div style="font-weight:700; color:var(--text-main); font-size:14px; margin-bottom:4px;">Approvals Queue is Clear!</div>
+            <div style="font-size:12.5px;">All leave requests, missed punch adjustments, and overtime forms have been reviewed.</div>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = items.map(item => {
+        let badgeClass = 'leave';
+        let badgeLabel = 'Leave Request';
+        let iconName = 'palmtree';
+        let detailHtml = '';
+        let actionButtonsHtml = '';
+
+        if (item.item_type === 'leave') {
+          badgeClass = 'leave';
+          badgeLabel = item.title || 'Leave Request';
+          iconName = 'calendar';
+          detailHtml = `
+            <div class="action-item-desc">
+              <strong>${item.days_count} Day(s)</strong> &bull; ${item.start_date} to ${item.end_date}
+            </div>
+            ${item.reason ? `<div class="action-item-reason">"${item.reason}"</div>` : ''}
+          `;
+          actionButtonsHtml = `
+            <button class="btn-primary btn-sm" onclick="adminQuickDecideLeave('${item.ref_no}', 'Approved')">
+              <i data-lucide="check" style="width:12px; height:12px;"></i> Approve
+            </button>
+            <button class="btn-secondary btn-sm" onclick="adminQuickDecideLeave('${item.ref_no}', 'Rejected')">
+              <i data-lucide="x" style="width:12px; height:12px;"></i> Reject
+            </button>
+          `;
+        } else if (item.item_type === 'correction') {
+          badgeClass = 'correction';
+          badgeLabel = 'Missed Punch Adjustment';
+          iconName = 'clock';
+          detailHtml = `
+            <div class="action-item-desc">
+              <strong>Date:</strong> ${item.target_date} &bull; 
+              ${item.time_in ? 'In: ' + item.time_in : ''} 
+              ${item.break_out ? '| B.Out: ' + item.break_out : ''} 
+              ${item.break_in ? '| B.In: ' + item.break_in : ''} 
+              ${item.time_out ? '| Out: ' + item.time_out : ''}
+            </div>
+            ${item.reason ? `<div class="action-item-reason">"${item.reason}"</div>` : ''}
+          `;
+          actionButtonsHtml = `
+            <button class="btn-primary btn-sm" onclick="adminQuickDecideCorrection(${item.id}, 'approve')">
+              <i data-lucide="check" style="width:12px; height:12px;"></i> Approve
+            </button>
+            <button class="btn-secondary btn-sm" onclick="adminQuickDecideCorrection(${item.id}, 'reject')">
+              <i data-lucide="x" style="width:12px; height:12px;"></i> Reject
+            </button>
+          `;
+        } else if (item.item_type === 'ot') {
+          badgeClass = 'ot';
+          badgeLabel = 'Overtime Pre-Authorization';
+          iconName = 'trending-up';
+          detailHtml = `
+            <div class="action-item-desc">
+              <strong>${item.estimated_hours} Hours OT</strong> on ${item.ot_date}
+            </div>
+            ${item.reason ? `<div class="action-item-reason">"${item.reason}"</div>` : ''}
+          `;
+          actionButtonsHtml = `
+            <button class="btn-primary btn-sm" onclick="adminQuickDecideOt(${item.id}, 'approve')">
+              <i data-lucide="check" style="width:12px; height:12px;"></i> Approve
+            </button>
+            <button class="btn-secondary btn-sm" onclick="adminQuickDecideOt(${item.id}, 'reject')">
+              <i data-lucide="x" style="width:12px; height:12px;"></i> Reject
+            </button>
+          `;
+        }
+
+        const avatarMarkup = item.avatar_path 
+          ? `<img src="${item.avatar_path}" alt="Avatar" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">`
+          : `<div style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px;">${item.avatar_initials || 'A'}</div>`;
+
+        return `
+          <div class="action-item-card">
+            <div class="action-item-left">
+              ${avatarMarkup}
+              <div class="action-item-meta">
+                <span class="action-item-type-badge ${badgeClass}">
+                  <i data-lucide="${iconName}" style="width:11px; height:11px;"></i>
+                  ${badgeLabel}
+                </span>
+                <div class="action-item-title">${item.employee_name} <span style="font-size:11.5px; font-weight:normal; color:var(--text-muted);">&bull; ${item.employee_title || 'Associate'}</span></div>
+                ${detailHtml}
+              </div>
+            </div>
+            <div class="action-item-actions">
+              ${actionButtonsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function adminQuickDecideLeave(refNo, decision) {
+      showConfirmDialog({
+        title: `${decision} Leave Application?`,
+        message: `Are you sure you want to mark leave reference ${refNo} as ${decision}?`,
+        confirmText: `${decision} Leave`,
+        isDanger: decision === 'Rejected'
+      }).then(confirmed => {
+        if (!confirmed) return;
+        fetch('actions/decide_leave.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref_no: refNo, decision: decision, reason: '' })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message || `Leave ${decision.toLowerCase()} successfully.`, 'success');
+            loadAdminOverallDashboard();
+          } else {
+            showToast(data.message || 'Error processing decision.', 'error');
+          }
+        })
+        .catch(err => {
+          showToast('Network error processing decision.', 'error');
+        });
+      });
+    }
+
+    function adminQuickDecideCorrection(id, actionType) {
+      const isApprove = (actionType === 'approve');
+      showConfirmDialog({
+        title: `${isApprove ? 'Approve' : 'Reject'} Attendance Adjustment?`,
+        message: `Are you sure you want to ${isApprove ? 'approve and apply' : 'reject'} this punch correction?`,
+        confirmText: isApprove ? 'Approve & Apply' : 'Reject',
+        isDanger: !isApprove
+      }).then(confirmed => {
+        if (!confirmed) return;
+        const formData = new FormData();
+        formData.append('action', isApprove ? 'approve_correction' : 'reject_correction');
+        formData.append('id', id);
+
+        fetch('actions/manage_attendance_corrections.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message, 'success');
+            loadAdminOverallDashboard();
+          } else {
+            showToast(data.message, 'error');
+          }
+        })
+        .catch(err => {
+          showToast('Network error processing adjustment.', 'error');
+        });
+      });
+    }
+
+    function adminQuickDecideOt(id, actionType) {
+      const isApprove = (actionType === 'approve');
+      showConfirmDialog({
+        title: `${isApprove ? 'Approve' : 'Reject'} Overtime Request?`,
+        message: `Are you sure you want to ${isApprove ? 'pre-approve' : 'reject'} this overtime request?`,
+        confirmText: isApprove ? 'Approve Overtime' : 'Reject',
+        isDanger: !isApprove
+      }).then(confirmed => {
+        if (!confirmed) return;
+        const formData = new FormData();
+        formData.append('action', isApprove ? 'approve_ot' : 'reject_ot');
+        formData.append('id', id);
+
+        fetch('actions/manage_overtime.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message, 'success');
+            loadAdminOverallDashboard();
+          } else {
+            showToast(data.message, 'error');
+          }
+        })
+        .catch(err => {
+          showToast('Network error processing overtime.', 'error');
+        });
+      });
+    }
+
+    function renderAdminTodayPunches(punches) {
+      const tbody = document.getElementById('adminTodayPunchesTableBody');
+      if (!tbody) return;
+
+      if (!punches || punches.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">
+              No biometric punches recorded yet today. Associates will appear automatically upon scanning.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = punches.map(p => {
+        let statusBadge = '<span class="status-pill active"><span class="status-dot"></span> Present</span>';
+        if (p.time_out) {
+          statusBadge = '<span class="status-pill info"><span class="status-dot"></span> Completed</span>';
+        } else if (p.break_out && !p.break_in) {
+          statusBadge = '<span class="status-pill warning"><span class="status-dot"></span> On Break</span>';
+        }
+
+        const avatarMarkup = p.avatar_path 
+          ? `<img src="${p.avatar_path}" alt="Avatar" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">`
+          : `<div style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11px;">${p.avatar_initials || 'A'}</div>`;
+
+        return `
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${avatarMarkup}
+                <div>
+                  <div style="font-weight:600; color:var(--text-main);">${p.name}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${p.title || 'Associate'}</div>
+                </div>
+              </div>
+            </td>
+            <td><strong>${p.time_in_12 || '&mdash;'}</strong></td>
+            <td>${p.break_out_12 || '&mdash;'}</td>
+            <td>${p.break_in_12 || '&mdash;'}</td>
+            <td><strong>${p.time_out_12 || '&mdash;'}</strong></td>
+            <td><strong style="color:var(--primary);">${p.rendered_formatted || '0.00 hrs'}</strong></td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAdminOverallPresence() {
+      fetch('actions/get_presence.php')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) return;
+          const container = document.getElementById('adminOverallPresenceRoster');
+          if (!container) return;
+
+          if (!data.roster || data.roster.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:12px;">No active roster available.</div>';
+            return;
+          }
+
+          container.innerHTML = data.roster.map(u => {
+            const avatarMarkup = u.avatar_path 
+              ? `<img src="${u.avatar_path}" alt="Avatar" style="width:28px; height:28px; border-radius:50%; object-fit:cover;">`
+              : `<div style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:10px;">${u.avatar_initials || 'A'}</div>`;
+
+            let pillClass = 'inactive';
+            if (u.state === 'present') pillClass = 'active';
+            else if (u.state === 'on_break') pillClass = 'warning';
+            else if (u.state === 'on_leave') pillClass = 'info';
+
+            return `
+              <div class="presence-roster-item">
+                <div class="presence-roster-user">
+                  ${avatarMarkup}
+                  <div class="user-meta">
+                    <span class="name">${u.name}</span>
+                    <span class="title">${u.title || 'Associate'}</span>
+                  </div>
+                </div>
+                <span class="status-pill ${pillClass}" style="font-size:10.5px; padding: 2px 7px;">
+                  <span class="status-dot"></span>
+                  <span>${u.state_label}</span>
+                </span>
+              </div>
+            `;
+          }).join('');
+        })
+        .catch(err => {
+          console.error('Presence roster fetch error:', err);
+        });
+    }
+
+    function renderAdminUpcomingSchedule(holidays, leaves) {
+      const container = document.getElementById('adminUpcomingScheduleList');
+      if (!container) return;
+
+      const hasHolidays = holidays && holidays.length > 0;
+      const hasLeaves = leaves && leaves.length > 0;
+
+      if (!hasHolidays && !hasLeaves) {
+        container.innerHTML = '<div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">No upcoming leaves or Philippine statutory holidays in the next 7 days.</div>';
+        return;
+      }
+
+      let html = '';
+      if (hasHolidays) {
+        holidays.forEach(h => {
+          html += `
+            <div style="display:flex; align-items:flex-start; gap:10px; padding:8px 10px; border-radius:6px; background:#fef3c7; border:1px solid #fde68a;">
+              <i data-lucide="flag" style="width:14px; height:14px; color:#b45309; flex-shrink:0; margin-top:2px;"></i>
+              <div>
+                <div style="font-size:12px; font-weight:700; color:#92400e;">${h.title}</div>
+                <div style="font-size:11px; color:#b45309;">${h.holiday_date} &bull; ${h.holiday_type || 'Regular Holiday'}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      if (hasLeaves) {
+        leaves.forEach(lv => {
+          html += `
+            <div style="display:flex; align-items:flex-start; gap:10px; padding:8px 10px; border-radius:6px; background:#eff6ff; border:1px solid #bfdbfe;">
+              <i data-lucide="palmtree" style="width:14px; height:14px; color:#2563eb; flex-shrink:0; margin-top:2px;"></i>
+              <div>
+                <div style="font-size:12px; font-weight:700; color:#1e40af;">${lv.employee_name}</div>
+                <div style="font-size:11px; color:#2563eb;">${lv.leave_type_label} &bull; ${lv.start_date} to ${lv.end_date}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
     }
 
     function openModal(id) { 
@@ -2298,33 +3162,150 @@ if (file_exists($zkStatusFile)) {
       return `${strHours}:${minutes} ${ampm}`;
     }
 
-    // DTR / Biometric Attendance Loader
-    async function loadDtrLogs(silent = false) {
-      const dateVal = document.getElementById('dtrDatePicker')?.value || todayStr;
-      const tbody = document.getElementById('dtrTableBody');
-      if (!tbody) return;
-      if (!silent) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px;"><div style="font-size:12px; color:var(--text-muted);">Fetching ZKTeco MB460 Plus records for ${dateVal}...</div></td></tr>`;
+    // ==========================================
+    // DTR & BIOMETRIC ATTENDANCE CONTROLLER
+    // ==========================================
+    let adminCurrentPeriod = 'today';
+    let cachedDtrRecords = [];
+
+    function setAdminDatePeriod(period, btnEl) {
+      adminCurrentPeriod = period;
+      document.querySelectorAll('.period-quick-pills .btn-period').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+
+      const monthWrap = document.getElementById('adminMonthWrap');
+      const customWrap = document.getElementById('adminCustomRangeWrap');
+
+      if (period === 'first_half' || period === 'second_half' || period === 'full_month') {
+        if (monthWrap) monthWrap.style.display = 'block';
+        if (customWrap) customWrap.style.display = 'none';
+      } else if (period === 'custom') {
+        if (monthWrap) monthWrap.style.display = 'none';
+        if (customWrap) customWrap.style.display = 'inline-flex';
+      } else {
+        if (monthWrap) monthWrap.style.display = 'none';
+        if (customWrap) customWrap.style.display = 'none';
       }
+
+      loadDtrLogs();
+    }
+
+    function getAdminDateRange() {
+      const today = new Date();
+      const tY = today.getFullYear();
+      const tM = String(today.getMonth() + 1).padStart(2, '0');
+      const tD = String(today.getDate()).padStart(2, '0');
+      const todayIso = `${tY}-${tM}-${tD}`;
+
+      if (adminCurrentPeriod === 'today') {
+        return { start_date: todayIso, end_date: todayIso, is_single: true, year: tY, month: parseInt(tM, 10), period: 'full' };
+      }
+
+      if (adminCurrentPeriod === 'this_week') {
+        const curr = new Date();
+        const firstDayOfWeek = curr.getDate() - curr.getDay() + (curr.getDay() === 0 ? -6 : 1); // Monday
+        const monday = new Date(curr.setDate(firstDayOfWeek));
+        const sunday = new Date(curr.setDate(firstDayOfWeek + 6));
+        const sIso = monday.toISOString().slice(0, 10);
+        const eIso = sunday.toISOString().slice(0, 10);
+        return { start_date: sIso, end_date: eIso, is_single: false, year: tY, month: parseInt(tM, 10), period: 'full' };
+      }
+
+      if (adminCurrentPeriod === 'custom') {
+        const s = document.getElementById('adminCustomStartDate')?.value || todayIso;
+        const e = document.getElementById('adminCustomEndDate')?.value || s;
+        return { start_date: s, end_date: e, is_single: (s === e), year: tY, month: parseInt(tM, 10), period: 'full' };
+      }
+
+      // Monthly / Semi-Monthly Attendance periods
+      const monthVal = document.getElementById('adminDtrMonthPicker')?.value || `${tY}-${tM}`;
+      const [yearStr, monthStr] = monthVal.split('-');
+      const y = parseInt(yearStr, 10);
+      const m = parseInt(monthStr, 10);
+      const lastDay = new Date(y, m, 0).getDate();
+
+      let sDay = '01';
+      let eDay = String(lastDay).padStart(2, '0');
+      let pCode = 'full';
+
+      if (adminCurrentPeriod === 'first_half') {
+        eDay = '15';
+        pCode = '1st_half';
+      } else if (adminCurrentPeriod === 'second_half') {
+        sDay = '16';
+        pCode = '2nd_half';
+      }
+
+      return {
+        start_date: `${yearStr}-${monthStr}-${sDay}`,
+        end_date: `${yearStr}-${monthStr}-${eDay}`,
+        is_single: false,
+        year: y,
+        month: m,
+        period: pCode
+      };
+    }
+
+    async function loadDtrLogs(silent = false) {
+      const range = getAdminDateRange();
+      const userFilter = document.getElementById('dtrFilterUser')?.value || '0';
+      const tbody = document.getElementById('dtrTableBody');
+      const thDate = document.getElementById('dtrThDate');
+      if (!tbody) return;
+
+      if (!range.is_single && thDate) {
+        thDate.style.display = 'table-cell';
+      } else if (thDate) {
+        thDate.style.display = 'none';
+      }
+
+      if (!silent) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:24px;"><div style="font-size:12px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Fetching ZKTeco MB460 Plus records for ${range.start_date} to ${range.end_date}...</div></td></tr>`;
+        if (window.lucide) lucide.createIcons();
+      }
+
       try {
-        const res = await fetch(`actions/get_dtr_logs.php?date=${dateVal}`);
+        let url = `actions/get_dtr_logs.php?start_date=${range.start_date}&end_date=${range.end_date}`;
+        if (userFilter && userFilter !== '0') {
+          url += `&user_id=${userFilter}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
         if (data.success && data.records) {
+          cachedDtrRecords = data.records;
+
+          // Update KPI Summary Cards
+          const presentEl = document.getElementById('kpiPresentCount');
+          const percentEl = document.getElementById('kpiPresentPercent');
+          const breakEl = document.getElementById('kpiOnBreakCount');
+          const leaveEl = document.getElementById('kpiOnLeaveCount');
+          const hoursEl = document.getElementById('kpiTotalRenderedHours');
+          const hoursFmtEl = document.getElementById('kpiRenderedFormatted');
+
+          if (presentEl) presentEl.innerText = data.present_count ?? 0;
+          if (percentEl) percentEl.innerText = `/ ${data.total_staff || 0} Associates`;
+          if (breakEl) breakEl.innerText = data.on_break_count ?? 0;
+          if (leaveEl) leaveEl.innerText = data.on_leave_count ?? 0;
+          if (hoursEl) hoursEl.innerText = data.total_rendered_hours ? data.total_rendered_hours.toFixed(1) : '0.0';
+          if (hoursFmtEl) hoursFmtEl.innerText = data.total_rendered_formatted || '0 hrs';
+
           if (data.records.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No records found for ${dateVal}.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">No attendance or leave records found for this period.</td></tr>`;
             return;
           }
+
           let rowsHtml = '';
           data.records.forEach(r => {
             let statusBadge = '';
             if (r.status === 'On Leave') {
               statusBadge = `<span class="badge-leave"><i data-lucide="palmtree" style="width:12px;height:12px;"></i> ${r.status_text}</span>`;
-            } else if (r.status === 'On-Time') {
-              statusBadge = `<span class="badge-ontime"><i data-lucide="check" style="width:12px;height:12px;"></i> On-Time</span>`;
-            } else if (r.status === 'Late') {
-              statusBadge = `<span class="badge-late"><i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Late</span>`;
+            } else if (r.status === 'On Break') {
+              statusBadge = `<span class="badge-pending"><i data-lucide="coffee" style="width:12px;height:12px;"></i> On Break</span>`;
+            } else if (r.status === 'Present') {
+              statusBadge = `<span class="badge-ontime"><i data-lucide="check" style="width:12px;height:12px;"></i> Present</span>`;
             } else {
-              statusBadge = `<span style="color:var(--text-light); font-size:12px; font-weight:600;">Expected / In Transit</span>`;
+              statusBadge = `<span style="color:var(--text-light); font-size:12px; font-weight:600;">Not Yet Clocked In</span>`;
             }
 
             let methodBadge = '—';
@@ -2334,6 +3315,8 @@ if (file_exists($zkStatusFile)) {
               methodBadge = `<span class="badge-fingerprint"><i data-lucide="fingerprint" style="width:12px;height:12px;"></i> Fingerprint</span>`;
             } else if (r.verification_method === 'PIN / Card') {
               methodBadge = `<span class="badge-pin">PIN / RFID</span>`;
+            } else if (r.verification_method === 'Admin Adjustment') {
+              methodBadge = `<span style="color:#0284c7; font-size:11px; font-weight:600;"><i data-lucide="edit-3" style="width:11px;height:11px;vertical-align:middle;"></i> Adjusted</span>`;
             } else if (r.is_on_leave) {
               methodBadge = `<span style="color:var(--text-muted); font-size:11px;">Leave Reconciled</span>`;
             }
@@ -2342,10 +3325,9 @@ if (file_exists($zkStatusFile)) {
               ? `<img src="${r.avatar_path}" alt="">` 
               : `${r.avatar_initials}`;
 
-            const formattedTimeIn = format12h(r.time_in);
-            const formattedBreakOut = format12h(r.break_out);
-            const formattedBreakIn = format12h(r.break_in);
-            const formattedTimeOut = format12h(r.time_out);
+            const dateCell = (!range.is_single) 
+              ? `<td><strong style="font-size:12px;">${r.log_date_formatted || r.log_date}</strong></td>` 
+              : '';
 
             rowsHtml += `
               <tr>
@@ -2359,12 +3341,20 @@ if (file_exists($zkStatusFile)) {
                   </div>
                 </td>
                 <td><strong>#${r.biometric_pin}</strong></td>
-                <td>${formattedTimeIn ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${formattedTimeIn}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
-                <td>${formattedBreakOut ? `<span style="font-weight:700; font-family:monospace; color:#b45309; font-size:12px;">${formattedBreakOut}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
-                <td>${formattedBreakIn ? `<span style="font-weight:700; font-family:monospace; color:#15803d; font-size:12px;">${formattedBreakIn}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
-                <td>${formattedTimeOut ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${formattedTimeOut}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                ${dateCell}
+                <td>${r.time_in ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_in}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${r.break_out ? `<span style="font-weight:700; font-family:monospace; color:#b45309; font-size:12px;">${r.break_out}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${r.break_in ? `<span style="font-weight:700; font-family:monospace; color:#15803d; font-size:12px;">${r.break_in}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${r.time_out ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_out}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td><strong style="color:var(--primary); font-size:12px;">${r.rendered_hours > 0 ? r.rendered_hours + ' hrs' : '—'}</strong></td>
+                <td>${r.overtime_hours > 0 ? `<span style="color:#0284c7; font-weight:700; font-size:12px;">+${r.overtime_hours} hrs</span>` : '<span style="color:var(--text-light); font-size:11px;">—</span>'}</td>
                 <td>${methodBadge}</td>
                 <td>${statusBadge}</td>
+                <td style="text-align:center;">
+                  <button class="btn-icon" title="Adjust Punches" onclick="openAdminEditPunch(${r.user_id}, '${escapeJs(r.name)}', '${r.biometric_pin}', '${r.log_date}', '${r.raw_time_in || ''}', '${r.raw_break_out || ''}', '${r.raw_break_in || ''}', '${r.raw_time_out || ''}')">
+                    <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                  </button>
+                </td>
               </tr>
             `;
           });
@@ -2373,8 +3363,347 @@ if (file_exists($zkStatusFile)) {
         }
       } catch (err) {
         if (!silent) {
-          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--danger);">Error loading DTR records.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; color:var(--danger);">Error loading DTR records.</td></tr>`;
         }
+      }
+
+      loadAdminPresence();
+      loadAdminCorrections();
+      loadAdminOt();
+    }
+
+    function escapeJs(str) {
+      if (!str) return '';
+      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function openAdminPrintDtr() {
+      const range = getAdminDateRange();
+      const userFilter = document.getElementById('dtrFilterUser')?.value || '0';
+      let url = `print_dtr.php?year=${range.year}&month=${range.month}&period=${range.period}`;
+      if (userFilter && userFilter !== '0') {
+        url += `&user_id=${userFilter}`;
+      }
+      window.open(url, '_blank');
+    }
+
+    function exportDtrCsv() {
+      if (!cachedDtrRecords || cachedDtrRecords.length === 0) {
+        showToast('No attendance records available to export.', 'info');
+        return;
+      }
+
+      let csv = "Associate,PIN,Date,Time In,Break Out,Break In,Time Out,Rendered Hours,Overtime Hours,Verification Method,Status\n";
+      cachedDtrRecords.forEach(r => {
+        const row = [
+          `"${r.name.replace(/"/g, '""')}"`,
+          `"${r.biometric_pin}"`,
+          `"${r.log_date}"`,
+          `"${r.time_in || ''}"`,
+          `"${r.break_out || ''}"`,
+          `"${r.break_in || ''}"`,
+          `"${r.time_out || ''}"`,
+          `"${r.rendered_hours || 0}"`,
+          `"${r.overtime_hours || 0}"`,
+          `"${r.verification_method || ''}"`,
+          `"${r.status_text || r.status}"`
+        ];
+        csv += row.join(',') + "\n";
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `JTYeo_Attendance_DTR_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Attendance records exported to CSV successfully.', 'success');
+    }
+
+    function openAdminEditPunch(userId, userName, pin, date, tIn, bOut, bIn, tOut) {
+      document.getElementById('editPunchUserId').value = userId;
+      document.getElementById('editPunchAssociateName').innerText = userName;
+      document.getElementById('editPunchDateLabel').innerText = date;
+      document.getElementById('editPunchPinLabel').innerText = `#${pin}`;
+      document.getElementById('editPunchDateInput').value = date;
+
+      document.getElementById('editTimeIn').value = tIn || '';
+      document.getElementById('editBreakOut').value = bOut || '';
+      document.getElementById('editBreakIn').value = bIn || '';
+      document.getElementById('editTimeOut').value = tOut || '';
+
+      openModal('adminEditPunchModal');
+    }
+
+    async function handleAdminEditPunchSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('adminEditPunchForm');
+      const formData = new FormData(form);
+      formData.append('action', 'submit_correction');
+
+      const btn = document.getElementById('btnSavePunchEdit');
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      try {
+        const res = await fetch('actions/manage_attendance_corrections.php', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerText = 'Save DTR Adjustment';
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('adminEditPunchModal');
+          loadDtrLogs();
+        } else {
+          showToast(data.message || 'Error updating punches.', 'error');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = 'Save DTR Adjustment';
+        showToast('Network error updating punches.', 'error');
+      }
+    }
+
+    async function syncClock() {
+      showToast('Queueing Philippine Standard Time clock sync to ZKTeco MB460 Plus...', 'info');
+      try {
+        const res = await fetch('actions/biometric_sync.php?action=sync_clock');
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+        } else {
+          showToast(data.message || 'Failed to queue clock sync.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error during clock sync.', 'error');
+      }
+    }
+
+    function loadAdminPresence() {
+      const container = document.getElementById('adminPresenceRosterContainer');
+      if (!container) return;
+      fetch('actions/get_presence.php')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.roster) return;
+          const labelEl = document.getElementById('adminPresenceDateLabel');
+          if (labelEl) labelEl.innerText = data.date_formatted;
+
+          let html = '';
+          data.roster.forEach(m => {
+            let dotColor = '#94a3b8';
+            if (m.state === 'present') dotColor = '#10b981';
+            else if (m.state === 'on_break') dotColor = '#f59e0b';
+            else if (m.state === 'on_leave') dotColor = '#3b82f6';
+            else if (m.state === 'completed') dotColor = '#059669';
+
+            html += `
+              <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; min-width:220px; flex:1 1 calc(33.333% - 12px);">
+                <div style="width:10px; height:10px; border-radius:50%; background:${dotColor}; flex-shrink:0;"></div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:700; font-size:12.5px; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.name}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${m.state_label} &bull; ${m.last_action}</div>
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        })
+        .catch(() => {});
+    }
+
+    function loadAdminCorrections() {
+      const tbody = document.getElementById('adminCorrectionsTbody');
+      const badge = document.getElementById('adminCorrectionsBadge');
+      if (!tbody) return;
+
+      fetch('actions/manage_attendance_corrections.php?action=get_corrections')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.corrections || data.corrections.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">No missed punch adjustment requests.</td></tr>`;
+            if (badge) badge.style.display = 'none';
+            return;
+          }
+
+          let pendingCount = 0;
+          let html = '';
+          data.corrections.forEach(c => {
+            if (c.status === 'Pending') pendingCount++;
+
+            let punchStr = [];
+            if (c.time_in_12 && c.time_in_12 !== '-') punchStr.push(`In: ${c.time_in_12}`);
+            if (c.break_out_12 && c.break_out_12 !== '-') punchStr.push(`B-Out: ${c.break_out_12}`);
+            if (c.break_in_12 && c.break_in_12 !== '-') punchStr.push(`B-In: ${c.break_in_12}`);
+            if (c.time_out_12 && c.time_out_12 !== '-') punchStr.push(`Out: ${c.time_out_12}`);
+
+            let actionHtml = '';
+            if (c.status === 'Pending') {
+              actionHtml = `
+                <div style="display:flex; gap:6px;">
+                  <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="approveCorrection(${c.id})">Approve</button>
+                  <button class="btn-secondary" style="padding:4px 8px; font-size:11px; color:var(--danger);" onclick="rejectCorrection(${c.id})">Reject</button>
+                </div>
+              `;
+            } else {
+              let bClass = c.status === 'Approved' ? 'badge-approved' : 'badge-rejected';
+              actionHtml = `<span class="badge ${bClass}">${c.status}</span>`;
+            }
+
+            html += `
+              <tr>
+                <td><strong>${c.user_name}</strong></td>
+                <td>${c.target_date_formatted}</td>
+                <td><span style="font-size:11px;">${punchStr.join(' &bull; ') || 'Adjustment'}</span></td>
+                <td><span style="font-size:11.5px;" title="${c.reason}">${c.reason}</span></td>
+                <td>${actionHtml}</td>
+              </tr>
+            `;
+          });
+
+          if (badge) {
+            if (pendingCount > 0) {
+              badge.innerText = pendingCount;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+          tbody.innerHTML = html;
+        });
+    }
+
+    async function approveCorrection(id) {
+      try {
+        const formData = new FormData();
+        formData.append('action', 'approve_correction');
+        formData.append('id', id);
+        const res = await fetch('actions/manage_attendance_corrections.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          loadDtrLogs();
+          loadAdminCorrections();
+        } else {
+          showToast(data.message || 'Error approving adjustment.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error approving adjustment.', 'error');
+      }
+    }
+
+    async function rejectCorrection(id) {
+      try {
+        const formData = new FormData();
+        formData.append('action', 'reject_correction');
+        formData.append('id', id);
+        const res = await fetch('actions/manage_attendance_corrections.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          loadAdminCorrections();
+        } else {
+          showToast(data.message || 'Error rejecting adjustment.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error rejecting adjustment.', 'error');
+      }
+    }
+
+    function loadAdminOt() {
+      const tbody = document.getElementById('adminOtTbody');
+      const badge = document.getElementById('adminOtBadge');
+      if (!tbody) return;
+
+      fetch('actions/manage_overtime.php?action=get_ot_requests')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.requests || data.requests.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">No overtime requests pending.</td></tr>`;
+            if (badge) badge.style.display = 'none';
+            return;
+          }
+
+          let pendingCount = 0;
+          let html = '';
+          data.requests.forEach(r => {
+            if (r.status === 'Pending') pendingCount++;
+
+            let actionHtml = '';
+            if (r.status === 'Pending') {
+              actionHtml = `
+                <div style="display:flex; gap:6px;">
+                  <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="approveOt(${r.id})">Approve</button>
+                  <button class="btn-secondary" style="padding:4px 8px; font-size:11px; color:var(--danger);" onclick="rejectOt(${r.id})">Reject</button>
+                </div>
+              `;
+            } else {
+              let bClass = r.status === 'Approved' ? 'badge-approved' : 'badge-rejected';
+              actionHtml = `<span class="badge ${bClass}">${r.status}</span>`;
+            }
+
+            html += `
+              <tr>
+                <td><strong>${r.user_name}</strong></td>
+                <td>${r.ot_date_formatted}</td>
+                <td><strong style="color:#0284c7;">${r.estimated_hours} hrs</strong></td>
+                <td><span style="font-size:11.5px;" title="${r.reason}">${r.reason}</span></td>
+                <td>${actionHtml}</td>
+              </tr>
+            `;
+          });
+
+          if (badge) {
+            if (pendingCount > 0) {
+              badge.innerText = pendingCount;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+          tbody.innerHTML = html;
+        });
+    }
+
+    async function approveOt(id) {
+      try {
+        const formData = new FormData();
+        formData.append('action', 'approve_ot');
+        formData.append('id', id);
+        const res = await fetch('actions/manage_overtime.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          loadDtrLogs();
+          loadAdminOt();
+        } else {
+          showToast(data.message || 'Error approving overtime.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error approving overtime.', 'error');
+      }
+    }
+
+    async function rejectOt(id) {
+      try {
+        const formData = new FormData();
+        formData.append('action', 'reject_ot');
+        formData.append('id', id);
+        const res = await fetch('actions/manage_overtime.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          loadAdminOt();
+        } else {
+          showToast(data.message || 'Error rejecting overtime.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error rejecting overtime.', 'error');
       }
     }
 
