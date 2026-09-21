@@ -13,7 +13,7 @@
  * @param float $approvedOtHours  Approved overtime hours
  * @return array
  */
-function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $approvedOtHours = 0) {
+function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $approvedOtHours = 0, $logDate = null) {
     $metrics = [
         'rendered_hours' => 0.0,
         'rendered_formatted' => '0 hrs',
@@ -21,7 +21,13 @@ function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $app
         'break_formatted' => '0 mins',
         'status' => 'Absent',
         'overtime_hours' => floatval($approvedOtHours),
-        'is_completed' => false
+        'is_completed' => false,
+        'tardy_minutes' => 0,
+        'is_tardy' => false,
+        'tardy_formatted' => 'On Time',
+        'is_incomplete' => false,
+        'exception_type' => null,
+        'exception_label' => null
     ];
 
     // Clean inputs
@@ -34,14 +40,25 @@ function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $app
         return $metrics;
     }
 
+    // Official Firm Start Time: 8:30 AM
+    $shiftStartTs = strtotime("2000-01-01 08:30:00");
+    $inTs = strtotime("2000-01-01 " . $timeIn);
+
+    if ($inTs > $shiftStartTs) {
+        $tardyMins = round(($inTs - $shiftStartTs) / 60);
+        $metrics['tardy_minutes'] = $tardyMins;
+        $metrics['is_tardy'] = true;
+        $metrics['tardy_formatted'] = ($tardyMins >= 60) 
+            ? floor($tardyMins / 60) . 'h ' . ($tardyMins % 60) . 'm late' 
+            : "{$tardyMins}m late";
+    }
+
     // Determine current status
     if ($breakOut && !$breakIn && !$timeOut) {
         $metrics['status'] = 'On Break';
     } else {
         $metrics['status'] = 'Present';
     }
-
-    $inTs = strtotime("2000-01-01 " . $timeIn);
     
     // Calculate break duration if both punches exist
     $breakSeconds = 0;
@@ -68,6 +85,28 @@ function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $app
             $metrics['rendered_hours'] = $hours;
             $metrics['rendered_formatted'] = formatHoursToReadable($hours);
             $metrics['is_completed'] = true;
+        }
+    } else {
+        // Check for Missing Out exception on past days or late in the evening
+        $todayStr = date('Y-m-d');
+        $isPastDay = !empty($logDate) && ($logDate < $todayStr);
+        $isLateToday = (!empty($logDate) && $logDate === $todayStr && intval(date('H')) >= 19);
+
+        if ($isPastDay || $isLateToday) {
+            $metrics['is_incomplete'] = true;
+            $metrics['exception_type'] = 'missing_out';
+            $metrics['exception_label'] = 'Missing Out';
+        }
+    }
+
+    // Also check for incomplete break on past days
+    if ($breakOut && !$breakIn) {
+        $todayStr = date('Y-m-d');
+        $isPastDay = !empty($logDate) && ($logDate < $todayStr);
+        if ($isPastDay) {
+            $metrics['is_incomplete'] = true;
+            $metrics['exception_type'] = 'missing_break_in';
+            $metrics['exception_label'] = 'Missing Break In';
         }
     }
 

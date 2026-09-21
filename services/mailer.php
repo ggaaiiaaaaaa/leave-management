@@ -16,6 +16,16 @@ function sendLeaveNotification($pdo, $type, $data) {
         $recipientEmail = $admin['email'] ?? 'admin@jtyeocpa.ph';
         $recipientName = $admin['name'] ?? 'Atty. Jonathan Yeo, CPA';
 
+        // Determine base URL dynamically
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
+        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
+        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+
+        $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=approvals&ref=" . urlencode($data['ref_no']);
+
         $subject = "New Leave Application Filed: {$data['employee_name']} ({$data['leave_type_label']})";
         $htmlBody = "
             <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
@@ -32,14 +42,28 @@ function sendLeaveNotification($pdo, $type, $data) {
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Inclusive Dates:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['start_date']} to {$data['end_date']} ({$data['days_count']} Working Days)</td></tr>
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Reason:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['reason']}</td></tr>
                 </table>
-                <p style='color: #64748b; font-size: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
-                    You can review and decide on this application from your Admin Dashboard.
+                <div style='margin: 22px 0; text-align: center;'>
+                    <a href='{$reviewLink}' style='display: inline-block; background-color: #dc0000; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;'>
+                        Review Application in Approvals Queue &rarr;
+                    </a>
+                </div>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
+                    You can also access this request directly from the Approvals Queue on your Executive Dashboard.
                 </p>
             </div>
         ";
     } elseif ($type === 'leave_approved') {
         $recipientEmail = $data['employee_email'];
         $recipientName = $data['employee_name'];
+
+        // Determine base URL dynamically
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
+        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
+        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+        $slipLink = "{$baseUrl}/staff_dashboard.php?tab=my-portal&print_ref=" . urlencode($data['ref_no']);
 
         $subject = "Leave Application Approved: {$data['leave_type_label']} ({$data['ref_no']})";
         $htmlBody = "
@@ -56,8 +80,13 @@ function sendLeaveNotification($pdo, $type, $data) {
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Dates:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['start_date']} to {$data['end_date']} ({$data['days_count']} Working Days)</td></tr>
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Approved By:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0f172a;'>{$data['approver_name']}</td></tr>
                 </table>
-                <p style='color: #64748b; font-size: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
-                    Your leave balance and team calendar have been updated accordingly.
+                <div style='margin: 22px 0; text-align: center;'>
+                    <a href='{$slipLink}' style='display: inline-block; background-color: #047857; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;'>
+                        Print Official Signed Leave Slip &rarr;
+                    </a>
+                </div>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
+                    Your leave balance and team calendar have been updated accordingly. Authorized leave hours (8.0 hrs/day) are automatically credited to your Form 48 DTR.
                 </p>
             </div>
         ";

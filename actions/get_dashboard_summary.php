@@ -146,8 +146,8 @@ if ($isAdmin) {
         'zk_status' => [
             'online' => $zkIsOnline,
             'last_seen' => $zkData['last_seen_formatted'] ?? null,
-            'ip' => $zkData['ip'] ?? '192.168.100.157',
-            'sn' => $zkData['sn'] ?? 'TTQ5261200350'
+            'ip' => (!empty($zkData['ip']) && $zkData['ip'] !== 'unknown') ? $zkData['ip'] : 'Auto-detecting...',
+            'sn' => (!empty($zkData['sn']) && $zkData['sn'] !== 'UNKNOWN') ? $zkData['sn'] : 'Auto-detecting...'
         ]
     ]);
     exit;

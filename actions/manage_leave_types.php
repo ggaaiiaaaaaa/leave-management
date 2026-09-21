@@ -126,6 +126,58 @@ try {
             echo json_encode(['success' => true, 'message' => "Leave category has been {$statusText}."]);
             break;
 
+        case 'delete':
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Invalid leave category selected.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("SELECT * FROM leave_types WHERE id = ?");
+            $stmt->execute([$id]);
+            $typeRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$typeRow) {
+                echo json_encode(['success' => false, 'message' => 'Leave category not found.']);
+                exit;
+            }
+
+            $code = $typeRow['code'];
+            $coreProtectedCodes = ['VL', 'SL', 'LWOP', 'Maternity', 'Paternity'];
+            if (in_array($code, $coreProtectedCodes, true)) {
+                echo json_encode([
+                    'success' => false,
+                    'is_core' => true,
+                    'message' => "Statutory policy '{$typeRow['name']}' ({$code}) is protected by labor regulations and cannot be deleted."
+                ]);
+                exit;
+            }
+
+            // Check if any filed leave requests exist under this code
+            $reqCountStmt = $pdo->prepare("SELECT COUNT(*) FROM leave_requests WHERE leave_type = ?");
+            $reqCountStmt->execute([$code]);
+            $reqCount = (int)$reqCountStmt->fetchColumn();
+
+            if ($reqCount > 0) {
+                echo json_encode([
+                    'success' => false,
+                    'can_archive' => true,
+                    'count' => $reqCount,
+                    'message' => "Cannot delete '{$typeRow['name']}': {$reqCount} filed leave request(s) exist under this policy. Please Archive it instead to maintain audit trails."
+                ]);
+                exit;
+            }
+
+            // Safe to delete: clean up user allocations and remove type
+            $pdo->prepare("DELETE FROM user_leave_allocations WHERE leave_type_code = ?")->execute([$code]);
+            $pdo->prepare("DELETE FROM leave_types WHERE id = ?")->execute([$id]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Leave policy '{$typeRow['name']}' has been permanently deleted."
+            ]);
+            break;
+
         case 'bulk_allocate':
             $code = trim($input['leave_type_code'] ?? '');
             $amount = max(0, (float)($input['amount'] ?? 0));
@@ -240,7 +292,7 @@ try {
 
         case 'get_matrix':
             $types = $pdo->query("SELECT * FROM leave_types ORDER BY is_active DESC, id ASC")->fetchAll();
-            $users = $pdo->query("SELECT id, name, email, role, department, title, gender FROM users ORDER BY name ASC")->fetchAll();
+            $users = $pdo->query("SELECT id, name, email, role, gender FROM users ORDER BY name ASC")->fetchAll();
 
             $matrix = [];
             foreach ($users as $u) {

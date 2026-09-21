@@ -452,9 +452,11 @@ if ($isAdmin) {
 
                     // Check approved leave
                     $leaveLabel = null;
+                    $isPaidLeave = true;
                     foreach ($leaves as $lv) {
                         if ($currentDateStr >= $lv['start_date'] && $currentDateStr <= $lv['end_date']) {
                             $leaveLabel = $lv['leave_type_label'];
+                            $isPaidLeave = ($lv['leave_type'] !== 'LWOP');
                             break;
                         }
                     }
@@ -469,14 +471,12 @@ if ($isAdmin) {
                         $log['break_out'] ?? null,
                         $log['break_in'] ?? null,
                         $log['time_out'] ?? null,
-                        $log['overtime_hours'] ?? 0
+                        $log['overtime_hours'] ?? 0,
+                        $currentDateStr
                     );
 
                     $renderedHours = $metrics['rendered_hours'];
                     $otHours = floatval($log['overtime_hours'] ?? 0);
-
-                    $totalRenderedHoursMonth += $renderedHours;
-                    $totalOtHoursMonth += $otHours;
 
                     $rowClass = '';
                     $rowNote = '';
@@ -487,17 +487,24 @@ if ($isAdmin) {
                     } elseif ($leaveLabel) {
                         $rowClass = 'leave-row';
                         $rowNote = "ON LEAVE ({$leaveLabel})";
+                        // Automatically credit 8.00 hours for paid authorized leave days on working days
+                        if (empty($tIn) && $isPaidLeave && !$isWeekend) {
+                            $renderedHours = 8.00;
+                        }
                     } elseif ($isWeekend && empty($tIn)) {
                         $rowClass = 'weekend-row';
                         $rowNote = ($dayOfWeek == 6) ? 'SATURDAY' : 'SUNDAY';
                     }
+
+                    $totalRenderedHoursMonth += $renderedHours;
+                    $totalOtHoursMonth += $otHours;
                 ?>
                     <tr class="<?= $rowClass ?>">
                         <td><strong><?= $d ?></strong></td>
                         <?php if (!empty($rowNote) && empty($tIn)): ?>
-                            <td colspan="4" style="text-align: center; font-size: 9px; letter-spacing: 0.5px; color: #475569;"><?= $rowNote ?></td>
-                            <td>—</td>
-                            <td>—</td>
+                            <td colspan="4" style="text-align: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; color: <?= $leaveLabel ? '#1e40af' : '#475569' ?>;"><?= $rowNote ?></td>
+                            <td style="font-weight:<?= ($renderedHours > 0) ? '700' : 'normal' ?>;"><?= ($renderedHours > 0) ? number_format($renderedHours, 2) : '—' ?></td>
+                            <td><?= ($otHours > 0) ? number_format($otHours, 2) : '—' ?></td>
                         <?php else: ?>
                             <td><?= $tIn ?: '' ?></td>
                             <td><?= $bOut ?: '' ?></td>

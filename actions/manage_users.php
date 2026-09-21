@@ -333,4 +333,84 @@ if ($action === 'get_user') {
     exit;
 }
 
+// 5. DELETE ASSOCIATE ACCOUNT (Admin Only)
+if ($action === 'delete_user') {
+    if ($user['role'] !== 'admin') {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized. Only administrators can delete associate accounts.']);
+        exit;
+    }
+
+    $targetId = (int)($_POST['user_id'] ?? ($_GET['user_id'] ?? 0));
+    if ($targetId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid associate ID specified.']);
+        exit;
+    }
+
+    if ($targetId === (int)$user['id']) {
+        echo json_encode(['success' => false, 'message' => 'You cannot delete your own logged-in administrator account.']);
+        exit;
+    }
+
+    // Check if target user exists
+    $uStmt = $pdo->prepare("SELECT id, name, avatar_path FROM users WHERE id = ?");
+    $uStmt->execute([$targetId]);
+    $targetUser = $uStmt->fetch();
+
+    if (!$targetUser) {
+        echo json_encode(['success' => false, 'message' => 'Associate not found or already deleted.']);
+        exit;
+    }
+
+    $targetName = $targetUser['name'];
+
+    try {
+        $pdo->beginTransaction();
+
+        // 1. Delete associated leave applications and physical attachments
+        $leaveStmt = $pdo->prepare("SELECT attachment_path FROM leave_applications WHERE user_id = ?");
+        $leaveStmt->execute([$targetId]);
+        $attachments = $leaveStmt->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($attachments as $att) {
+            if ($att && file_exists(__DIR__ . '/../' . $att)) {
+                @unlink(__DIR__ . '/../' . $att);
+            }
+        }
+        $pdo->prepare("DELETE FROM leave_applications WHERE user_id = ?")->execute([$targetId]);
+
+        // 2. Delete user leave allocations
+        $pdo->prepare("DELETE FROM user_leave_allocations WHERE user_id = ?")->execute([$targetId]);
+
+        // 3. Delete attendance corrections
+        $pdo->prepare("DELETE FROM attendance_corrections WHERE user_id = ?")->execute([$targetId]);
+
+        // 4. Delete overtime requests
+        $pdo->prepare("DELETE FROM overtime_requests WHERE user_id = ?")->execute([$targetId]);
+
+        // 5. Delete biometric punch logs
+        $pdo->prepare("DELETE FROM biometric_logs WHERE user_id = ?")->execute([$targetId]);
+
+        // 6. Delete profile avatar file if uploaded
+        if (!empty($targetUser['avatar_path']) && file_exists(__DIR__ . '/../' . $targetUser['avatar_path'])) {
+            @unlink(__DIR__ . '/../' . $targetUser['avatar_path']);
+        }
+
+        // 7. Delete user account
+        $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$targetId]);
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Associate \"{$targetName}\" has been permanently removed."
+        ]);
+        exit;
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        echo json_encode(['success' => false, 'message' => 'Failed to delete associate: ' . $e->getMessage()]);
+        exit;
+    }
+}
+
 echo json_encode(['success' => false, 'message' => 'Unknown management action.']);

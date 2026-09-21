@@ -212,7 +212,30 @@ if ($hasAttachment) {
 $initialStatus = hasRole('admin') ? 'Approved' : 'Pending';
 $approverName = hasRole('admin') ? $user['name'] : null;
 $decidedAt = hasRole('admin') ? date('Y-m-d H:i:s') : null;
-$refNo = 'LR-' . date('Y') . '-' . str_pad(mt_rand(100, 999), 3, '0', STR_PAD_LEFT);
+// Generate sequential Reference Number (e.g., LR-2026-001, LR-2026-002)
+$currentYear = date('Y');
+$prefix = 'LR-' . $currentYear . '-';
+
+$seqStmt = $pdo->prepare("
+    SELECT MAX(CAST(SUBSTR(ref_no, 9) AS INTEGER)) 
+    FROM leave_requests 
+    WHERE ref_no LIKE ?
+");
+$seqStmt->execute([$prefix . '%']);
+$maxSeq = (int)$seqStmt->fetchColumn();
+$nextSeq = ($maxSeq > 0) ? ($maxSeq + 1) : 1;
+
+// Ensure collision-free sequential ref_no
+do {
+    $refNo = $prefix . str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
+    $checkStmt = $pdo->prepare("SELECT 1 FROM leave_requests WHERE ref_no = ?");
+    $checkStmt->execute([$refNo]);
+    if ($checkStmt->fetch()) {
+        $nextSeq++;
+    } else {
+        break;
+    }
+} while (true);
 
 $insertStmt = $pdo->prepare("
     INSERT INTO leave_requests (

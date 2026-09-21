@@ -97,8 +97,20 @@ foreach ($allocsRaw as $ar) {
 // Live ZKTeco Hardware Status
 $zkStatusFile = __DIR__ . '/database/zkteco_status.json';
 $zkIsOnline = false;
+$zkDeviceIp = 'Auto-detecting...';
+$zkDeviceSn = 'MB460-Plus';
+$zkLastSeen = date('g:i A');
 if (file_exists($zkStatusFile)) {
     $zkData = json_decode(file_get_contents($zkStatusFile), true) ?: [];
+    if (!empty($zkData['ip']) && $zkData['ip'] !== 'unknown') {
+        $zkDeviceIp = $zkData['ip'];
+    }
+    if (!empty($zkData['sn']) && $zkData['sn'] !== 'UNKNOWN') {
+        $zkDeviceSn = $zkData['sn'];
+    }
+    if (!empty($zkData['last_seen_formatted'])) {
+        $zkLastSeen = $zkData['last_seen_formatted'];
+    }
     if (!empty($zkData['last_seen']) && (time() - $zkData['last_seen']) < 60) {
         $zkIsOnline = true;
     }
@@ -151,20 +163,12 @@ if (file_exists($zkStatusFile)) {
           <i data-lucide="layout-grid"></i>
           <span>Overall Dashboard</span>
         </a>
-        <a class="nav-item" data-tab="overview" onclick="switchTab('overview')">
-          <i data-lucide="layers"></i>
-          <span>Leave Overview</span>
-        </a>
         <a class="nav-item" data-tab="approvals" onclick="switchTab('approvals')">
           <i data-lucide="check-circle-2"></i>
           <span>Approvals Queue</span>
           <?php if ($pendingCount > 0): ?>
             <span class="nav-badge" id="pendingApprovalsBadge"><?= $pendingCount ?></span>
           <?php endif; ?>
-        </a>
-        <a class="nav-item" data-tab="biometrics" onclick="switchTab('biometrics'); loadDtrLogs();">
-          <i data-lucide="scan-face"></i>
-          <span>Biometric Attendance</span>
         </a>
         <a class="nav-item" data-tab="calendar" onclick="switchTab('calendar'); initCalendar();">
           <i data-lucide="calendar"></i>
@@ -173,6 +177,14 @@ if (file_exists($zkStatusFile)) {
         <a class="nav-item" data-tab="users" onclick="switchTab('users')">
           <i data-lucide="users"></i>
           <span>Associate Management</span>
+        </a>
+        <a class="nav-item" data-tab="biometrics" onclick="switchTab('biometrics'); loadDtrLogs();">
+          <i data-lucide="scan-face"></i>
+          <span>Biometric Attendance</span>
+        </a>
+        <a class="nav-item" data-tab="overview" onclick="switchTab('overview')">
+          <i data-lucide="history"></i>
+          <span>Leave History</span>
         </a>
         <a class="nav-item" data-tab="leave-policies" onclick="switchTab('leave-policies')">
           <i data-lucide="sliders"></i>
@@ -244,7 +256,7 @@ if (file_exists($zkStatusFile)) {
 
           <!-- Executive Firm Pulse KPI Row -->
           <div class="kpi-grid" style="margin-bottom: 24px;">
-            <div class="kpi-card green">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Present in Office</span>
                 <div class="kpi-icon"><i data-lucide="user-check"></i></div>
@@ -253,13 +265,13 @@ if (file_exists($zkStatusFile)) {
                 <span class="kpi-value" id="adminOverallPresent"><?= $presentCount ?></span>
                 <span class="kpi-sub">/ <?= $totalStaff ?> Associates</span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="activity" style="width:14px;height:14px;"></i>
                 <span>Clocked In Today</span>
               </div>
             </div>
 
-            <div class="kpi-card amber">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Currently on Break</span>
                 <div class="kpi-icon"><i data-lucide="coffee"></i></div>
@@ -268,13 +280,13 @@ if (file_exists($zkStatusFile)) {
                 <span class="kpi-value" id="adminOverallBreak">0</span>
                 <span class="kpi-sub">Associates</span>
               </div>
-              <div class="kpi-footer" style="color:var(--warning);">
+              <div class="kpi-footer">
                 <i data-lucide="clock" style="width:14px;height:14px;"></i>
                 <span>Lunch / Meal Break</span>
               </div>
             </div>
 
-            <div class="kpi-card blue">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">On Approved Leave</span>
                 <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
@@ -283,13 +295,13 @@ if (file_exists($zkStatusFile)) {
                 <span class="kpi-value" id="adminOverallLeave"><?= $onLeaveCount ?></span>
                 <span class="kpi-sub">Active Today</span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="calendar" style="width:14px;height:14px;"></i>
                 <span>Scheduled Absences</span>
               </div>
             </div>
 
-            <div class="kpi-card purple">
+            <div class="kpi-card" onclick="switchTab('approvals')" style="cursor:pointer;" title="Click to open Approvals Queue">
               <div class="kpi-header">
                 <span class="kpi-label">Awaiting Your Decision</span>
                 <div class="kpi-icon"><i data-lucide="clipboard-check"></i></div>
@@ -298,7 +310,7 @@ if (file_exists($zkStatusFile)) {
                 <span class="kpi-value" id="adminOverallPending"><?= $pendingCount ?></span>
                 <span class="kpi-sub">Action Items</span>
               </div>
-              <div class="kpi-footer" style="color:var(--purple);">
+              <div class="kpi-footer">
                 <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i>
                 <span id="adminPendingBreakdownText">Leaves, Punches &amp; OT</span>
               </div>
@@ -315,10 +327,15 @@ if (file_exists($zkStatusFile)) {
               <div class="dashboard-card">
                 <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
                   <h3>
-                    <i data-lucide="inbox" style="color:var(--accent);"></i>
+                    <i data-lucide="inbox"></i>
                     Action Center &mdash; Items Awaiting Your Decision
                   </h3>
-                  <span class="badge badge-primary" id="adminActionCenterBadge">Loading...</span>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="badge badge-primary" id="adminActionCenterBadge">Loading...</span>
+                    <button class="btn-link" onclick="switchTab('approvals')" style="font-size:12px; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer;">
+                      Go to Approvals Queue &rarr;
+                    </button>
+                  </div>
                 </div>
                 <div class="card-body" style="padding: 16px;">
                   <div id="adminActionCenterList" class="action-items-list">
@@ -334,7 +351,7 @@ if (file_exists($zkStatusFile)) {
               <div class="dashboard-card">
                 <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
                   <h3>
-                    <i data-lucide="scan-face" style="color:var(--accent);"></i>
+                    <i data-lucide="scan-face"></i>
                     Today's Attendance Punches (ZKTeco MB460 Plus)
                   </h3>
                   <button class="btn-link" onclick="switchTab('biometrics'); loadDtrLogs();" style="font-size:12px; font-weight:600; color:var(--accent); background:none; border:none; cursor:pointer;">
@@ -383,9 +400,9 @@ if (file_exists($zkStatusFile)) {
                   </span>
                 </div>
                 <div style="font-size:12px; color:var(--text-muted); display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
-                  <div><strong>IP:</strong> <code>192.168.100.157:4370</code></div>
-                  <div><strong>Serial:</strong> <code>TTQ5261200350</code></div>
-                  <div id="adminZkLastSeenText"><strong>Last Sync:</strong> <?= date('g:i A') ?></div>
+                  <div><strong>IP:</strong> <code id="adminZkIpDisplay"><?= htmlspecialchars($zkDeviceIp) ?><?= ($zkDeviceIp !== 'Auto-detecting...' && strpos($zkDeviceIp, ':') === false) ? ':4370' : '' ?></code></div>
+                  <div><strong>Serial:</strong> <code id="adminZkSerialDisplay"><?= htmlspecialchars($zkDeviceSn) ?></code></div>
+                  <div id="adminZkLastSeenText"><strong>Last Sync:</strong> <?= htmlspecialchars($zkLastSeen) ?></div>
                 </div>
                 <button class="btn-secondary btn-sm" onclick="triggerManualSync()" style="width:100%; justify-content:center;">
                   <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i>
@@ -397,7 +414,7 @@ if (file_exists($zkStatusFile)) {
               <div class="dashboard-card">
                 <div class="card-head">
                   <h3>
-                    <i data-lucide="users" style="color:var(--accent);"></i>
+                    <i data-lucide="users"></i>
                     Who's in the Office Now
                   </h3>
                 </div>
@@ -414,7 +431,7 @@ if (file_exists($zkStatusFile)) {
               <div class="dashboard-card">
                 <div class="card-head">
                   <h3>
-                    <i data-lucide="calendar" style="color:var(--accent);"></i>
+                    <i data-lucide="calendar"></i>
                     Upcoming Schedule (7 Days)
                   </h3>
                 </div>
@@ -433,48 +450,23 @@ if (file_exists($zkStatusFile)) {
         </div>
 
         <!-- ==============================================
-             TAB 1: LEAVE OVERVIEW
+             TAB: LEAVE HISTORY
              ============================================== -->
-        <div id="tab-overview" class="tab-pane">
-          <!-- "Who's in the Office Today?" Morning Executive Widget -->
-          <div class="morning-executive-banner">
-            <div class="morning-header">
-              <h3><i data-lucide="sun" style="color:#fbbf24;"></i> Who's in the Office Today?</h3>
-              <div class="morning-date-badge"><?= date('l, F j, Y') ?> &bull; ZKTeco Live LAN</div>
-            </div>
-            <div class="morning-stats-grid">
-              <div class="morning-stat-box">
-                <div class="morning-stat-label"><i data-lucide="users" style="width:13px;height:13px;"></i> Total Associates</div>
-                <div class="morning-stat-num purple"><?= $totalStaff ?></div>
-              </div>
-              <div class="morning-stat-box">
-                <div class="morning-stat-label"><i data-lucide="scan-face" style="width:13px;height:13px;"></i> Present in Office</div>
-                <div class="morning-stat-num green"><?= $presentCount ?></div>
-              </div>
-              <div class="morning-stat-box">
-                <div class="morning-stat-label"><i data-lucide="palmtree" style="width:13px;height:13px;"></i> On Approved Leave</div>
-                <div class="morning-stat-num blue"><?= $onLeaveCount ?></div>
-              </div>
-              <div class="morning-stat-box">
-                <div class="morning-stat-label"><i data-lucide="clock" style="width:13px;height:13px;"></i> Expected / In Transit</div>
-                <div class="morning-stat-num amber"><?= $expectedCount ?></div>
-              </div>
-            </div>
-          </div>
+        <div id="tab-overview" class="tab-pane" style="display:none;">
 
           <div class="page-header">
             <div class="page-title">
-              <h1>Firm Master Leave Ledger</h1>
-              <p>Complete historical record of all associate leave applications and approvals.</p>
+              <h1>Firm Leave History</h1>
+              <p>Complete chronological record and audit trail of all associate leave applications and approvals.</p>
             </div>
             <div class="header-actions">
-              <button class="btn-secondary" onclick="openAdjustmentModal()">
-                <i data-lucide="scale"></i>
-                <span>Adjust Balances</span>
+              <button class="btn-secondary" onclick="exportLeaveHistoryCsv()">
+                <i data-lucide="download"></i>
+                <span>Export History CSV</span>
               </button>
-              <button class="btn-primary" onclick="openModal('applyModal')">
-                <i data-lucide="plus-circle"></i>
-                <span>File Leave Request</span>
+              <button class="btn-secondary" onclick="window.print()">
+                <i data-lucide="printer"></i>
+                <span>Print Ledger</span>
               </button>
             </div>
           </div>
@@ -482,7 +474,7 @@ if (file_exists($zkStatusFile)) {
           <!-- Master Table Card -->
           <div class="dashboard-card">
             <div class="card-head">
-              <h3><i data-lucide="layers" style="color:var(--accent);"></i> Associate Leave History</h3>
+              <h3><i data-lucide="history"></i> Associate Leave Applications History</h3>
               <span style="font-size:12px; color:var(--text-muted);"><?= count($leaveRequests) ?> Records</span>
             </div>
             <div class="table-responsive">
@@ -550,7 +542,7 @@ if (file_exists($zkStatusFile)) {
                         <td>
                           <div style="display:flex; gap:6px;">
                             <?php if ($req['status'] === 'Pending'): ?>
-                              <button class="btn-icon approve" title="Review & Decide" onclick="openDecisionModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>')">
+                              <button class="btn-icon approve" title="Review & Decide" onclick="openDecisionModal('<?= $req['ref_no'] ?>', '<?= htmlspecialchars(addslashes($req['employee_name'])) ?>', '<?= htmlspecialchars(addslashes($req['leave_type_label'])) ?>', '<?= $req['days_count'] ?>', '<?= htmlspecialchars(addslashes($req['reason'])) ?>', '<?= $req['start_date'] . ($req['start_date'] !== $req['end_date'] ? ' to ' . $req['end_date'] : '') ?>', '<?= htmlspecialchars(addslashes($req['attachment_path'] ?? '')) ?>')">
                                 <i data-lucide="check-square" style="width:14px;height:14px;"></i>
                               </button>
                             <?php endif; ?>
@@ -586,7 +578,7 @@ if (file_exists($zkStatusFile)) {
 
           <div class="dashboard-card">
             <div class="card-head">
-              <h3><i data-lucide="inbox" style="color:var(--accent);"></i> Pending Review Queue</h3>
+              <h3><i data-lucide="inbox"></i> Pending Review Queue</h3>
               <span class="badge badge-pending"><?= $pendingCount ?> Applications</span>
             </div>
             <div class="table-responsive">
@@ -607,7 +599,7 @@ if (file_exists($zkStatusFile)) {
                     <tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);">No pending applications awaiting decision. All clear!</td></tr>
                   <?php else: ?>
                     <?php foreach ($pendingApprovals as $p): ?>
-                      <tr>
+                      <tr data-ref="<?= htmlspecialchars($p['ref_no']) ?>" class="pending-approval-row">
                         <td>
                           <div style="font-weight:700; color:var(--primary);"><?= htmlspecialchars($p['employee_name']) ?></div>
                           <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($p['title']) ?></div>
@@ -626,7 +618,7 @@ if (file_exists($zkStatusFile)) {
                           <?php endif; ?>
                         </td>
                         <td>
-                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $p['ref_no'] ?>', '<?= addslashes($p['employee_name']) ?>', '<?= addslashes($p['leave_type_label']) ?>', '<?= $p['days_count'] ?>')">
+                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $p['ref_no'] ?>', '<?= htmlspecialchars(addslashes($p['employee_name'])) ?>', '<?= htmlspecialchars(addslashes($p['leave_type_label'])) ?>', '<?= $p['days_count'] ?>', '<?= htmlspecialchars(addslashes($p['reason'])) ?>', '<?= $p['start_date'] . ($p['start_date'] !== $p['end_date'] ? ' to ' . $p['end_date'] : '') ?>', '<?= htmlspecialchars(addslashes($p['attachment_path'] ?? '')) ?>')">
                             <i data-lucide="check-square" style="width:13px;height:13px;"></i> Review
                           </button>
                         </td>
@@ -681,86 +673,37 @@ if (file_exists($zkStatusFile)) {
             </div>
           </div>
 
-          <!-- Attendance Real-Time KPIs -->
-          <div class="kpi-grid">
-            <div class="kpi-card green">
-              <div class="kpi-header">
-                <span class="kpi-label">Present Today</span>
-                <div class="kpi-icon"><i data-lucide="user-check"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value" id="kpiPresentCount">0</span>
-                <span class="kpi-sub" id="kpiPresentPercent">/ 0 Associates</span>
-              </div>
-              <div class="kpi-footer positive">
-                <i data-lucide="check" style="width:14px;height:14px;"></i>
-                <span>Clocked into Office</span>
-              </div>
-            </div>
-
-            <div class="kpi-card amber">
-              <div class="kpi-header">
-                <span class="kpi-label">Currently on Break</span>
-                <div class="kpi-icon"><i data-lucide="coffee"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value" id="kpiOnBreakCount">0</span>
-                <span class="kpi-sub">On Lunch / Break</span>
-              </div>
-              <div class="kpi-footer neutral">
-                <i data-lucide="clock" style="width:14px;height:14px;"></i>
-                <span>Break Out Registered</span>
-              </div>
-            </div>
-
-            <div class="kpi-card blue">
-              <div class="kpi-header">
-                <span class="kpi-label">On Approved Leave</span>
-                <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value" id="kpiOnLeaveCount">0</span>
-                <span class="kpi-sub">Scheduled Absence</span>
-              </div>
-              <div class="kpi-footer positive">
-                <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
-                <span>Authorized Leave</span>
-              </div>
-            </div>
-
-            <div class="kpi-card purple">
-              <div class="kpi-header">
-                <span class="kpi-label">Accumulated Rendered Hours</span>
-                <div class="kpi-icon"><i data-lucide="activity"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value" id="kpiTotalRenderedHours">0.0</span>
-                <span class="kpi-sub">Productive Hours</span>
-              </div>
-              <div class="kpi-footer neutral">
-                <i data-lucide="clock" style="width:14px;height:14px;"></i>
-                <span id="kpiRenderedFormatted">0 hrs</span>
-              </div>
-            </div>
-          </div>
-
           <!-- DTR Filter & Ledger Card -->
-          <div class="dashboard-card">
-            <div class="card-head" style="flex-wrap:wrap; gap:12px;">
+          <div class="dashboard-card" style="margin-top:16px;">
+            <div class="card-head" style="flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center;">
               <div>
-                <h3><i data-lucide="clock" style="color:var(--accent);"></i> Daily Time Record (DTR) &amp; Attendance Ledger</h3>
+                <h3><i data-lucide="clock"></i> Daily Time Record (DTR) &amp; Attendance Ledger</h3>
                 <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Reconciled physical biometric punches, actual rendered hours, and approved leaves.</p>
               </div>
-
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <button class="btn-primary" style="font-size:12px; padding:6px 12px;" onclick="openAdminPrintDtr()">
-                  <i data-lucide="printer"></i>
-                  <span>Print Form 48 DTR</span>
-                </button>
-                <button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="exportDtrCsv()">
-                  <i data-lucide="download"></i>
-                  <span>Export CSV</span>
-                </button>
+              <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <div style="font-size:12.5px; color:var(--text-main); background:var(--bg-subtle); padding:6px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-weight:600; display:inline-flex; align-items:center; gap:8px;">
+                  <i data-lucide="activity" style="width:14px;height:14px;color:var(--accent);"></i>
+                  <span>Rendered:</span>
+                  <span id="kpiRenderedFormatted" style="color:var(--accent); font-weight:700;">0 hrs</span>
+                  <span style="color:var(--border-color); margin:0 2px;">|</span>
+                  <i data-lucide="clock" style="width:13px;height:13px;color:#b91c1c;"></i>
+                  <span>Tardy:</span>
+                  <span id="kpiTardyFormatted" style="color:#b91c1c; font-weight:700;">0m</span>
+                  <span style="color:var(--border-color); margin:0 2px;">|</span>
+                  <i data-lucide="alert-circle" style="width:13px;height:13px;color:#b45309;"></i>
+                  <span>Exceptions:</span>
+                  <span id="kpiExceptionsCount" style="color:#b45309; font-weight:700;">0</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <button class="btn-primary" style="font-size:12px; padding:6px 12px;" onclick="openAdminPrintDtr()">
+                    <i data-lucide="printer"></i>
+                    <span>Print Form 48 DTR</span>
+                  </button>
+                  <button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="exportDtrCsv()">
+                    <i data-lucide="download"></i>
+                    <span>Export CSV</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -823,67 +766,6 @@ if (file_exists($zkStatusFile)) {
             </div>
           </div>
 
-          <!-- Real-Time Team Presence Roster Widget -->
-          <div class="dashboard-card" style="margin-top: 20px;">
-            <div class="card-head">
-              <h3><i data-lucide="users" style="color:var(--accent);"></i> Live Office Presence Board (Who's In / Who's Out)</h3>
-              <span style="font-size:12px; color:var(--text-muted);" id="adminPresenceDateLabel">Today</span>
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:12px; padding:16px;" id="adminPresenceRosterContainer">
-              <div style="color:var(--text-muted); font-size:13px;">Loading team presence...</div>
-            </div>
-          </div>
-
-          <!-- Attendance Adjustments & Overtime Approvals Queue -->
-          <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px;">
-            <!-- Missed Punch Adjustment Queue -->
-            <div class="dashboard-card">
-              <div class="card-head">
-                <h4><i data-lucide="edit-3" style="color:var(--accent);"></i> Missed Punch Adjustment Requests</h4>
-                <span class="nav-badge" id="adminCorrectionsBadge" style="display:none;">0</span>
-              </div>
-              <div class="table-responsive">
-                <table class="custom-table" style="font-size:12px;">
-                  <thead>
-                    <tr>
-                      <th>Associate</th>
-                      <th>Date</th>
-                      <th>Adjusted Times</th>
-                      <th>Reason</th>
-                      <th>Status / Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminCorrectionsTbody">
-                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Loading adjustment requests...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Overtime Pre-Approvals Queue -->
-            <div class="dashboard-card">
-              <div class="card-head">
-                <h4><i data-lucide="clock" style="color:var(--accent);"></i> Overtime Pre-Approvals Queue</h4>
-                <span class="nav-badge" id="adminOtBadge" style="display:none;">0</span>
-              </div>
-              <div class="table-responsive">
-                <table class="custom-table" style="font-size:12px;">
-                  <thead>
-                    <tr>
-                      <th>Associate</th>
-                      <th>OT Date</th>
-                      <th>Hours</th>
-                      <th>Engagement / Reason</th>
-                      <th>Status / Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminOtTbody">
-                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">Loading overtime requests...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- ==============================================
@@ -913,15 +795,9 @@ if (file_exists($zkStatusFile)) {
               <span class="filter-label">Category:</span>
               <select id="calFilterType" class="form-select" style="padding:6px 10px; font-size:12px;" onchange="refreshCalendarEvents()">
                 <option value="ALL">All Categories</option>
-                <option value="VL">Vacation Leave</option>
-                <option value="SL">Sick Leave</option>
-                <option value="Emergency">Emergency Leave</option>
-                <option value="Bereavement">Bereavement Leave</option>
-                <option value="Maternity">Maternity Leave</option>
-                <option value="Paternity">Paternity Leave</option>
-                <option value="SoloParent">Solo Parent Leave</option>
-                <option value="SpecialWomen">Special Leave for Women</option>
-                <option value="LWOP">Leave Without Pay</option>
+                <?php foreach ($activeLeaveTypes as $lt): ?>
+                  <option value="<?= htmlspecialchars($lt['code']) ?>"><?= htmlspecialchars($lt['name']) ?></option>
+                <?php endforeach; ?>
               </select>
             </div>
 
@@ -937,14 +813,12 @@ if (file_exists($zkStatusFile)) {
             <div id="leaveCalendar"></div>
 
             <div class="calendar-legend-bar">
-              <div class="legend-chip"><span class="dot" style="background:#059669;"></span> Vacation Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#ea580c;"></span> Emergency Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#475569;"></span> Bereavement Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#7c3aed;"></span> Maternity Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#0284c7;"></span> Paternity Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#9333ea;"></span> Special Leave for Women</div>
+              <?php foreach ($activeLeaveTypes as $lt): ?>
+                <div class="legend-chip">
+                  <span class="dot" style="background:<?= htmlspecialchars($lt['color'] ?? '#8b0e14') ?>;"></span>
+                  <?= htmlspecialchars($lt['name']) ?>
+                </div>
+              <?php endforeach; ?>
               <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Regular Holiday</div>
               <div class="legend-chip"><span class="dot" style="background:#7c2d12;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Special Holiday</div>
             </div>
@@ -1047,6 +921,11 @@ if (file_exists($zkStatusFile)) {
                           <button class="btn-icon" title="Direct Balance Adjustment" onclick="openAdjustmentModal(<?= $u['id'] ?>)">
                             <i data-lucide="scale" style="width:14px;height:14px;color:var(--accent);"></i>
                           </button>
+                          <?php if ((int)$u['id'] !== (int)$user['id']): ?>
+                            <button class="btn-icon" title="Delete Associate" style="color:var(--danger);" onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name'])) ?>')">
+                              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                            </button>
+                          <?php endif; ?>
                         </div>
                       </td>
                     </tr>
@@ -1079,12 +958,12 @@ if (file_exists($zkStatusFile)) {
           <!-- Section 1: Firm Leave Categories Grid -->
           <div class="dashboard-card" style="margin-bottom: 24px;">
             <div class="card-head">
-              <h3><i data-lucide="sliders" style="color:var(--accent);"></i> Active Firm Leave Categories</h3>
+              <h3><i data-lucide="sliders"></i> Active Firm Leave Categories</h3>
               <span style="font-size:12px; color:var(--text-muted);"><?= count($allLeaveTypes) ?> Configured Categories</span>
             </div>
             <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; padding:20px;">
               <?php foreach ($allLeaveTypes as $lt): ?>
-                <div class="policy-card" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:18px; display:flex; flex-direction:column; justify-content:space-between; position:relative; border-left:4px solid <?= htmlspecialchars($lt['color']) ?>; box-shadow:var(--shadow-sm);">
+                <div class="policy-card" style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:18px; display:flex; flex-direction:column; justify-content:space-between; position:relative; box-shadow:var(--shadow-sm);">
                   <div>
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                       <div style="display:flex; align-items:center; gap:8px;">
@@ -1099,6 +978,9 @@ if (file_exists($zkStatusFile)) {
                     </p>
 
                     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+                      <?php 
+                        $isCore = in_array($lt['code'], ['VL', 'SL', 'LWOP', 'Maternity', 'Paternity'], true);
+                      ?>
                       <span class="badge" style="background:<?= $lt['is_paid'] ? 'var(--success-soft)' : 'var(--bg-subtle)' ?>; color:<?= $lt['is_paid'] ? '#065f46' : 'var(--text-muted)' ?>;">
                         <?= $lt['is_paid'] ? 'Paid Leave' : 'Unpaid (LWOP)' ?>
                       </span>
@@ -1107,6 +989,9 @@ if (file_exists($zkStatusFile)) {
                       </span>
                       <?php if ($lt['requires_attachment']): ?>
                         <span class="badge" style="background:#fee2e2; color:#b91c1c;">Proof Required</span>
+                      <?php endif; ?>
+                      <?php if ($isCore): ?>
+                        <span class="badge" style="background:var(--bg-subtle); color:var(--text-muted);">Core Policy</span>
                       <?php endif; ?>
                       <?php if (!$lt['is_active']): ?>
                         <span class="badge" style="background:#f1f5f9; color:#64748b;">Archived</span>
@@ -1131,6 +1016,11 @@ if (file_exists($zkStatusFile)) {
                       <button class="btn-icon" title="<?= $lt['is_active'] ? 'Archive Policy' : 'Activate Policy' ?>" onclick="toggleLeaveTypeStatus(<?= $lt['id'] ?>, <?= $lt['is_active'] ? 0 : 1 ?>)">
                         <i data-lucide="<?= $lt['is_active'] ? 'archive' : 'rotate-ccw' ?>" style="width:14px;height:14px;color:<?= $lt['is_active'] ? 'var(--text-muted)' : 'var(--success)' ?>;"></i>
                       </button>
+                      <?php if (!$isCore): ?>
+                        <button class="btn-icon" title="Permanently Delete Policy" onclick="deleteLeaveType(<?= $lt['id'] ?>, '<?= htmlspecialchars(addslashes($lt['name'])) ?>')">
+                          <i data-lucide="trash-2" style="width:14px;height:14px;color:var(--danger, #dc2626);"></i>
+                        </button>
+                      <?php endif; ?>
                     </div>
                   </div>
                 </div>
@@ -1142,7 +1032,7 @@ if (file_exists($zkStatusFile)) {
           <div class="dashboard-card">
             <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div>
-                <h3><i data-lucide="grid" style="color:var(--accent);"></i> Associate Leave Allocation Matrix</h3>
+                <h3><i data-lucide="grid"></i> Associate Leave Allocation Matrix</h3>
                 <span style="font-size:12px; color:var(--text-muted);">Click any balance chip to quickly adjust individual credits</span>
               </div>
               <div style="display:flex; align-items:center; gap:10px;">
@@ -1154,7 +1044,6 @@ if (file_exists($zkStatusFile)) {
                 <thead>
                   <tr>
                     <th style="min-width:190px;">Associate</th>
-                    <th style="min-width:120px;">Department</th>
                     <?php foreach ($activeLeaveTypes as $lt): ?>
                       <th style="text-align:center; min-width:85px;" title="<?= htmlspecialchars($lt['name']) ?>">
                         <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
@@ -1173,9 +1062,8 @@ if (file_exists($zkStatusFile)) {
                     <tr class="matrix-row">
                       <td>
                         <div style="font-weight:700; color:var(--primary);"><?= htmlspecialchars($u['name']) ?></div>
-                        <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($u['title']) ?> &bull; <?= htmlspecialchars($u['gender']) ?></div>
+                        <div style="font-size:11px; color:var(--text-muted);"><?= htmlspecialchars($u['gender']) ?></div>
                       </td>
-                      <td><?= htmlspecialchars($u['department']) ?></td>
                       <?php foreach ($activeLeaveTypes as $lt): 
                         $code = $lt['code'];
                         $isRestricted = ($lt['gender_restriction'] === 'Female' && $uGender === 'male') || ($lt['gender_restriction'] === 'Male' && $uGender === 'female');
@@ -1223,10 +1111,29 @@ if (file_exists($zkStatusFile)) {
       </div>
       <div class="modal-body">
         <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:14px;">
-          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference</div>
-          <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="decModalRef">LR-2026-XXX</div>
-          <div style="font-size:13px; margin-top:8px;"><strong>Associate:</strong> <span id="decModalStaff"></span></div>
-          <div style="font-size:13px;"><strong>Category:</strong> <span id="decModalType"></span> (<span id="decModalDays"></span> working day/s)</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Reference</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); font-family:monospace;" id="decModalRef">LR-2026-XXX</div>
+            </div>
+            <div id="decModalAttachmentWrap" style="display:none;">
+              <a id="decModalAttachmentLink" href="#" target="_blank" class="btn-secondary btn-sm" style="font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                <i data-lucide="paperclip" style="width:13px;height:13px;"></i> View Attached Proof
+              </a>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; font-size:13px;">
+            <div><strong>Associate:</strong> <span id="decModalStaff"></span></div>
+            <div><strong>Category:</strong> <span id="decModalType"></span></div>
+            <div><strong>Inclusive Dates:</strong> <span id="decModalDates"></span></div>
+            <div><strong>Duration:</strong> <span id="decModalDays"></span> working day(s)</div>
+          </div>
+          <div style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--border-color);">
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Reason / Engagement Details:</div>
+            <div id="decModalReason" style="font-size:13px; color:var(--text-main); background:#fff; padding:10px 12px; border-radius:6px; border:1px solid var(--border-color); font-style:italic; line-height:1.4;">
+              None specified
+            </div>
+          </div>
         </div>
 
         <div class="overlap-banner safe" id="decModalOverlap">
@@ -1730,9 +1637,14 @@ if (file_exists($zkStatusFile)) {
             <input type="password" name="reset_password" class="form-input" placeholder="Enter new password">
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
-          <button type="submit" class="btn-primary" id="btnEditUserBtn">Save Profile Changes</button>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" class="btn-danger" id="btnDeleteUserInModal" onclick="deleteUserFromEditModal()" style="background:#fee2e2; color:#b91c1c; border-color:#fca5a5; display:inline-flex; align-items:center; gap:6px;">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete Associate
+          </button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+            <button type="submit" class="btn-primary" id="btnEditUserBtn">Save Profile Changes</button>
+          </div>
         </div>
       </form>
     </div>
@@ -2088,6 +2000,7 @@ if (file_exists($zkStatusFile)) {
     initLiveClock();
 
     const allUsersData = <?= json_encode(array_column($allUsers, null, 'id')) ?>;
+    const currentLoggedUserId = <?= (int)$user['id'] ?>;
 
     function switchTab(tabId, updateState = true) {
       const activePane = document.getElementById(`tab-${tabId}`);
@@ -2111,8 +2024,16 @@ if (file_exists($zkStatusFile)) {
       if (tabId === 'overall') {
         if (typeof loadAdminOverallDashboard === 'function') loadAdminOverallDashboard();
       }
-      if (tabId === 'calendar' && typeof calendarInstance !== 'undefined' && calendarInstance) {
-        setTimeout(() => calendarInstance.render(), 50);
+      if (tabId === 'calendar') {
+        setTimeout(() => {
+          if (typeof initCalendar === 'function') {
+            if (!calendarInstance) {
+              initCalendar();
+            } else {
+              calendarInstance.render();
+            }
+          }
+        }, 50);
       }
       if (tabId === 'biometrics') {
         if (typeof loadDtrLogs === 'function') loadDtrLogs();
@@ -2122,8 +2043,10 @@ if (file_exists($zkStatusFile)) {
     }
 
     function initSavedTab() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryTab = urlParams.get('tab');
       const hashTab = window.location.hash.replace('#', '').trim();
-      const savedTab = hashTab || localStorage.getItem('jtyeo_admin_active_tab') || 'overall';
+      const savedTab = queryTab || hashTab || localStorage.getItem('jtyeo_admin_active_tab') || 'overall';
       if (savedTab && document.getElementById(`tab-${savedTab}`)) {
         switchTab(savedTab, false);
       } else {
@@ -2134,6 +2057,31 @@ if (file_exists($zkStatusFile)) {
         if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
       } else if (savedTab === 'overall') {
         if (typeof loadAdminOverallDashboard === 'function') loadAdminOverallDashboard();
+      } else if (savedTab === 'calendar') {
+        setTimeout(() => {
+          if (typeof initCalendar === 'function') {
+            if (!calendarInstance) {
+              initCalendar();
+            } else {
+              calendarInstance.render();
+            }
+          }
+        }, 50);
+      }
+
+      // Check for deep-linked leave approval from email notification
+      const targetRef = urlParams.get('ref');
+      if (targetRef && (savedTab === 'approvals' || queryTab === 'approvals')) {
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-ref="${targetRef}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.outline = '2px solid var(--primary)';
+            row.style.backgroundColor = 'rgba(79, 70, 229, 0.08)';
+            const reviewBtn = row.querySelector('button');
+            if (reviewBtn) reviewBtn.click();
+          }
+        }, 350);
       }
     }
 
@@ -2192,6 +2140,14 @@ if (file_exists($zkStatusFile)) {
             if (ls && data.zk_status.last_seen) {
               ls.innerHTML = `<strong>Last Sync:</strong> ${data.zk_status.last_seen}`;
             }
+            const ipEl = document.getElementById('adminZkIpDisplay');
+            if (ipEl && data.zk_status.ip) {
+              ipEl.innerText = data.zk_status.ip + (data.zk_status.ip !== 'Auto-detecting...' && !data.zk_status.ip.includes(':') ? ':4370' : '');
+            }
+            const snEl = document.getElementById('adminZkSerialDisplay');
+            if (snEl && data.zk_status.sn) {
+              snEl.innerText = data.zk_status.sn;
+            }
           }
 
           // 5. Render Live Team Presence Roster
@@ -2243,11 +2199,8 @@ if (file_exists($zkStatusFile)) {
             ${item.reason ? `<div class="action-item-reason">"${item.reason}"</div>` : ''}
           `;
           actionButtonsHtml = `
-            <button class="btn-primary btn-sm" onclick="adminQuickDecideLeave('${item.ref_no}', 'Approved')">
-              <i data-lucide="check" style="width:12px; height:12px;"></i> Approve
-            </button>
-            <button class="btn-secondary btn-sm" onclick="adminQuickDecideLeave('${item.ref_no}', 'Rejected')">
-              <i data-lucide="x" style="width:12px; height:12px;"></i> Reject
+            <button class="btn-primary btn-sm" onclick="switchTab('approvals')">
+              <i data-lucide="check-square" style="width:12px; height:12px;"></i> Review in Queue &rarr;
             </button>
           `;
         } else if (item.item_type === 'correction') {
@@ -2265,11 +2218,8 @@ if (file_exists($zkStatusFile)) {
             ${item.reason ? `<div class="action-item-reason">"${item.reason}"</div>` : ''}
           `;
           actionButtonsHtml = `
-            <button class="btn-primary btn-sm" onclick="adminQuickDecideCorrection(${item.id}, 'approve')">
-              <i data-lucide="check" style="width:12px; height:12px;"></i> Approve
-            </button>
-            <button class="btn-secondary btn-sm" onclick="adminQuickDecideCorrection(${item.id}, 'reject')">
-              <i data-lucide="x" style="width:12px; height:12px;"></i> Reject
+            <button class="btn-primary btn-sm" onclick="switchTab('biometrics'); loadDtrLogs();">
+              <i data-lucide="check-square" style="width:12px; height:12px;"></i> Review in Attendance &rarr;
             </button>
           `;
         } else if (item.item_type === 'ot') {
@@ -2283,11 +2233,8 @@ if (file_exists($zkStatusFile)) {
             ${item.reason ? `<div class="action-item-reason">"${item.reason}"</div>` : ''}
           `;
           actionButtonsHtml = `
-            <button class="btn-primary btn-sm" onclick="adminQuickDecideOt(${item.id}, 'approve')">
-              <i data-lucide="check" style="width:12px; height:12px;"></i> Approve
-            </button>
-            <button class="btn-secondary btn-sm" onclick="adminQuickDecideOt(${item.id}, 'reject')">
-              <i data-lucide="x" style="width:12px; height:12px;"></i> Reject
+            <button class="btn-primary btn-sm" onclick="switchTab('biometrics'); loadDtrLogs();">
+              <i data-lucide="check-square" style="width:12px; height:12px;"></i> Review in Attendance &rarr;
             </button>
           `;
         }
@@ -2555,6 +2502,21 @@ if (file_exists($zkStatusFile)) {
       if (id === 'applyModal' && typeof calculateWorkingDaysPreview === 'function') {
         calculateWorkingDaysPreview();
       }
+      if (id === 'addUserModal') {
+        const form = document.getElementById('addUserForm');
+        if (form) form.reset();
+        const faceEl = document.getElementById('addFaceEnrolled');
+        const fpEl = document.getElementById('addFpEnrolled');
+        if (faceEl) faceEl.checked = false;
+        if (fpEl) fpEl.checked = false;
+        const statusEl = document.getElementById('pinDetectionStatus');
+        if (statusEl) statusEl.innerHTML = '';
+        const badgeEl = document.getElementById('enrollAutoBadge');
+        if (badgeEl) {
+          badgeEl.innerHTML = 'Auto-updates on first punch';
+          badgeEl.style.color = 'var(--accent)';
+        }
+      }
       if (window.lucide) lucide.createIcons(); 
     }
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
@@ -2756,14 +2718,35 @@ if (file_exists($zkStatusFile)) {
 
     // Decision Modal
     let currentDecRef = '';
-    function openDecisionModal(refNo, empName, leaveType, days) {
+    function openDecisionModal(refNo, empName, leaveType, days, reason = '', dates = '', attachment = '') {
       currentDecRef = refNo;
       document.getElementById('decModalRef').innerText = refNo;
-      document.getElementById('decModalStaff').innerText = empName;
-      document.getElementById('decModalType').innerText = leaveType;
-      document.getElementById('decModalDays').innerText = days;
+      document.getElementById('decModalStaff').innerText = empName || '—';
+      document.getElementById('decModalType').innerText = leaveType || '—';
+      document.getElementById('decModalDays').innerText = days || '0';
+
+      const datesEl = document.getElementById('decModalDates');
+      if (datesEl) datesEl.innerText = dates || '—';
+
+      const reasonEl = document.getElementById('decModalReason');
+      if (reasonEl) {
+        reasonEl.innerText = (reason && reason.trim()) ? `"${reason.trim()}"` : 'No specific reason stated.';
+      }
+
+      const attWrap = document.getElementById('decModalAttachmentWrap');
+      const attLink = document.getElementById('decModalAttachmentLink');
+      if (attWrap && attLink) {
+        if (attachment && attachment.trim()) {
+          attLink.href = attachment.trim();
+          attWrap.style.display = 'block';
+        } else {
+          attWrap.style.display = 'none';
+        }
+      }
+
       document.getElementById('decModalNote').value = '';
       openModal('decisionModal');
+      if (window.lucide) lucide.createIcons();
     }
 
     async function executeDecisionWithNote(decision) {
@@ -3019,6 +3002,35 @@ if (file_exists($zkStatusFile)) {
         }
       } catch (err) {
         showToast('Network error', 'error');
+      }
+    }
+
+    async function deleteLeaveType(id, name) {
+      const confirmed = await showConfirmDialog({
+        title: 'Delete Leave Policy',
+        message: `Are you sure you want to permanently delete '${name}'? This cannot be undone. Policies with historical employee records cannot be deleted and must be Archived instead.`,
+        confirmText: 'Delete Policy',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch('actions/manage_leave_types.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id: id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          setTimeout(() => window.location.reload(), 700);
+        } else {
+          showToast(data.message || 'Error deleting policy', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while deleting policy', 'error');
       }
     }
 
@@ -3282,6 +3294,8 @@ if (file_exists($zkStatusFile)) {
           const leaveEl = document.getElementById('kpiOnLeaveCount');
           const hoursEl = document.getElementById('kpiTotalRenderedHours');
           const hoursFmtEl = document.getElementById('kpiRenderedFormatted');
+          const tardyEl = document.getElementById('kpiTardyFormatted');
+          const exceptEl = document.getElementById('kpiExceptionsCount');
 
           if (presentEl) presentEl.innerText = data.present_count ?? 0;
           if (percentEl) percentEl.innerText = `/ ${data.total_staff || 0} Associates`;
@@ -3289,6 +3303,8 @@ if (file_exists($zkStatusFile)) {
           if (leaveEl) leaveEl.innerText = data.on_leave_count ?? 0;
           if (hoursEl) hoursEl.innerText = data.total_rendered_hours ? data.total_rendered_hours.toFixed(1) : '0.0';
           if (hoursFmtEl) hoursFmtEl.innerText = data.total_rendered_formatted || '0 hrs';
+          if (tardyEl) tardyEl.innerText = data.total_tardy_formatted || '0m';
+          if (exceptEl) exceptEl.innerText = data.total_exceptions_count ?? 0;
 
           if (data.records.length === 0) {
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">No attendance or leave records found for this period.</td></tr>`;
@@ -3329,6 +3345,21 @@ if (file_exists($zkStatusFile)) {
               ? `<td><strong style="font-size:12px;">${r.log_date_formatted || r.log_date}</strong></td>` 
               : '';
 
+            let timeInCell = '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>';
+            if (r.time_in) {
+              timeInCell = `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_in}</span>`;
+              if (r.is_tardy) {
+                timeInCell += ` <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 5px;" title="Tardy: Arrival past 8:30 AM official schedule">${r.tardy_formatted}</span>`;
+              }
+            }
+
+            let timeOutCell = '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>';
+            if (r.time_out) {
+              timeOutCell = `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_out}</span>`;
+            } else if (r.is_incomplete && r.exception_type === 'missing_out') {
+              timeOutCell = `<span class="badge" style="background:#fef3c7; color:#b45309; font-size:10px; padding:2px 6px;" title="No time-out registered on terminal">Missing Out</span>`;
+            }
+
             rowsHtml += `
               <tr>
                 <td>
@@ -3342,10 +3373,10 @@ if (file_exists($zkStatusFile)) {
                 </td>
                 <td><strong>#${r.biometric_pin}</strong></td>
                 ${dateCell}
-                <td>${r.time_in ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_in}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${timeInCell}</td>
                 <td>${r.break_out ? `<span style="font-weight:700; font-family:monospace; color:#b45309; font-size:12px;">${r.break_out}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
                 <td>${r.break_in ? `<span style="font-weight:700; font-family:monospace; color:#15803d; font-size:12px;">${r.break_in}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
-                <td>${r.time_out ? `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_out}</span>` : '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>'}</td>
+                <td>${timeOutCell}</td>
                 <td><strong style="color:var(--primary); font-size:12px;">${r.rendered_hours > 0 ? r.rendered_hours + ' hrs' : '—'}</strong></td>
                 <td>${r.overtime_hours > 0 ? `<span style="color:#0284c7; font-weight:700; font-size:12px;">+${r.overtime_hours} hrs</span>` : '<span style="color:var(--text-light); font-size:11px;">—</span>'}</td>
                 <td>${methodBadge}</td>
@@ -3420,6 +3451,53 @@ if (file_exists($zkStatusFile)) {
       a.click();
       document.body.removeChild(a);
       showToast('Attendance records exported to CSV successfully.', 'success');
+    }
+
+    function exportLeaveHistoryCsv() {
+      const data = <?= json_encode(array_map(function($r) {
+        return [
+          'ref_no' => $r['ref_no'],
+          'employee_name' => $r['employee_name'],
+          'title' => $r['title'],
+          'leave_type_label' => $r['leave_type_label'],
+          'start_date' => $r['start_date'],
+          'end_date' => $r['end_date'],
+          'days_count' => $r['days_count'],
+          'status' => $r['status'],
+          'reason' => $r['reason'] ?? ''
+        ];
+      }, $leaveRequests)) ?>;
+
+      if (!data || data.length === 0) {
+        showToast('No leave history records to export.', 'info');
+        return;
+      }
+
+      let csv = "Ref No,Associate,Title,Leave Category,Start Date,End Date,Days Count,Status,Reason\n";
+      data.forEach(r => {
+        const row = [
+          `"${(r.ref_no || '').replace(/"/g, '""')}"`,
+          `"${(r.employee_name || '').replace(/"/g, '""')}"`,
+          `"${(r.title || '').replace(/"/g, '""')}"`,
+          `"${(r.leave_type_label || '').replace(/"/g, '""')}"`,
+          `"${r.start_date || ''}"`,
+          `"${r.end_date || ''}"`,
+          `"${r.days_count || 0}"`,
+          `"${r.status || ''}"`,
+          `"${(r.reason || '').replace(/"/g, '""')}"`
+        ];
+        csv += row.join(',') + "\n";
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `JTYeo_Leave_History_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Leave history exported to CSV successfully.', 'success');
     }
 
     function openAdminEditPunch(userId, userName, pin, date, tIn, bOut, bIn, tOut) {
@@ -3751,6 +3829,22 @@ if (file_exists($zkStatusFile)) {
             badge.style.color = '#15803d';
             badge.innerHTML = '<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Online (Connected)';
           }
+          const ovBadge = document.getElementById('adminZkOnlineBadge');
+          const ovLbl = document.getElementById('adminZkStatusLabel');
+          if (ovBadge && ovLbl) {
+            ovBadge.className = 'status-pill active';
+            ovLbl.innerText = 'Online / LAN';
+          }
+          if (data.device_ip) {
+            const ipEl = document.getElementById('adminZkIpDisplay');
+            if (ipEl && data.device_ip !== 'Auto-detecting...') {
+              ipEl.innerText = data.device_ip + (!data.device_ip.includes(':') ? ':4370' : '');
+            }
+          }
+          const ls = document.getElementById('adminZkLastSeenText');
+          if (ls && data.sync_time) {
+            ls.innerHTML = `<strong>Last Sync:</strong> ${data.sync_time}`;
+          }
           loadDtrLogs();
           if (data.updated_count > 0) {
             setTimeout(() => window.location.reload(), 1200);
@@ -3761,6 +3855,12 @@ if (file_exists($zkStatusFile)) {
             badge.style.background = '#fee2e2';
             badge.style.color = '#991b1b';
             badge.innerHTML = '<i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Offline (Not Connected)';
+          }
+          const ovBadge = document.getElementById('adminZkOnlineBadge');
+          const ovLbl = document.getElementById('adminZkStatusLabel');
+          if (ovBadge && ovLbl) {
+            ovBadge.className = 'status-pill inactive';
+            ovLbl.innerText = 'Standby / LAN';
           }
         }
         if (window.lucide) lucide.createIcons();
@@ -3774,6 +3874,7 @@ if (file_exists($zkStatusFile)) {
         if (window.lucide) lucide.createIcons();
       }
     }
+    window.triggerManualSync = syncBiometrics;
 
     // Dynamic PIN Auto-Detection for Add Associate
     let pinTimer = null;
@@ -3936,6 +4037,12 @@ if (file_exists($zkStatusFile)) {
           const fileInput = document.getElementById('editUserAvatarInput');
           if (fileInput) fileInput.value = '';
 
+          // Control Delete button in modal (cannot delete yourself)
+          const delBtn = document.getElementById('btnDeleteUserInModal');
+          if (delBtn) {
+            delBtn.style.display = (parseInt(u.id) === currentLoggedUserId) ? 'none' : 'inline-flex';
+          }
+
           openModal('editUserModal');
         }
       } catch (err) {
@@ -3964,6 +4071,53 @@ if (file_exists($zkStatusFile)) {
         showToast('Network error.', 'error');
         btn.disabled = false;
       }
+    }
+
+    // Delete Associate Account (Admin Only)
+    async function deleteUser(userId, userName) {
+      if (!userId) return;
+      if (parseInt(userId) === currentLoggedUserId) {
+        showToast('You cannot delete your own administrator account.', 'error');
+        return;
+      }
+
+      const confirmed = await showConfirmDialog({
+        title: 'Delete Associate Account',
+        message: `Are you sure you want to permanently delete "${userName}"? This will remove their user account, leave balance allocations, biometric logs, and profile records. This action cannot be undone.`,
+        confirmText: 'Delete Associate',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      try {
+        const formData = new FormData();
+        formData.append('action', 'delete_user');
+        formData.append('user_id', userId);
+
+        const res = await fetch('actions/manage_users.php', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          setTimeout(() => window.location.reload(), 900);
+        } else {
+          showToast(data.message || 'Failed to delete associate.', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while deleting associate.', 'error');
+      }
+    }
+
+    async function deleteUserFromEditModal() {
+      const id = document.getElementById('editUserId').value;
+      const name = document.getElementById('editUserName').value;
+      if (!id) return;
+      closeModal('editUserModal');
+      await deleteUser(id, name);
     }
 
     // Profile Photo & Password Update

@@ -19,14 +19,18 @@ $sn = $_GET['SN'] ?? ($_GET['sn'] ?? 'UNKNOWN');
 $table = $_GET['table'] ?? '';
 
 // Automatically record live heartbeat for zero-click status detection
-if ($clientIp !== 'unknown' && $clientIp !== '127.0.0.1' && $clientIp !== '::1') {
-    $statusFile = __DIR__ . '/../leave-jtyeo/database/zkteco_status.json';
+if ($clientIp !== 'unknown' && $clientIp !== '::1') {
+    $statusFile = file_exists(__DIR__ . '/../database')
+        ? __DIR__ . '/../database/zkteco_status.json'
+        : __DIR__ . '/../leave-jtyeo/database/zkteco_status.json';
+    $existing = file_exists($statusFile) ? (json_decode(file_get_contents($statusFile), true) ?: []) : [];
+    $effectiveSn = (!empty($sn) && $sn !== 'UNKNOWN') ? $sn : ($existing['sn'] ?? 'TTQ5261200350');
     @file_put_contents($statusFile, json_encode([
         'online' => true,
         'last_seen' => time(),
         'last_seen_formatted' => date('Y-m-d H:i:s'),
         'ip' => $clientIp,
-        'sn' => $sn
+        'sn' => $effectiveSn
     ]));
 }
 

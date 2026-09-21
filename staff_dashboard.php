@@ -38,9 +38,32 @@ $allUsers = $allUsersStmt->fetchAll();
 // Fetch Active Leave Types & User's Dynamic Allocations
 $activeLeaveTypes = $pdo->query("SELECT * FROM leave_types WHERE is_active = 1 ORDER BY id ASC")->fetchAll();
 
-$userAllocStmt = $pdo->prepare("SELECT leave_type_code, remaining_days FROM user_leave_allocations WHERE user_id = ?");
+$userAllocStmt = $pdo->prepare("SELECT leave_type_code, allocated_days, remaining_days FROM user_leave_allocations WHERE user_id = ?");
 $userAllocStmt->execute([$user['id']]);
-$userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+$userAllocDetails = [];
+foreach ($userAllocStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $userAllocDetails[$row['leave_type_code']] = $row;
+}
+$userAllocMap = array_column($userAllocDetails, 'remaining_days', 'leave_type_code');
+
+$vlAlloc = isset($userAllocDetails['VL']) ? (float)$userAllocDetails['VL']['allocated_days'] : 12.0;
+$slAlloc = isset($userAllocDetails['SL']) ? (float)$userAllocDetails['SL']['allocated_days'] : 10.0;
+if (isset($userAllocDetails['VL'])) $vlBalance = (float)$userAllocDetails['VL']['remaining_days'];
+if (isset($userAllocDetails['SL'])) $slBalance = (float)$userAllocDetails['SL']['remaining_days'];
+
+$leaveIconMap = [
+    'VL'           => 'palmtree',
+    'SL'           => 'heart-pulse',
+    'Emergency'    => 'alert-triangle',
+    'Bereavement'  => 'shield',
+    'SoloParent'   => 'users',
+    'Maternity'    => 'baby',
+    'Paternity'    => 'user-check',
+    'SpecialWomen' => 'activity',
+    'Study'        => 'book-open',
+    'Wellness'     => 'smile',
+    'BAR_EXAM'     => 'scale',
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -159,11 +182,11 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
           </div>
 
           <!-- 1. Today's Personal Attendance Banner -->
-          <div class="dashboard-card" style="margin-bottom: 24px; border-left: 4px solid var(--primary);">
+          <div class="dashboard-card" style="margin-bottom: 24px;">
             <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
               <div>
                 <h3 style="display:flex; align-items:center; gap:8px;">
-                  <i data-lucide="scan-face" style="color:var(--accent);"></i>
+                  <i data-lucide="scan-face"></i>
                   Today's Attendance Punches &bull; <span style="font-weight:normal; font-size:13px; color:var(--text-muted);"><?= date('l, F j, Y') ?></span>
                 </h3>
               </div>
@@ -212,37 +235,37 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
           <!-- 2. Personal KPI Summary Cards -->
           <div class="kpi-grid" style="margin-bottom: 24px;">
-            <div class="kpi-card green">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Vacation Leave (VL)</span>
                 <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value"><?= number_format($vlBalance, 1) ?></span>
-                <span class="kpi-sub">/ 12.0 Days</span>
+                <span class="kpi-sub">/ <?= number_format($vlAlloc, 1) ?> Days</span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="check" style="width:14px;height:14px;"></i>
                 <span>Available Balance</span>
               </div>
             </div>
 
-            <div class="kpi-card purple">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Sick Leave (SL)</span>
                 <div class="kpi-icon"><i data-lucide="heart-pulse"></i></div>
               </div>
               <div class="kpi-value-row">
                 <span class="kpi-value"><?= number_format($slBalance, 1) ?></span>
-                <span class="kpi-sub">/ 10.0 Days</span>
+                <span class="kpi-sub">/ <?= number_format($slAlloc, 1) ?> Days</span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
                 <span>Available Balance</span>
               </div>
             </div>
 
-            <div class="kpi-card blue">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Month Rendered Hours</span>
                 <div class="kpi-icon"><i data-lucide="clock"></i></div>
@@ -251,13 +274,13 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
                 <span class="kpi-value" id="staffOverallMonthHours">0.0</span>
                 <span class="kpi-sub">Total Hours</span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
                 <span id="staffOverallMonthOt">0.0 hrs approved OT</span>
               </div>
             </div>
 
-            <div class="kpi-card amber">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Pending Requests</span>
                 <div class="kpi-icon"><i data-lucide="hourglass"></i></div>
@@ -266,7 +289,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
                 <span class="kpi-value" id="staffOverallPendingCount">0</span>
                 <span class="kpi-sub">Applications</span>
               </div>
-              <div class="kpi-footer" style="color:var(--warning);">
+              <div class="kpi-footer">
                 <i data-lucide="activity" style="width:14px;height:14px;"></i>
                 <span id="staffOverallPendingBreakdown">Under HR Review</span>
               </div>
@@ -280,7 +303,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
             </div>
             <div class="quick-launcher-grid">
               <div class="quick-launcher-card" onclick="openModal('applyModal')">
-                <div class="quick-launcher-icon" style="background:#eff6ff; color:#2563eb;">
+                <div class="quick-launcher-icon">
                   <i data-lucide="calendar-plus"></i>
                 </div>
                 <div>
@@ -290,7 +313,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               </div>
 
               <div class="quick-launcher-card" onclick="openModal('staffCorrectionModal')">
-                <div class="quick-launcher-icon" style="background:#fef3c7; color:#b45309;">
+                <div class="quick-launcher-icon">
                   <i data-lucide="edit-3"></i>
                 </div>
                 <div>
@@ -300,7 +323,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               </div>
 
               <div class="quick-launcher-card" onclick="openModal('staffOtModal')">
-                <div class="quick-launcher-icon" style="background:#f3e8ff; color:#7e22ce;">
+                <div class="quick-launcher-icon">
                   <i data-lucide="trending-up"></i>
                 </div>
                 <div>
@@ -310,7 +333,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               </div>
 
               <div class="quick-launcher-card" onclick="switchTab('attendance'); loadStaffDtr();">
-                <div class="quick-launcher-icon" style="background:#f0fdf4; color:#15803d;">
+                <div class="quick-launcher-icon">
                   <i data-lucide="printer"></i>
                 </div>
                 <div>
@@ -329,7 +352,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <div class="dashboard-card">
                 <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
                   <h3>
-                    <i data-lucide="history" style="color:var(--accent);"></i>
+                    <i data-lucide="history"></i>
                     My Recent Applications &amp; Status
                   </h3>
                   <button class="btn-link" onclick="switchTab('my-portal')" style="font-size:12px; font-weight:600; color:var(--accent); background:none; border:none; cursor:pointer;">
@@ -353,7 +376,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <div class="dashboard-card">
                 <div class="card-head">
                   <h3>
-                    <i data-lucide="users" style="color:var(--accent);"></i>
+                    <i data-lucide="users"></i>
                     Office Team Presence
                   </h3>
                 </div>
@@ -370,7 +393,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <div class="dashboard-card">
                 <div class="card-head">
                   <h3>
-                    <i data-lucide="calendar" style="color:var(--accent);"></i>
+                    <i data-lucide="calendar"></i>
                     Upcoming Holidays &amp; Leaves
                   </h3>
                 </div>
@@ -390,13 +413,13 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
         </div>
 
         <!-- ==============================================
-             TAB 1: MY PORTAL & BALANCES
+             TAB 1: MY BALANCES & HISTORY
              ============================================== -->
         <div id="tab-my-portal" class="tab-pane">
           <div class="page-header">
             <div class="page-title">
-              <h1>Welcome, <?= htmlspecialchars(explode(' ', $user['name'])[0]) ?></h1>
-              <p>Self-Service Portal &bull; Track your leave credits, file applications, and view history.</p>
+              <h1>My Balances &amp; History</h1>
+              <p>Review your policy entitlements, track leave credit usage, and view historical applications.</p>
             </div>
             <div class="header-actions">
               <button class="btn-primary" onclick="openModal('applyModal')">
@@ -406,90 +429,46 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
             </div>
           </div>
 
-          <!-- Personal Balance Cards -->
-          <div class="kpi-grid">
-            <div class="kpi-card green">
+          <!-- Personal Leave Entitlement & Balance Cards (Dynamic per Firm Policy) -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-bottom: 24px;">
+            <?php foreach ($activeLeaveTypes as $lt): 
+              $isGenderRestricted = (strcasecmp($lt['gender_restriction'], 'Female') === 0 && strcasecmp($userGender, 'Male') === 0) || (strcasecmp($lt['gender_restriction'], 'Male') === 0 && strcasecmp($userGender, 'Female') === 0);
+              if ($isGenderRestricted) continue;
+              if ($lt['code'] === 'LWOP') continue;
+
+              $code = $lt['code'];
+              $alloc = isset($userAllocDetails[$code]) ? (float)$userAllocDetails[$code]['allocated_days'] : (float)$lt['default_days'];
+              if (!isset($userAllocDetails[$code])) {
+                  if ($code === 'VL') $rem = $vlBalance;
+                  elseif ($code === 'SL') $rem = $slBalance;
+                  else $rem = (float)$lt['default_days'];
+              } else {
+                  $rem = (float)$userAllocDetails[$code]['remaining_days'];
+              }
+              $used = max(0, $alloc - $rem);
+              $icon = $leaveIconMap[$code] ?? 'calendar';
+            ?>
+            <div class="kpi-card">
               <div class="kpi-header">
-                <span class="kpi-label">Vacation Leave (VL)</span>
-                <div class="kpi-icon"><i data-lucide="palmtree"></i></div>
+                <span class="kpi-label"><?= htmlspecialchars($lt['name']) ?> (<?= htmlspecialchars($code) ?>)</span>
+                <div class="kpi-icon"><i data-lucide="<?= $icon ?>"></i></div>
               </div>
               <div class="kpi-value-row">
-                <span class="kpi-value"><?= number_format($vlBalance, 1) ?></span>
-                <span class="kpi-sub">/ 12.0 Days</span>
+                <span class="kpi-value"><?= number_format($rem, 1) ?></span>
+                <span class="kpi-sub">/ <?= number_format($alloc, 1) ?> Days</span>
               </div>
-              <div class="kpi-footer positive">
-                <i data-lucide="check" style="width:14px;height:14px;"></i>
-                <span>Annual Vacation Credit</span>
-              </div>
-            </div>
-
-            <div class="kpi-card purple">
-              <div class="kpi-header">
-                <span class="kpi-label">Sick Leave (SL)</span>
-                <div class="kpi-icon"><i data-lucide="heart-pulse"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value"><?= number_format($slBalance, 1) ?></span>
-                <span class="kpi-sub">/ 10.0 Days</span>
-              </div>
-              <div class="kpi-footer neutral">
-                <i data-lucide="file-text" style="width:14px;height:14px;"></i>
-                <span>Medical Allocation</span>
+              <div class="kpi-footer">
+                <i data-lucide="<?= $used > 0 ? 'clock' : 'check' ?>" style="width:14px;height:14px;"></i>
+                <span><?= $used > 0 ? number_format($used, 1) . ' day(s) used' : 'Full allocation available' ?></span>
               </div>
             </div>
-
-            <div class="kpi-card amber">
-              <div class="kpi-header">
-                <span class="kpi-label">Emergency Leave</span>
-                <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
-              </div>
-              <div class="kpi-value-row">
-                <span class="kpi-value"><?= number_format($emBalance, 1) ?></span>
-                <span class="kpi-sub">/ 5.0 Days</span>
-              </div>
-              <div class="kpi-footer neutral">
-                <i data-lucide="shield" style="width:14px;height:14px;"></i>
-                <span>Urgent Personal Leave</span>
-              </div>
-            </div>
-
-            <?php if ($userGender === 'Female'): ?>
-              <div class="kpi-card blue">
-                <div class="kpi-header">
-                  <span class="kpi-label">Maternity Leave</span>
-                  <div class="kpi-icon"><i data-lucide="baby"></i></div>
-                </div>
-                <div class="kpi-value-row">
-                  <span class="kpi-value"><?= number_format($matBalance, 0) ?></span>
-                  <span class="kpi-sub">Days Entitlement</span>
-                </div>
-                <div class="kpi-footer positive">
-                  <i data-lucide="check" style="width:14px;height:14px;"></i>
-                  <span>Statutory Benefit</span>
-                </div>
-              </div>
-            <?php else: ?>
-              <div class="kpi-card blue">
-                <div class="kpi-header">
-                  <span class="kpi-label">Paternity Leave</span>
-                  <div class="kpi-icon"><i data-lucide="user-check"></i></div>
-                </div>
-                <div class="kpi-value-row">
-                  <span class="kpi-value"><?= number_format($patBalance, 1) ?></span>
-                  <span class="kpi-sub">/ 7.0 Days</span>
-                </div>
-                <div class="kpi-footer positive">
-                  <i data-lucide="check" style="width:14px;height:14px;"></i>
-                  <span>Statutory Benefit</span>
-                </div>
-              </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
           </div>
 
           <!-- Leave History Table Card -->
           <div class="dashboard-card">
             <div class="card-head">
-              <h3><i data-lucide="clock" style="color:var(--accent);"></i> My Personal Leave History</h3>
+              <h3><i data-lucide="clock"></i> My Personal Leave History</h3>
               <span style="font-size:12px; color:var(--text-muted);"><?= count($leaveRequests) ?> Applications</span>
             </div>
             <div class="table-responsive">
@@ -515,7 +494,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
                     </tr>
                   <?php else: ?>
                     <?php foreach ($leaveRequests as $req): ?>
-                      <tr>
+                      <tr data-ref="<?= htmlspecialchars($req['ref_no']) ?>" class="leave-history-row">
                         <td>
                           <span class="badge badge-vl"><?= htmlspecialchars($req['leave_type_label']) ?></span>
                           <div style="font-size:10.5px; color:var(--text-light); margin-top:2px;">Ref: <?= $req['ref_no'] ?></div>
@@ -594,15 +573,9 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <span class="filter-label">Category:</span>
               <select id="calFilterType" class="form-select" style="padding:6px 10px; font-size:12px;" onchange="refreshCalendarEvents()">
                 <option value="ALL">All Categories</option>
-                <option value="VL">Vacation Leave</option>
-                <option value="SL">Sick Leave</option>
-                <option value="Emergency">Emergency Leave</option>
-                <option value="Bereavement">Bereavement Leave</option>
-                <option value="Maternity">Maternity Leave</option>
-                <option value="Paternity">Paternity Leave</option>
-                <option value="SoloParent">Solo Parent Leave</option>
-                <option value="SpecialWomen">Special Leave for Women</option>
-                <option value="LWOP">Leave Without Pay</option>
+                <?php foreach ($activeLeaveTypes as $lt): ?>
+                  <option value="<?= htmlspecialchars($lt['code']) ?>"><?= htmlspecialchars($lt['name']) ?></option>
+                <?php endforeach; ?>
               </select>
             </div>
 
@@ -618,14 +591,12 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
             <div id="leaveCalendar"></div>
 
             <div class="calendar-legend-bar">
-              <div class="legend-chip"><span class="dot" style="background:#059669;"></span> Vacation Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#e11d48;"></span> Sick Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#ea580c;"></span> Emergency Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#475569;"></span> Bereavement Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#7c3aed;"></span> Maternity Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#0284c7;"></span> Paternity Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#d97706;"></span> Solo Parent Leave</div>
-              <div class="legend-chip"><span class="dot" style="background:#9333ea;"></span> Special Leave for Women</div>
+              <?php foreach ($activeLeaveTypes as $lt): ?>
+                <div class="legend-chip">
+                  <span class="dot" style="background:<?= htmlspecialchars($lt['color'] ?? '#8b0e14') ?>;"></span>
+                  <?= htmlspecialchars($lt['name']) ?>
+                </div>
+              <?php endforeach; ?>
               <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Regular Holiday</div>
               <div class="legend-chip"><span class="dot" style="background:#7c2d12;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Special Holiday</div>
             </div>
@@ -659,7 +630,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
           <!-- Associate Attendance KPIs -->
           <div class="kpi-grid">
-            <div class="kpi-card purple">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Biometric Terminal Profile</span>
                 <div class="kpi-icon"><i data-lucide="fingerprint"></i></div>
@@ -667,13 +638,13 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <div class="kpi-value-row">
                 <span class="kpi-value" style="font-size:20px;">PIN #<?= htmlspecialchars($user['biometric_pin'] ?: $user['id']) ?></span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
                 <span>Face &amp; Fingerprint Enrolled</span>
               </div>
             </div>
 
-            <div class="kpi-card green">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Rendered Work Hours</span>
                 <div class="kpi-icon"><i data-lucide="activity"></i></div>
@@ -682,13 +653,13 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
                 <span class="kpi-value" id="staffRenderedHours">0.0</span>
                 <span class="kpi-sub">Total Hours</span>
               </div>
-              <div class="kpi-footer neutral">
+              <div class="kpi-footer">
                 <i data-lucide="clock" style="width:14px;height:14px;"></i>
                 <span id="staffRenderedFormatted">0 hrs</span>
               </div>
             </div>
 
-            <div class="kpi-card blue">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Approved Overtime</span>
                 <div class="kpi-icon"><i data-lucide="award"></i></div>
@@ -697,13 +668,13 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
                 <span class="kpi-value" id="staffOtHours">0.0</span>
                 <span class="kpi-sub">Hours Rendered</span>
               </div>
-              <div class="kpi-footer positive">
+              <div class="kpi-footer">
                 <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
                 <span>Pre-Approved Overtime</span>
               </div>
             </div>
 
-            <div class="kpi-card amber">
+            <div class="kpi-card">
               <div class="kpi-header">
                 <span class="kpi-label">Today's Office Status</span>
                 <div class="kpi-icon"><i data-lucide="user-check"></i></div>
@@ -711,7 +682,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
               <div class="kpi-value-row">
                 <span class="kpi-value" style="font-size:18px;" id="staffTodayPresence">Checking...</span>
               </div>
-              <div class="kpi-footer neutral">
+              <div class="kpi-footer">
                 <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
                 <span id="staffTodayPunchDesc">Real-Time Presence</span>
               </div>
@@ -722,7 +693,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
           <div class="dashboard-card" style="margin-bottom: 20px;">
             <div class="card-head" style="flex-wrap:wrap; gap:12px;">
               <div style="display:flex; align-items:center; gap:8px;">
-                <i data-lucide="calendar" style="color:var(--accent);"></i>
+                <i data-lucide="calendar"></i>
                 <h3 style="margin:0;">Attendance Calendar Period</h3>
               </div>
               <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -767,7 +738,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
           <!-- Real-Time Team Presence Roster Widget -->
           <div class="dashboard-card" style="margin-bottom: 20px;">
             <div class="card-head">
-              <h3><i data-lucide="users" style="color:var(--accent);"></i> Live Office Presence Board (Who's In / Who's Out)</h3>
+              <h3><i data-lucide="users"></i> Live Office Presence Board (Who's In / Who's Out)</h3>
               <span style="font-size:12px; color:var(--text-muted);" id="presenceDateLabel">Today</span>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:12px; padding:16px;" id="presenceRosterContainer">
@@ -779,7 +750,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
           <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
             <div class="dashboard-card">
               <div class="card-head">
-                <h4><i data-lucide="edit-3" style="color:var(--accent);"></i> My Missed Punch Adjustments</h4>
+                <h4><i data-lucide="edit-3"></i> My Missed Punch Adjustments</h4>
                 <button class="btn-secondary" style="font-size:11.5px; padding:4px 8px;" onclick="openModal('staffCorrectionModal')">New Adjustment</button>
               </div>
               <div class="table-responsive">
@@ -801,7 +772,7 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
             <div class="dashboard-card">
               <div class="card-head">
-                <h4><i data-lucide="clock" style="color:var(--accent);"></i> My Overtime Pre-Approvals</h4>
+                <h4><i data-lucide="clock"></i> My Overtime Pre-Approvals</h4>
                 <button class="btn-secondary" style="font-size:11.5px; padding:4px 8px;" onclick="openModal('staffOtModal')">Request OT</button>
               </div>
               <div class="table-responsive">
@@ -844,9 +815,9 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
             <label class="form-label">Leave Category <span class="req">*</span></label>
             <select name="leave_type" id="applyLeaveType" class="form-select" required onchange="calculateWorkingDaysPreview()">
               <?php foreach ($activeLeaveTypes as $lt): 
-                $isGenderRestricted = ($lt['gender_restriction'] === 'Female' && $userGender === 'Male') || ($lt['gender_restriction'] === 'Male' && $userGender === 'Female');
+                $isGenderRestricted = (strcasecmp($lt['gender_restriction'], 'Female') === 0 && strcasecmp($userGender, 'Male') === 0) || (strcasecmp($lt['gender_restriction'], 'Male') === 0 && strcasecmp($userGender, 'Female') === 0);
                 if ($isGenderRestricted) continue;
-                $remDays = $userAllocMap[$lt['code']] ?? (float)$lt['default_days'];
+                $remDays = isset($userAllocMap[$lt['code']]) ? (float)$userAllocMap[$lt['code']] : ($lt['code'] === 'VL' ? $vlBalance : ($lt['code'] === 'SL' ? $slBalance : (float)$lt['default_days']));
               ?>
                 <option value="<?= htmlspecialchars($lt['code']) ?>"
                   data-gender="<?= htmlspecialchars($lt['gender_restriction']) ?>"
@@ -1237,8 +1208,16 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
       if (tabId === 'overall') {
         if (typeof loadStaffOverallDashboard === 'function') loadStaffOverallDashboard();
       }
-      if (tabId === 'calendar' && typeof calendarInstance !== 'undefined' && calendarInstance) {
-        setTimeout(() => calendarInstance.render(), 50);
+      if (tabId === 'calendar') {
+        setTimeout(() => {
+          if (typeof initCalendar === 'function') {
+            if (!calendarInstance) {
+              initCalendar();
+            } else {
+              calendarInstance.render();
+            }
+          }
+        }, 50);
       }
       if (tabId === 'attendance') {
         if (typeof loadStaffDtr === 'function') loadStaffDtr();
@@ -1247,8 +1226,10 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
     function initSavedTab() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryTab = urlParams.get('tab');
       const hashTab = window.location.hash.replace('#', '').trim();
-      const savedTab = hashTab || localStorage.getItem('jtyeo_staff_active_tab') || 'overall';
+      const savedTab = queryTab || hashTab || localStorage.getItem('jtyeo_staff_active_tab') || 'overall';
       if (savedTab && document.getElementById(`tab-${savedTab}`)) {
         switchTab(savedTab, false);
       } else {
@@ -1258,6 +1239,36 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
         if (typeof loadStaffDtr === 'function') loadStaffDtr();
       } else if (savedTab === 'overall') {
         if (typeof loadStaffOverallDashboard === 'function') loadStaffOverallDashboard();
+      } else if (savedTab === 'calendar') {
+        setTimeout(() => {
+          if (typeof initCalendar === 'function') {
+            if (!calendarInstance) {
+              initCalendar();
+            } else {
+              calendarInstance.render();
+            }
+          }
+        }, 50);
+      }
+
+      // Check for deep-linked print slip from automated email
+      const targetPrintRef = urlParams.get('print_ref') || urlParams.get('ref');
+      if (targetPrintRef) {
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-ref="${targetPrintRef}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.outline = '2px solid var(--accent)';
+            row.style.backgroundColor = 'rgba(14, 165, 233, 0.08)';
+            const printBtn = row.querySelector('button[title="Print Official Leave Slip"]');
+            if (printBtn) {
+              printBtn.click();
+            } else {
+              const viewBtn = row.querySelector('button[title="View Full Details"]');
+              if (viewBtn) viewBtn.click();
+            }
+          }
+        }, 350);
       }
     }
 
@@ -1906,13 +1917,23 @@ $userAllocMap = $userAllocStmt->fetchAll(PDO::FETCH_KEY_PAIR);
             else if (r.status_type === 'warning') badgeClass = 'badge-pending';
             else if (r.status_type === 'leave') badgeClass = 'badge-secondary';
 
+            let timeInHtml = r.time_in || '—';
+            if (r.time_in && r.is_tardy) {
+              timeInHtml += ` <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 5px;" title="Tardy: Arrival past 8:30 AM official schedule">${r.tardy_formatted}</span>`;
+            }
+
+            let timeOutHtml = r.time_out || '—';
+            if (!r.time_out && r.is_incomplete && r.exception_type === 'missing_out') {
+              timeOutHtml = `<span class="badge" style="background:#fef3c7; color:#b45309; font-size:10px; padding:2px 6px;" title="No time-out registered on terminal">Missing Out</span>`;
+            }
+
             html += `
               <tr>
                 <td><strong>${r.log_date_formatted || r.log_date}</strong></td>
-                <td>${r.time_in || '—'}</td>
+                <td>${timeInHtml}</td>
                 <td>${r.break_out || '—'}</td>
                 <td>${r.break_in || '—'}</td>
-                <td>${r.time_out || '—'}</td>
+                <td>${timeOutHtml}</td>
                 <td><strong style="color:var(--primary);">${r.rendered_hours > 0 ? r.rendered_hours + ' hrs' : '—'}</strong></td>
                 <td>${r.overtime_hours > 0 ? `<span style="color:#0284c7; font-weight:700;">+${r.overtime_hours} hrs</span>` : '—'}</td>
                 <td><span style="font-size:11px; color:var(--text-muted);">${r.verification_method || '—'}</span></td>

@@ -127,20 +127,18 @@ if ($action === 'check_device_pin') {
         $hasFp = $hasFp || (bool)$existingUser['fingerprint_enrolled'];
     }
 
-    // If standard numeric PIN (e.g. 100, 101, 102, 103, 104) enrolled on the physical terminal
-    if (is_numeric($pin) && intval($pin) >= 100) {
-        $hasFace = true;
-        $hasFp = true;
-    }
+    $statusParts = [];
+    if ($hasFace) $statusParts[] = "Face Enrolled";
+    if ($hasFp) $statusParts[] = "Fingerprint Enrolled";
 
     echo json_encode([
         'success' => true,
         'pin' => $pin,
         'face_enrolled' => $hasFace ? 1 : 0,
         'fingerprint_enrolled' => $hasFp ? 1 : 0,
-        'message' => ($hasFace || $hasFp) 
-            ? "ZKTeco MB460 Plus detected PIN #{$pin}: " . ($hasFace ? "Face Enrolled " : "") . ($hasFp ? "& Fingerprint Enrolled" : "")
-            : "PIN #{$pin} is not yet registered on device keypad."
+        'message' => !empty($statusParts) 
+            ? "PIN #{$pin}: " . implode(' & ', $statusParts)
+            : "PIN #{$pin}: Not yet enrolled on device keypad."
     ]);
     exit;
 }
@@ -166,7 +164,27 @@ if ($action === 'get_status') {
 
 // 3. 1-CLICK DEVICE SYNC (Real Network Socket & Ping)
 if ($action === 'sync_now') {
-    $deviceIp = trim($_POST['device_ip'] ?? ($_GET['device_ip'] ?? '192.168.100.157'));
+    $statusFile = __DIR__ . '/../database/zkteco_status.json';
+    $autoDetectedIp = '';
+    if (file_exists($statusFile)) {
+        $st = json_decode(file_get_contents($statusFile), true) ?: [];
+        if (!empty($st['ip']) && $st['ip'] !== 'unknown') {
+            $autoDetectedIp = $st['ip'];
+        }
+    }
+
+    $deviceIp = trim($_POST['device_ip'] ?? ($_GET['device_ip'] ?? $autoDetectedIp));
+
+    if (empty($deviceIp) || $deviceIp === 'Auto-detecting...') {
+        echo json_encode([
+            'success' => false,
+            'message' => "No biometric device detected on the local network yet. Please configure the Cloud Server IP on the device first.",
+            'device_ip' => 'Auto-detecting...',
+            'status' => 'Waiting for device',
+            'sync_time' => date('Y-m-d H:i:s')
+        ]);
+        exit;
+    }
     
     // Perform real network probe to ZKTeco hardware
     $isOnline = false;
@@ -190,12 +208,22 @@ if ($action === 'sync_now') {
     if (!$isOnline) {
         echo json_encode([
             'success' => false,
-            'message' => "ZKTeco MB460 Plus is OFFLINE / Unreachable at {$deviceIp}. Please connect the device to your network.",
+            'message' => "ZKTeco MB460 Plus is OFFLINE / Unreachable at {$deviceIp}. Please ensure it is connected to the office network.",
             'device_ip' => $deviceIp,
             'status' => 'Offline',
             'sync_time' => date('Y-m-d H:i:s')
         ]);
         exit;
+    }
+
+    // Update status file with confirmed live IP
+    if (file_exists($statusFile)) {
+        $existing = json_decode(file_get_contents($statusFile), true) ?: [];
+        $existing['online'] = true;
+        $existing['last_seen'] = time();
+        $existing['last_seen_formatted'] = date('Y-m-d H:i:s');
+        $existing['ip'] = $deviceIp;
+        @file_put_contents($statusFile, json_encode($existing));
     }
 
     // If device is genuinely online, synchronize user templates
@@ -209,8 +237,8 @@ if ($action === 'sync_now') {
         $pinLogs->execute([$pin]);
         $methods = $pinLogs->fetchAll(PDO::FETCH_COLUMN);
 
-        $shouldFace = in_array('Face Scan', $methods) || (is_numeric($pin) && intval($pin) >= 100);
-        $shouldFp = in_array('Fingerprint', $methods) || (is_numeric($pin) && intval($pin) >= 100);
+        $shouldFace = in_array('Face Scan', $methods);
+        $shouldFp = in_array('Fingerprint', $methods);
 
         if (($shouldFace && !$u['face_enrolled']) || ($shouldFp && !$u['fingerprint_enrolled'])) {
             $up = $pdo->prepare("UPDATE users SET face_enrolled = ?, fingerprint_enrolled = ? WHERE id = ?");
