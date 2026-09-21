@@ -374,7 +374,7 @@ if (file_exists($zkStatusFile)) {
 
               <!-- Today's Biometric Punch Activity Ledger -->
               <div class="dashboard-card">
-                <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="card-head">
                   <h3>
                     <i data-lucide="scan-face"></i>
                     Today's Attendance Punches (ZKTeco MB460 Plus)
@@ -414,7 +414,7 @@ if (file_exists($zkStatusFile)) {
 
               <!-- ZKTeco Hardware Status Widget -->
               <div class="hardware-widget-card">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
                   <div style="display:flex; align-items:center; gap:8px;">
                     <i data-lucide="cpu" style="width:18px; height:18px; color:var(--primary);"></i>
                     <strong style="font-size:13px;">ZKTeco MB460 Plus</strong>
@@ -795,8 +795,8 @@ if (file_exists($zkStatusFile)) {
           <div class="responsive-two-col-grid">
             <!-- Missed Punch Adjustments Queue -->
             <div class="dashboard-card">
-              <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
+              <div class="card-head">
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                   <h4 style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700;"><i data-lucide="edit-3"></i> Missed Punch Adjustment Requests</h4>
                   <span class="badge badge-pending" id="adminCorrectionsBadge" style="display:none;">0</span>
                 </div>
@@ -821,8 +821,8 @@ if (file_exists($zkStatusFile)) {
 
             <!-- Overtime Pre-Approvals Queue -->
             <div class="dashboard-card">
-              <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
+              <div class="card-head">
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                   <h4 style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700;"><i data-lucide="clock"></i> Overtime Pre-Approval Requests</h4>
                   <span class="badge badge-pending" id="adminOtBadge" style="display:none;">0</span>
                 </div>
@@ -1716,6 +1716,7 @@ if (file_exists($zkStatusFile)) {
             <label class="form-label">Reset Password (Leave blank to keep current):</label>
             <input type="password" name="reset_password" class="form-input" placeholder="Enter new password">
           </div>
+        </div>
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
           <button type="submit" class="btn-primary" id="btnEditUserBtn">Save Profile Changes</button>
@@ -2113,7 +2114,7 @@ if (file_exists($zkStatusFile)) {
       try {
         localStorage.setItem('jtyeo_admin_active_tab', tabId);
         if (updateState && history.replaceState) {
-          history.replaceState(null, '', '#' + tabId);
+          history.replaceState(null, '', window.location.pathname + '?tab=' + tabId);
         }
       } catch (e) {}
 
@@ -2139,6 +2140,7 @@ if (file_exists($zkStatusFile)) {
     }
 
     function initSavedTab() {
+      window.scrollTo(0, 0);
       const urlParams = new URLSearchParams(window.location.search);
       const queryTab = urlParams.get('tab');
       const hashTab = window.location.hash.replace('#', '').trim();
@@ -2148,6 +2150,7 @@ if (file_exists($zkStatusFile)) {
       } else {
         switchTab('overall', false);
       }
+      window.scrollTo(0, 0);
       if (savedTab === 'biometrics') {
         if (typeof loadDtrLogs === 'function') loadDtrLogs();
         if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
@@ -2415,7 +2418,7 @@ if (file_exists($zkStatusFile)) {
         if (leaveItems.length > 0) {
           html += `
             <div style="margin-bottom: 20px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border-color);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border-color);">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <i data-lucide="calendar" style="width:16px; height:16px; color:var(--primary);"></i>
                   <strong style="font-size:13px; color:var(--text-main);">Leave Applications</strong>
@@ -2435,7 +2438,7 @@ if (file_exists($zkStatusFile)) {
         if (otItems.length > 0) {
           html += `
             <div style="margin-bottom: 20px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border-color);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border-color);">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <i data-lucide="clock" style="width:16px; height:16px; color:#0284c7;"></i>
                   <strong style="font-size:13px; color:var(--text-main);">Overtime Requests</strong>
@@ -2455,7 +2458,7 @@ if (file_exists($zkStatusFile)) {
         if (correctionItems.length > 0) {
           html += `
             <div style="margin-bottom: 10px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border-color);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border-color);">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <i data-lucide="edit-3" style="width:16px; height:16px; color:#d97706;"></i>
                   <strong style="font-size:13px; color:var(--text-main);">Missed Punch Adjustments</strong>

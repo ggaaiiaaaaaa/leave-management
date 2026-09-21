@@ -192,14 +192,14 @@ $leaveIconMap = [
 
           <!-- 1. Today's Personal Attendance Banner -->
           <div class="dashboard-card" style="margin-bottom: 24px;">
-            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-head">
               <div>
                 <h3 style="display:flex; align-items:center; gap:8px;">
                   <i data-lucide="scan-face"></i>
                   Today's Attendance Punches &bull; <span style="font-weight:normal; font-size:13px; color:var(--text-muted);"><?= date('l, F j, Y') ?></span>
                 </h3>
               </div>
-              <div style="display:flex; align-items:center; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span class="status-pill active" style="font-size:11px;">
                   <span class="status-dot"></span>
                   <span>Biometric PIN: #<?= htmlspecialchars($user['biometric_pin'] ?: $user['id']) ?></span>
@@ -359,7 +359,7 @@ $leaveIconMap = [
             <!-- Left: My Recent Requests -->
             <div class="overall-col-main">
               <div class="dashboard-card">
-                <div class="card-head" style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="card-head">
                   <h3>
                     <i data-lucide="history"></i>
                     My Recent Applications &amp; Status
@@ -1232,7 +1232,7 @@ $leaveIconMap = [
       try {
         localStorage.setItem('jtyeo_staff_active_tab', tabId);
         if (updateState && history.replaceState) {
-          history.replaceState(null, '', '#' + tabId);
+          history.replaceState(null, '', window.location.pathname + '?tab=' + tabId);
         }
       } catch (e) {}
 
@@ -1257,6 +1257,7 @@ $leaveIconMap = [
     }
 
     function initSavedTab() {
+      window.scrollTo(0, 0);
       const urlParams = new URLSearchParams(window.location.search);
       const queryTab = urlParams.get('tab');
       const hashTab = window.location.hash.replace('#', '').trim();
@@ -1266,6 +1267,7 @@ $leaveIconMap = [
       } else {
         switchTab('overall', false);
       }
+      window.scrollTo(0, 0);
       if (savedTab === 'attendance') {
         if (typeof loadStaffDtr === 'function') loadStaffDtr();
       } else if (savedTab === 'overall') {
