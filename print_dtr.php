@@ -108,6 +108,11 @@ if ($isAdmin) {
             padding: 0;
         }
 
+        html, body {
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f1f5f9;
@@ -116,6 +121,13 @@ if ($isAdmin) {
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+        }
+
+        .dtr-sheet-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
         }
 
         .no-print-toolbar {
@@ -322,6 +334,44 @@ if ($isAdmin) {
             color: #475569;
         }
 
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 12px 8px;
+            }
+
+            .no-print-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+                padding: 14px;
+            }
+
+            .toolbar-group {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                gap: 8px;
+            }
+
+            .toolbar-select, .toolbar-btn {
+                width: 100%;
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+
+            .dtr-sheet-container {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .dtr-sheet {
+                min-width: 650px;
+                padding: 24px 20px;
+                margin: 0 auto;
+            }
+        }
+
         @media print {
             body {
                 background: #ffffff;
@@ -395,7 +445,8 @@ if ($isAdmin) {
     </div>
 
     <!-- Official Civil Service Form No. 48 Sheet -->
-    <div class="dtr-sheet">
+    <div class="dtr-sheet-container">
+      <div class="dtr-sheet">
         <div class="header-block">
             <div class="form-num">Civil Service Form No. 48</div>
             <div class="main-title">DAILY TIME RECORD</div>
@@ -544,6 +595,7 @@ if ($isAdmin) {
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <script>

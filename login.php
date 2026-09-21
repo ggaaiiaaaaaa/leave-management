@@ -458,51 +458,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       color: #475569;
     }
 
-    /* Remember me & Forgot password row */
-    .form-options-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-      margin-bottom: 22px;
-      font-size: 13.5px;
-    }
 
-    .remember-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: #334155;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .remember-checkbox {
-      width: 17px;
-      height: 17px;
-      border-radius: 4px;
-      accent-color: #dc0000;
-      cursor: pointer;
-    }
-
-    .forgot-link {
-      color: #b91c1c;
-      text-decoration: none;
-      font-weight: 700;
-      transition: color 0.15s ease;
-    }
-
-    .forgot-link:hover {
-      color: #dc0000;
-      text-decoration: underline;
-    }
 
     /* Sign In Submit Button */
     .btn-submit {
       width: 100%;
+      margin-top: 10px;
       padding: 14px 20px;
       background: linear-gradient(180deg, #dc0000 0%, #b91c1c 100%);
       color: #ffffff;
@@ -593,10 +554,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       .form-group {
         margin-bottom: 14px;
       }
-      .form-options-row {
-        margin-top: 10px;
-        margin-bottom: 16px;
-      }
+
       .hero-wave {
         height: 170px;
       }
@@ -830,12 +788,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         margin-bottom: 16px;
       }
 
-      .form-options-row {
-        margin-top: 10px;
-        margin-bottom: 20px;
-        font-size: 13px;
-      }
-
       .btn-submit {
         padding: 13px 16px;
         font-size: 15px;
@@ -857,45 +809,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       .card-logo-img {
         width: 130px;
       }
-
-      .form-options-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-    /* Custom Forgot Password Modal */
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(18, 10, 12, 0.72);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 99999;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      animation: fadeIn 0.2s ease;
-    }
-    .modal-backdrop.show { display: flex; }
-    .modal-window {
-      background: #ffffff;
-      border-radius: 20px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 30px 70px -15px rgba(20, 8, 11, 0.45), 0 0 0 1px rgba(220, 0, 0, 0.12);
-      border: 1px solid rgba(220, 0, 0, 0.15);
-      border-top: 4px solid #dc0000;
-      overflow: hidden;
-      animation: modalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-      text-align: center;
-    }
-    @keyframes modalPop {
-      0% { opacity: 0; transform: scale(0.93) translateY(14px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
     }
   </style>
 </head>
@@ -1046,14 +959,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </div>
             </div>
 
-            <!-- Options Row -->
-            <div class="form-options-row">
-              <label class="remember-label">
-                <input type="checkbox" name="remember" class="remember-checkbox" checked>
-                <span>Remember me</span>
-              </label>
-              <a href="#" class="forgot-link" onclick="openForgotModal(); return false;">Forgot password?</a>
-            </div>
+
 
             <!-- Action Button -->
             <button type="submit" class="btn-submit">
@@ -1071,31 +977,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
 
-  <!-- Custom Forgot Password Modal -->
-  <div class="modal-backdrop" id="forgotModal">
-    <div class="modal-window">
-      <div style="padding: 32px 26px 20px;">
-        <div style="width: 64px; height: 64px; border-radius: 50%; background: #fee2e2; color: #dc0000; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 10px 25px -5px rgba(220, 0, 0, 0.2);">
-          <i data-lucide="key-round" style="width: 32px; height: 32px;"></i>
-        </div>
-        <h3 style="font-size: 19px; font-weight: 800; color: #140A0C; margin-bottom: 8px; letter-spacing: -0.02em;">Password Assistance</h3>
-        <p style="font-size: 13.5px; color: #666; line-height: 1.6; margin-bottom: 16px;">
-          For data confidentiality and audit compliance under <strong>J.T. Yeo CPAs</strong> internal policy, automated password recovery is disabled.
-        </p>
-        <div style="background: #faf8f8; border: 1px solid rgba(220, 0, 0, 0.12); border-radius: 12px; padding: 14px 16px; text-align: left; font-size: 13px; color: #444; line-height: 1.55;">
-          <div style="font-weight: 700; color: #dc0000; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            <i data-lucide="shield-alert" style="width: 16px; height: 16px;"></i> Administrative Contact
-          </div>
-          Please contact <strong>Atty. Jonathan Yeo</strong> or HR Administration at <a href="mailto:admin@jtyeocpa.ph" style="color: #dc0000; font-weight: 700; text-decoration: underline;">admin@jtyeocpa.ph</a> to reset your account credentials.
-        </div>
-      </div>
-      <div style="padding: 16px 24px 24px; display: flex; justify-content: center; border-top: 1px solid #f0e6e7; background: #ffffff;">
-        <button type="button" onclick="closeForgotModal()" style="width: 100%; padding: 12px 18px; border-radius: 10px; background: linear-gradient(135deg, #dc0000 0%, #8b0e14 100%); color: #fff; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(220, 0, 0, 0.25); font-size: 14px; font-family: inherit;">
-          Understood, Close
-        </button>
-      </div>
-    </div>
-  </div>
+
 
   <script>
     // Initialize icons
@@ -1121,22 +1003,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       });
     }
 
-    function openForgotModal() {
-      document.getElementById('forgotModal').classList.add('show');
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function closeForgotModal() {
-      document.getElementById('forgotModal').classList.remove('show');
-    }
-
-    document.addEventListener('click', function(e) {
-      if (e.target && e.target.id === 'forgotModal') closeForgotModal();
-    });
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeForgotModal();
-    });
   </script>
 </body>
 

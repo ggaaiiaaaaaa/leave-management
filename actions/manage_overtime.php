@@ -88,6 +88,16 @@ if ($action === 'submit_ot') {
         // Apply OT hours to biometric_logs
         $up = $pdo->prepare("UPDATE biometric_logs SET overtime_hours = ? WHERE user_id = ? AND log_date = ?");
         $up->execute([$estimatedHours, $targetUserId, $otDate]);
+    } else {
+        // Notify Admin of new overtime request
+        require_once __DIR__ . '/../services/mailer.php';
+        sendLeaveNotification($pdo, 'ot_filed', [
+            'employee_name' => $currentUser['name'],
+            'employee_email' => $currentUser['email'],
+            'ot_date' => $otDate,
+            'estimated_hours' => $estimatedHours,
+            'reason' => $reason
+        ]);
     }
 
     echo json_encode([
@@ -132,6 +142,21 @@ if ($action === 'approve_ot') {
     ");
     $bioUp->execute([$ot['estimated_hours'], $ot['user_id'], $ot['ot_date']]);
 
+    // Notify employee of approval
+    $empStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = ?");
+    $empStmt->execute([$ot['user_id']]);
+    $emp = $empStmt->fetch();
+    if ($emp && !empty($emp['email'])) {
+        require_once __DIR__ . '/../services/mailer.php';
+        sendLeaveNotification($pdo, 'ot_approved', [
+            'employee_name' => $emp['name'],
+            'employee_email' => $emp['email'],
+            'ot_date' => $ot['ot_date'],
+            'estimated_hours' => $ot['estimated_hours'],
+            'approver_name' => $currentUser['name']
+        ]);
+    }
+
     echo json_encode([
         'success' => true,
         'message' => "Overtime request for {$ot['estimated_hours']} hrs approved."
@@ -147,12 +172,34 @@ if ($action === 'reject_ot') {
     }
 
     $id = intval($_POST['id'] ?? 0);
+
+    $stmt = $pdo->prepare("SELECT * FROM overtime_requests WHERE id = ?");
+    $stmt->execute([$id]);
+    $ot = $stmt->fetch();
+
     $up = $pdo->prepare("
         UPDATE overtime_requests 
         SET status = 'Rejected', approved_by = ?, decided_at = CURRENT_TIMESTAMP 
         WHERE id = ?
     ");
     $up->execute([$currentUser['id'], $id]);
+
+    // Notify employee of rejection
+    if ($ot) {
+        $empStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = ?");
+        $empStmt->execute([$ot['user_id']]);
+        $emp = $empStmt->fetch();
+        if ($emp && !empty($emp['email'])) {
+            require_once __DIR__ . '/../services/mailer.php';
+            sendLeaveNotification($pdo, 'ot_rejected', [
+                'employee_name' => $emp['name'],
+                'employee_email' => $emp['email'],
+                'ot_date' => $ot['ot_date'],
+                'estimated_hours' => $ot['estimated_hours'],
+                'approver_name' => $currentUser['name']
+            ]);
+        }
+    }
 
     echo json_encode([
         'success' => true,

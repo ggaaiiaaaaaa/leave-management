@@ -93,6 +93,9 @@ $leaveIconMap = [
 </head>
 <body>
   <div class="app-container">
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileMenu(false)"></div>
+
     <!-- Sidebar Navigation -->
     <aside class="sidebar no-print">
       <div class="brand-section">
@@ -104,6 +107,9 @@ $leaveIconMap = [
           <span>Accounting Office</span>
           <div class="firm-badge">Staff Associate Portal</div>
         </div>
+        <button class="mobile-menu-close" onclick="toggleMobileMenu(false)" aria-label="Close navigation menu">
+          <i data-lucide="x"></i>
+        </button>
       </div>
 
       <nav class="sidebar-nav">
@@ -132,6 +138,9 @@ $leaveIconMap = [
       <!-- Top Bar Header -->
       <header class="top-header no-print">
         <div class="header-left">
+          <button class="mobile-menu-toggle no-print" id="mobileMenuToggle" onclick="toggleMobileMenu()" aria-label="Toggle navigation menu">
+            <i data-lucide="menu"></i>
+          </button>
           <div class="firm-status">
             <span class="status-dot"></span>
             <span>Current Role: <strong><?= htmlspecialchars($user['title']) ?></strong></span>
@@ -747,7 +756,7 @@ $leaveIconMap = [
           </div>
 
           <!-- Requests History: Corrections & Overtime -->
-          <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
+          <div class="responsive-two-col-grid">
             <div class="dashboard-card">
               <div class="card-head">
                 <h4><i data-lucide="edit-3"></i> My Missed Punch Adjustments</h4>
@@ -1186,7 +1195,29 @@ $leaveIconMap = [
       'SpecialWomen': <?= (float)$specBalance ?>
     };
 
+    // Mobile Navigation Drawer Controller
+    window.toggleMobileMenu = function(force) {
+      const sidebar = document.querySelector('.sidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (!sidebar) return;
+      const isOpen = sidebar.classList.contains('mobile-open');
+      const nextState = (typeof force === 'boolean') ? force : !isOpen;
+      if (nextState) {
+        sidebar.classList.add('mobile-open');
+        backdrop?.classList.add('show');
+        document.body.classList.add('sidebar-open');
+      } else {
+        sidebar.classList.remove('mobile-open');
+        backdrop?.classList.remove('show');
+        document.body.classList.remove('sidebar-open');
+      }
+    };
+
     function switchTab(tabId, updateState = true) {
+      if (window.innerWidth <= 992) {
+        toggleMobileMenu(false);
+      }
+
       const activePane = document.getElementById(`tab-${tabId}`);
       if (!activePane) tabId = 'overall';
 

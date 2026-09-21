@@ -112,44 +112,207 @@ function sendLeaveNotification($pdo, $type, $data) {
                 </p>
             </div>
         ";
-    } elseif ($type === 'email_changed') {
-        // Sent to Managing Partner / Admin when an associate changes their email
+    } elseif ($type === 'ot_filed') {
+        // Sent to Managing Partner / Admin
         $adminStmt = $pdo->query("SELECT email, name FROM users WHERE role = 'admin' LIMIT 1");
         $admin = $adminStmt->fetch();
         $recipientEmail = $admin['email'] ?? 'admin@jtyeocpa.ph';
-        $recipientName = $admin['name'] ?? 'Managing Partner';
+        $recipientName = $admin['name'] ?? 'Atty. Jonathan Yeo, CPA';
 
-        $subject = "Security Notice: Associate Email Changed ({$data['employee_name']})";
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
+        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
+        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+        $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=biometrics";
+
+        $subject = "New Overtime Pre-Approval Filed: {$data['employee_name']} ({$data['estimated_hours']} hrs on {$data['ot_date']})";
         $htmlBody = "
             <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
-                <div style='border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;'>
-                    <h2 style='color: #0f172a; margin: 0; font-size: 20px;'>JTYeo CPA Accounting Office</h2>
-                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>Account Security &amp; Profile Notice</p>
+                <div style='border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px;'>
+                    <h2 style='color: #0284c7; margin: 0; font-size: 20px;'>JTYeo CPA Accounting Office</h2>
+                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>Overtime Pre-Authorization Request</p>
                 </div>
                 <p style='color: #334155; font-size: 15px;'>Dear <strong>{$recipientName}</strong>,</p>
-                <p style='color: #334155; font-size: 14px;'>This is to notify you that an associate has updated their official email address:</p>
+                <p style='color: #334155; font-size: 14px;'>An associate has submitted an overtime pre-authorization request for your review:</p>
                 <table style='width: 100%; border-collapse: collapse; margin: 16px 0;'>
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px; width: 140px;'>Associate Name:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0f172a;'>{$data['employee_name']}</td></tr>
-                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Previous Email:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #dc2626; font-family: monospace;'>{$data['old_email']}</td></tr>
-                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>New Email:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #15803d; font-weight: bold; font-family: monospace;'>{$data['new_email']}</td></tr>
-                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Updated At:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['updated_at']}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Overtime Date:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['ot_date']}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Estimated Hours:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0284c7;'>{$data['estimated_hours']} Hours</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Reason / Project:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['reason']}</td></tr>
                 </table>
-                <p style='color: #64748b; font-size: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
-                    If this update was unexpected, you can review or modify their credentials from the Admin Associates tab.
+                <div style='margin: 22px 0; text-align: center;'>
+                    <a href='{$reviewLink}' style='display: inline-block; background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;'>
+                        Review in Overtime Queue &rarr;
+                    </a>
+                </div>
+            </div>
+        ";
+    } elseif ($type === 'ot_approved') {
+        $recipientEmail = $data['employee_email'];
+        $recipientName = $data['employee_name'];
+
+        $subject = "Overtime Pre-Approval Confirmed: {$data['estimated_hours']} hrs on {$data['ot_date']}";
+        $htmlBody = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
+                <div style='border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 16px;'>
+                    <h2 style='color: #10b981; margin: 0; font-size: 20px;'>Overtime Approved</h2>
+                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>JTYeo CPA Accounting Office</p>
+                </div>
+                <p style='color: #334155; font-size: 15px;'>Dear <strong>{$recipientName}</strong>,</p>
+                <p style='color: #334155; font-size: 14px;'>Your overtime request has been <strong style='color: #10b981;'>APPROVED</strong> by <strong>{$data['approver_name']}</strong>.</p>
+                <table style='width: 100%; border-collapse: collapse; margin: 16px 0;'>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px; width: 140px;'>Overtime Date:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['ot_date']}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Approved Hours:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0284c7;'>{$data['estimated_hours']} Hours</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Approved By:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['approver_name']}</td></tr>
+                </table>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
+                    Approved overtime hours are officially authorized and recorded on your Form 48 DTR.
+                </p>
+            </div>
+        ";
+    } elseif ($type === 'ot_rejected') {
+        $recipientEmail = $data['employee_email'];
+        $recipientName = $data['employee_name'];
+
+        $subject = "Overtime Request Update: {$data['estimated_hours']} hrs on {$data['ot_date']}";
+        $htmlBody = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
+                <div style='border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 16px;'>
+                    <h2 style='color: #ef4444; margin: 0; font-size: 20px;'>Overtime Request Not Approved</h2>
+                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>JTYeo CPA Accounting Office</p>
+                </div>
+                <p style='color: #334155; font-size: 15px;'>Dear <strong>{$recipientName}</strong>,</p>
+                <p style='color: #334155; font-size: 14px;'>Your overtime pre-authorization request for <strong>{$data['estimated_hours']} hours</strong> on <strong>{$data['ot_date']}</strong> could not be approved at this time.</p>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
+                    Please coordinate directly with Atty. Jonathan Yeo or HR Administration for further inquiries.
+                </p>
+            </div>
+        ";
+    } elseif ($type === 'correction_filed') {
+        // Sent to Managing Partner / Admin
+        $adminStmt = $pdo->query("SELECT email, name FROM users WHERE role = 'admin' LIMIT 1");
+        $admin = $adminStmt->fetch();
+        $recipientEmail = $admin['email'] ?? 'admin@jtyeocpa.ph';
+        $recipientName = $admin['name'] ?? 'Atty. Jonathan Yeo, CPA';
+
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
+        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
+        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+        $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=biometrics";
+
+        $punchParts = [];
+        if (!empty($data['time_in'])) $punchParts[] = "In: {$data['time_in']}";
+        if (!empty($data['break_out'])) $punchParts[] = "Break Out: {$data['break_out']}";
+        if (!empty($data['break_in'])) $punchParts[] = "Break In: {$data['break_in']}";
+        if (!empty($data['time_out'])) $punchParts[] = "Out: {$data['time_out']}";
+        $punchStr = implode(' | ', $punchParts);
+
+        $subject = "Missed Punch Adjustment Filed: {$data['employee_name']} ({$data['target_date']})";
+        $htmlBody = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
+                <div style='border-bottom: 2px solid #d97706; padding-bottom: 12px; margin-bottom: 16px;'>
+                    <h2 style='color: #d97706; margin: 0; font-size: 20px;'>JTYeo CPA Accounting Office</h2>
+                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>Biometric Attendance Adjustment Request</p>
+                </div>
+                <p style='color: #334155; font-size: 15px;'>Dear <strong>{$recipientName}</strong>,</p>
+                <p style='color: #334155; font-size: 14px;'>An associate has submitted a missed punch adjustment request for your review:</p>
+                <table style='width: 100%; border-collapse: collapse; margin: 16px 0;'>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px; width: 140px;'>Associate Name:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0f172a;'>{$data['employee_name']}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Target Date:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['target_date']}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Adjusted Punches:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #d97706;'>{$punchStr}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Reason:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['reason']}</td></tr>
+                </table>
+                <div style='margin: 22px 0; text-align: center;'>
+                    <a href='{$reviewLink}' style='display: inline-block; background-color: #d97706; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;'>
+                        Review in Attendance &rarr;
+                    </a>
+                </div>
+            </div>
+        ";
+    } elseif ($type === 'correction_approved') {
+        $recipientEmail = $data['employee_email'];
+        $recipientName = $data['employee_name'];
+
+        $subject = "Missed Punch Adjustment Approved ({$data['target_date']})";
+        $htmlBody = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
+                <div style='border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 16px;'>
+                    <h2 style='color: #10b981; margin: 0; font-size: 20px;'>Adjustment Approved</h2>
+                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>JTYeo CPA Accounting Office</p>
+                </div>
+                <p style='color: #334155; font-size: 15px;'>Dear <strong>{$recipientName}</strong>,</p>
+                <p style='color: #334155; font-size: 14px;'>Your missed punch adjustment for <strong>{$data['target_date']}</strong> has been <strong style='color: #10b981;'>APPROVED</strong> by <strong>{$data['approver_name']}</strong>.</p>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
+                    Your biometric attendance record and rendered hours have been recalculated and updated on your Form 48 DTR.
+                </p>
+            </div>
+        ";
+    } elseif ($type === 'correction_rejected') {
+        $recipientEmail = $data['employee_email'];
+        $recipientName = $data['employee_name'];
+
+        $subject = "Missed Punch Adjustment Update ({$data['target_date']})";
+        $htmlBody = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
+                <div style='border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 16px;'>
+                    <h2 style='color: #ef4444; margin: 0; font-size: 20px;'>Adjustment Request Not Approved</h2>
+                    <p style='color: #64748b; margin: 4px 0 0 0; font-size: 13px;'>JTYeo CPA Accounting Office</p>
+                </div>
+                <p style='color: #334155; font-size: 15px;'>Dear <strong>{$recipientName}</strong>,</p>
+                <p style='color: #334155; font-size: 14px;'>Your attendance adjustment request for <strong>{$data['target_date']}</strong> could not be approved at this time.</p>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 12px;'>
+                    Please coordinate directly with Atty. Jonathan Yeo or HR Administration for further details.
                 </p>
             </div>
         ";
     }
 
+    // Attempt dispatch via SMTP if enabled
+    $smtpConfigFile = __DIR__ . '/../config/smtp.php';
+    $sendSuccess = false;
+    $status = 'Logged';
+
+    if (file_exists($smtpConfigFile)) {
+        $smtpConfig = require $smtpConfigFile;
+        if (!empty($smtpConfig['enabled']) && !empty($smtpConfig['username'])) {
+            require_once __DIR__ . '/smtp_client.php';
+            $smtp = new SmtpClient($smtpConfig);
+            $res = $smtp->send(
+                $smtpConfig['from_email'] ?? $smtpConfig['username'],
+                $smtpConfig['from_name'] ?? 'J.T. Yeo CPA Accounting Office',
+                $recipientEmail,
+                $recipientName,
+                $subject,
+                $htmlBody
+            );
+            if ($res['success']) {
+                $sendSuccess = true;
+                $status = 'Sent (SMTP)';
+            } else {
+                $status = 'Failed (SMTP: ' . substr($res['error'] ?? 'Unknown error', 0, 40) . ')';
+            }
+        }
+    }
+
+    if (!$sendSuccess) {
+        // Fallback to PHP mail()
+        $mailSent = @mail($recipientEmail, $subject, $htmlBody, "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: no-reply@jtyeocpa.ph");
+        if ($mailSent && $status === 'Logged') {
+            $status = 'Sent (mail)';
+        }
+    }
+
     // Record notification in database
     $stmt = $pdo->prepare("
         INSERT INTO email_notifications (recipient_email, recipient_name, subject, body, notification_type, status)
-        VALUES (?, ?, ?, ?, ?, 'Sent')
+        VALUES (?, ?, ?, ?, ?, ?)
     ");
-    $stmt->execute([$recipientEmail, $recipientName, $subject, $htmlBody, $type]);
-
-    // Attempt PHP mail() silently if configured
-    @mail($recipientEmail, $subject, $htmlBody, "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: no-reply@jtyeocpa.ph");
+    $stmt->execute([$recipientEmail, $recipientName, $subject, $htmlBody, $type, $status]);
 
     return true;
 }

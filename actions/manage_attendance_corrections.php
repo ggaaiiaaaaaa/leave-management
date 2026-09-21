@@ -102,6 +102,19 @@ if ($action === 'submit_correction') {
     // If auto-approved by Admin, apply immediately to biometric_logs
     if ($isAdmin) {
         applyCorrectionToBiometrics($pdo, $targetUserId, $targetDate, $timeIn, $breakOut, $breakIn, $timeOut);
+    } else {
+        // Notify Admin of new attendance correction request
+        require_once __DIR__ . '/../services/mailer.php';
+        sendLeaveNotification($pdo, 'correction_filed', [
+            'employee_name' => $currentUser['name'],
+            'employee_email' => $currentUser['email'],
+            'target_date' => $targetDate,
+            'time_in' => $timeIn,
+            'break_out' => $breakOut,
+            'break_in' => $breakIn,
+            'time_out' => $timeOut,
+            'reason' => $reason
+        ]);
     }
 
     echo json_encode([
@@ -142,6 +155,20 @@ if ($action === 'approve_correction') {
     // Apply corrected punch data directly to biometric_logs
     applyCorrectionToBiometrics($pdo, $corr['user_id'], $corr['target_date'], $corr['time_in'], $corr['break_out'], $corr['break_in'], $corr['time_out']);
 
+    // Notify employee of approval
+    $empStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = ?");
+    $empStmt->execute([$corr['user_id']]);
+    $emp = $empStmt->fetch();
+    if ($emp && !empty($emp['email'])) {
+        require_once __DIR__ . '/../services/mailer.php';
+        sendLeaveNotification($pdo, 'correction_approved', [
+            'employee_name' => $emp['name'],
+            'employee_email' => $emp['email'],
+            'target_date' => $corr['target_date'],
+            'approver_name' => $currentUser['name']
+        ]);
+    }
+
     echo json_encode([
         'success' => true,
         'message' => 'Attendance correction approved and DTR updated successfully.'
@@ -157,12 +184,32 @@ if ($action === 'reject_correction') {
     }
 
     $id = intval($_POST['id'] ?? 0);
+    $stmt = $pdo->prepare("SELECT * FROM attendance_corrections WHERE id = ?");
+    $stmt->execute([$id]);
+    $corr = $stmt->fetch();
+
     $up = $pdo->prepare("
         UPDATE attendance_corrections 
         SET status = 'Rejected', approved_by = ?, decided_at = CURRENT_TIMESTAMP 
         WHERE id = ?
     ");
     $up->execute([$currentUser['id'], $id]);
+
+    // Notify employee of rejection
+    if ($corr) {
+        $empStmt = $pdo->prepare("SELECT name, email FROM users WHERE id = ?");
+        $empStmt->execute([$corr['user_id']]);
+        $emp = $empStmt->fetch();
+        if ($emp && !empty($emp['email'])) {
+            require_once __DIR__ . '/../services/mailer.php';
+            sendLeaveNotification($pdo, 'correction_rejected', [
+                'employee_name' => $emp['name'],
+                'employee_email' => $emp['email'],
+                'target_date' => $corr['target_date'],
+                'approver_name' => $currentUser['name']
+            ]);
+        }
+    }
 
     echo json_encode([
         'success' => true,

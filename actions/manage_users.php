@@ -367,7 +367,7 @@ if ($action === 'delete_user') {
         $pdo->beginTransaction();
 
         // 1. Delete associated leave applications and physical attachments
-        $leaveStmt = $pdo->prepare("SELECT attachment_path FROM leave_applications WHERE user_id = ?");
+        $leaveStmt = $pdo->prepare("SELECT attachment_path FROM leave_requests WHERE user_id = ?");
         $leaveStmt->execute([$targetId]);
         $attachments = $leaveStmt->fetchAll(PDO::FETCH_COLUMN);
         foreach ($attachments as $att) {
@@ -375,7 +375,7 @@ if ($action === 'delete_user') {
                 @unlink(__DIR__ . '/../' . $att);
             }
         }
-        $pdo->prepare("DELETE FROM leave_applications WHERE user_id = ?")->execute([$targetId]);
+        $pdo->prepare("DELETE FROM leave_requests WHERE user_id = ?")->execute([$targetId]);
 
         // 2. Delete user leave allocations
         $pdo->prepare("DELETE FROM user_leave_allocations WHERE user_id = ?")->execute([$targetId]);
