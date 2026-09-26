@@ -1725,10 +1725,16 @@ if (file_exists($zkStatusFile)) {
             </div>
             <div style="flex:1;">
               <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:4px;">Associate Avatar Preview</div>
-              <label class="btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
-                <i data-lucide="camera" style="width:13px;height:13px;"></i> Choose Picture
-                <input type="file" name="avatar" id="editUserAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatarImage(this, 'editUserAvatarPreview', 'editUserAvatarInitials')">
-              </label>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label class="btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
+                  <i data-lucide="camera" style="width:13px;height:13px;"></i> Choose Picture
+                  <input type="file" name="avatar" id="editUserAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatarImage(this, 'editUserAvatarPreview', 'editUserAvatarInitials', 'btnRemoveEditAvatar', 'removeEditAvatarInput')">
+                </label>
+                <button type="button" class="btn-secondary" id="btnRemoveEditAvatar" style="display:none; align-items:center; gap:5px; padding:6px 12px; font-size:12px; color:var(--danger, #dc2626);" onclick="removeAvatar('editUserAvatarPreview', 'editUserAvatarInitials', 'editUserAvatarInput', 'btnRemoveEditAvatar', 'removeEditAvatarInput')">
+                  <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Remove Photo
+                </button>
+                <input type="hidden" name="remove_avatar" id="removeEditAvatarInput" value="0">
+              </div>
               <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Check how the photo looks in the avatar circle before saving.</div>
             </div>
           </div>
@@ -1815,11 +1821,17 @@ if (file_exists($zkStatusFile)) {
             </div>
             <div style="flex:1;">
               <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:4px;">Profile Picture Preview</div>
-              <label class="btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
-                <i data-lucide="camera" style="width:13px;height:13px;"></i> Choose Photo
-                <input type="file" name="avatar" id="myAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatarImage(this, 'myAvatarPreview', 'myAvatarInitialText')">
-              </label>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: JPG, PNG, WebP. Live preview shown on the left.</div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label class="btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
+                  <i data-lucide="camera" style="width:13px;height:13px;"></i> Choose Photo
+                  <input type="file" name="avatar" id="myAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatarImage(this, 'myAvatarPreview', 'myAvatarInitialText', 'btnRemoveMyAvatar', 'removeMyAvatarInput')">
+                </label>
+                <button type="button" class="btn-secondary" id="btnRemoveMyAvatar" style="display:<?= !empty($user['avatar_path']) ? 'inline-flex' : 'none' ?>; align-items:center; gap:5px; padding:6px 12px; font-size:12px; color:var(--danger, #dc2626);" onclick="removeAvatar('myAvatarPreview', 'myAvatarInitialText', 'myAvatarInput', 'btnRemoveMyAvatar', 'removeMyAvatarInput')">
+                  <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Remove Photo
+                </button>
+                <input type="hidden" name="remove_avatar" id="removeMyAvatarInput" value="0">
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: JPG, PNG, WebP. Removing falls back to initials.</div>
             </div>
           </div>
 
@@ -4342,8 +4354,7 @@ if (file_exists($zkStatusFile)) {
       }
     }
 
-    // Live Avatar Preview Before Saving
-    function previewAvatarImage(input, previewImgId, initialsSpanId) {
+    function previewAvatarImage(input, previewImgId, initialsSpanId, removeBtnId = 'btnRemoveMyAvatar', removeFlagId = 'removeMyAvatarInput') {
       if (input.files && input.files[0]) {
         const file = input.files[0];
         if (!file.type.match('image.*')) {
@@ -4354,6 +4365,8 @@ if (file_exists($zkStatusFile)) {
         reader.onload = function(e) {
           const img = document.getElementById(previewImgId);
           const initials = document.getElementById(initialsSpanId);
+          const removeBtn = document.getElementById(removeBtnId);
+          const removeFlag = document.getElementById(removeFlagId);
           if (img) {
             img.src = e.target.result;
             img.style.display = 'block';
@@ -4361,8 +4374,39 @@ if (file_exists($zkStatusFile)) {
           if (initials) {
             initials.style.display = 'none';
           }
+          if (removeBtn) {
+            removeBtn.style.display = 'inline-flex';
+          }
+          if (removeFlag) {
+            removeFlag.value = '0';
+          }
         };
         reader.readAsDataURL(file);
+      }
+    }
+
+    function removeAvatar(previewImgId = 'myAvatarPreview', initialsSpanId = 'myAvatarInitialText', fileInputId = 'myAvatarInput', removeBtnId = 'btnRemoveMyAvatar', removeFlagId = 'removeMyAvatarInput') {
+      const img = document.getElementById(previewImgId);
+      const initials = document.getElementById(initialsSpanId);
+      const fileInput = document.getElementById(fileInputId);
+      const removeBtn = document.getElementById(removeBtnId);
+      const removeFlag = document.getElementById(removeFlagId);
+
+      if (img) {
+        img.src = '';
+        img.style.display = 'none';
+      }
+      if (initials) {
+        initials.style.display = 'block';
+      }
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      if (removeBtn) {
+        removeBtn.style.display = 'none';
+      }
+      if (removeFlag) {
+        removeFlag.value = '1';
       }
     }
 
@@ -4386,14 +4430,19 @@ if (file_exists($zkStatusFile)) {
           // Populate avatar preview
           const previewImg = document.getElementById('editUserAvatarPreview');
           const initialsSpan = document.getElementById('editUserAvatarInitials');
+          const removeBtn = document.getElementById('btnRemoveEditAvatar');
+          const removeFlag = document.getElementById('removeEditAvatarInput');
+          if (removeFlag) removeFlag.value = '0';
           if (u.avatar_path && u.avatar_path.length > 3) {
             previewImg.src = u.avatar_path;
             previewImg.style.display = 'block';
             initialsSpan.style.display = 'none';
+            if (removeBtn) removeBtn.style.display = 'inline-flex';
           } else {
             previewImg.style.display = 'none';
             initialsSpan.innerText = u.avatar_initials || 'CP';
             initialsSpan.style.display = 'block';
+            if (removeBtn) removeBtn.style.display = 'none';
           }
           const fileInput = document.getElementById('editUserAvatarInput');
           if (fileInput) fileInput.value = '';

@@ -1009,11 +1009,17 @@ $leaveIconMap = [
             </div>
             <div style="flex:1;">
               <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:4px;">Profile Picture Preview</div>
-              <label class="btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
-                <i data-lucide="camera" style="width:13px;height:13px;"></i> Choose Photo
-                <input type="file" name="avatar" id="myAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatarImage(this, 'myAvatarPreview', 'myAvatarInitialText')">
-              </label>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: JPG, PNG, WebP. Live preview shown on the left.</div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <label class="btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
+                  <i data-lucide="camera" style="width:13px;height:13px;"></i> Choose Photo
+                  <input type="file" name="avatar" id="myAvatarInput" accept="image/*" style="display:none;" onchange="previewAvatarImage(this, 'myAvatarPreview', 'myAvatarInitialText')">
+                </label>
+                <button type="button" class="btn-secondary" id="btnRemoveAvatar" style="display:<?= !empty($user['avatar_path']) ? 'inline-flex' : 'none' ?>; align-items:center; gap:5px; padding:6px 12px; font-size:12px; color:var(--danger, #dc2626);" onclick="removeAvatar()">
+                  <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Remove Photo
+                </button>
+                <input type="hidden" name="remove_avatar" id="removeAvatarInput" value="0">
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: JPG, PNG, WebP. Removing falls back to initials.</div>
             </div>
           </div>
 
@@ -1772,7 +1778,7 @@ $leaveIconMap = [
     }
 
     // Live Avatar Preview Before Saving
-    function previewAvatarImage(input, previewImgId, initialsSpanId) {
+    function previewAvatarImage(input, previewImgId, initialsSpanId, removeBtnId = 'btnRemoveAvatar', removeFlagId = 'removeAvatarInput') {
       if (input.files && input.files[0]) {
         const file = input.files[0];
         if (!file.type.match('image.*')) {
@@ -1783,6 +1789,8 @@ $leaveIconMap = [
         reader.onload = function(e) {
           const img = document.getElementById(previewImgId);
           const initials = document.getElementById(initialsSpanId);
+          const removeBtn = document.getElementById(removeBtnId);
+          const removeFlag = document.getElementById(removeFlagId);
           if (img) {
             img.src = e.target.result;
             img.style.display = 'block';
@@ -1790,8 +1798,39 @@ $leaveIconMap = [
           if (initials) {
             initials.style.display = 'none';
           }
+          if (removeBtn) {
+            removeBtn.style.display = 'inline-flex';
+          }
+          if (removeFlag) {
+            removeFlag.value = '0';
+          }
         };
         reader.readAsDataURL(file);
+      }
+    }
+
+    function removeAvatar(previewImgId = 'myAvatarPreview', initialsSpanId = 'myAvatarInitialText', fileInputId = 'myAvatarInput', removeBtnId = 'btnRemoveAvatar', removeFlagId = 'removeAvatarInput') {
+      const img = document.getElementById(previewImgId);
+      const initials = document.getElementById(initialsSpanId);
+      const fileInput = document.getElementById(fileInputId);
+      const removeBtn = document.getElementById(removeBtnId);
+      const removeFlag = document.getElementById(removeFlagId);
+
+      if (img) {
+        img.src = '';
+        img.style.display = 'none';
+      }
+      if (initials) {
+        initials.style.display = 'block';
+      }
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      if (removeBtn) {
+        removeBtn.style.display = 'none';
+      }
+      if (removeFlag) {
+        removeFlag.value = '1';
       }
     }
 

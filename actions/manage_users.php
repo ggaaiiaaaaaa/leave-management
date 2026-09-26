@@ -77,9 +77,14 @@ if ($action === 'update_profile') {
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
     }
 
-    // Handle Profile Photo Upload
+    // Handle Profile Photo Upload or Removal
     $avatarPath = $curr['avatar_path'];
-    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+    if (!empty($_POST['remove_avatar']) && $_POST['remove_avatar'] === '1') {
+        if (!empty($avatarPath) && file_exists(__DIR__ . '/../' . $avatarPath)) {
+            @unlink(__DIR__ . '/../' . $avatarPath);
+        }
+        $avatarPath = null;
+    } elseif (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/../uploads/avatars';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
@@ -272,9 +277,14 @@ if ($action === 'edit_user') {
         exit;
     }
 
-    // Handle Profile Photo Upload in Edit Associate modal
+    // Handle Profile Photo Upload or Removal in Edit Associate modal
     $avatarPath = $existing['avatar_path'];
-    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+    if (!empty($_POST['remove_avatar']) && $_POST['remove_avatar'] === '1') {
+        if (!empty($avatarPath) && file_exists(__DIR__ . '/../' . $avatarPath)) {
+            @unlink(__DIR__ . '/../' . $avatarPath);
+        }
+        $avatarPath = null;
+    } elseif (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/../uploads/avatars';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
