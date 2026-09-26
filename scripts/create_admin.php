@@ -16,9 +16,9 @@ if ((int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() !== 0) {
     fwrite(STDERR, "Accounts already exist. Use the administrator interface.\n");
     exit(1);
 }
-fwrite(STDOUT, "Enter a unique password of at least 12 characters: ");
+fwrite(STDOUT, "Enter a unique password of at least 8 characters: ");
 $password = rtrim(fgets(STDIN) ?: '', "\r\n");
-if (strlen($password) < 12) {
+if (strlen($password) < 8) {
     fwrite(STDERR, "Password is too short.\n");
     exit(1);
 }

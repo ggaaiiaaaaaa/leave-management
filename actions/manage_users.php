@@ -62,8 +62,8 @@ if ($action === 'update_profile') {
     // Handle Password Change if requested
     $newHash = null;
     if (!empty($newPassword)) {
-        if (strlen($newPassword) < 12) {
-            echo json_encode(['success' => false, 'message' => 'New password must be at least 12 characters.']);
+        if (strlen($newPassword) < 8) {
+            echo json_encode(['success' => false, 'message' => 'New password must be at least 8 characters.']);
             exit;
         }
         if ($newPassword !== $confirmPassword) {
@@ -171,8 +171,8 @@ if ($action === 'add_user' || $action === 'create_user') {
     $faceEnrolled = isset($_POST['face_enrolled']) ? 1 : 0;
     $fingerprintEnrolled = isset($_POST['fingerprint_enrolled']) ? 1 : 0;
 
-    if (empty($name) || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12 || !in_array($role, ['staff', 'admin'], true)) {
-        echo json_encode(['success' => false, 'message' => 'Enter a name, valid email, role, and initial password of at least 12 characters.']);
+    if (empty($name) || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8 || !in_array($role, ['staff', 'admin'], true)) {
+        echo json_encode(['success' => false, 'message' => 'Enter a name, valid email, role, and initial password of at least 8 characters.']);
         exit;
     }
 
@@ -244,8 +244,8 @@ if ($action === 'edit_user') {
     $faceEnrolled = isset($_POST['face_enrolled']) ? 1 : 0;
     $fingerprintEnrolled = isset($_POST['fingerprint_enrolled']) ? 1 : 0;
     $resetPassword = $_POST['reset_password'] ?? '';
-    if ($resetPassword !== '' && strlen($resetPassword) < 12) {
-        echo json_encode(['success' => false, 'message' => 'Reset password must be at least 12 characters.']);
+    if ($resetPassword !== '' && strlen($resetPassword) < 8) {
+        echo json_encode(['success' => false, 'message' => 'Reset password must be at least 8 characters.']);
         exit;
     }
 

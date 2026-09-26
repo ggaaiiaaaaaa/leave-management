@@ -7,7 +7,7 @@ PHP 8.2, SQLite, vanilla JavaScript/CSS. The app provides staff and administrato
 1. Place the project at `C:\xampp\htdocs\leave-jtyeo` and start Apache in XAMPP.
 2. Ensure PHP has the `pdo_sqlite` and `fileinfo` extensions. The application stores its SQLite file outside the web folder at `C:\xampp\leave-jtyeo-data\leave_system.sqlite` by default. Set `LEAVE_DATA_DIR` to another private directory if needed. Back up that directory regularly.
 3. On a new empty database, run `php scripts/create_admin.php admin@example.com "Administrator Name" Female` (or `Male`) in a terminal and enter a unique password when prompted. Then open `http://localhost/leave-jtyeo/` and add staff through the administrator interface. Demo accounts are created only when `LEAVE_SEED_DEMO=1` is set for local testing. Never enable that setting with real data.
-4. Set a unique initial password of at least 12 characters when adding an associate.
+4. Set a unique initial password of at least 8 characters when adding an associate.
 
 ## Optional integrations
 

@@ -1047,7 +1047,7 @@ $leaveIconMap = [
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">New Password:</label>
-              <input type="password" name="new_password" class="form-input" placeholder="At least 12 characters">
+              <input type="password" name="new_password" class="form-input" placeholder="At least 8 characters">
             </div>
             <div class="form-group">
               <label class="form-label">Confirm New Password:</label>

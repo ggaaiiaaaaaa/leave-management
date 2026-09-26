@@ -1605,7 +1605,7 @@ if (file_exists($zkStatusFile)) {
             </div>
             <div class="form-group">
               <label class="form-label">Initial Password <span class="req">*</span></label>
-              <input type="password" name="password" class="form-input" minlength="12" autocomplete="new-password" required>
+              <input type="password" name="password" class="form-input" minlength="8" autocomplete="new-password" required>
             </div>
             <div class="form-group">
               <label class="form-label">ZKTeco Biometric PIN</label>
@@ -1792,7 +1792,7 @@ if (file_exists($zkStatusFile)) {
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">New Password:</label>
-              <input type="password" name="new_password" class="form-input" placeholder="At least 12 characters">
+              <input type="password" name="new_password" class="form-input" placeholder="At least 8 characters">
             </div>
             <div class="form-group">
               <label class="form-label">Confirm New Password:</label>
