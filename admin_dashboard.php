@@ -198,6 +198,10 @@ if (file_exists($zkStatusFile)) {
           <i data-lucide="sliders"></i>
           <span>Leave Types & Policies</span>
         </a>
+        <a class="nav-item" data-tab="holidays" onclick="switchTab('holidays'); loadHolidays();">
+          <i data-lucide="flag"></i>
+          <span>Official Holidays</span>
+        </a>
       </nav>
     </aside>
 
@@ -1176,6 +1180,63 @@ if (file_exists($zkStatusFile)) {
           </div>
         </div>
 
+        <!-- ==============================================
+             TAB 8: OFFICIAL PHILIPPINE HOLIDAYS MANAGEMENT
+             ============================================== -->
+        <div id="tab-holidays" class="tab-pane" style="display:none;">
+          <div class="page-header">
+            <div class="page-title">
+              <h1>Official Philippine Holidays</h1>
+              <p>National Regular Holidays, Special Non-Working Days, and Presidential Proclamations</p>
+            </div>
+            <div class="header-actions">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Year:</label>
+                <select id="holidayYearSelect" class="form-select" style="width:auto; padding:6px 12px; font-size:13px; font-weight:700;" onchange="loadHolidays(this.value)">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <button class="btn-secondary" onclick="openSeedYearModal()" title="Auto-populate standard regular & special holidays for selected year">
+                <i data-lucide="sparkles"></i>
+                <span>Auto-Generate Year</span>
+              </button>
+              <button class="btn-primary" onclick="openModal('addHolidayModal')">
+                <i data-lucide="plus-circle"></i>
+                <span>Add Proclamation Holiday</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="dashboard-card">
+            <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h3 id="holidayCardTitle"><i data-lucide="calendar"></i> Holiday Schedule</h3>
+                <span style="font-size:12px; color:var(--text-muted);" id="holidayCountSubtitle">Loading holidays...</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <input type="text" id="holidaySearchInput" class="form-input" placeholder="Search holiday..." style="padding:6px 12px; font-size:12px; width:220px;" onkeyup="filterHolidayTable()">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table" id="holidayTable">
+                <thead>
+                  <tr>
+                    <th style="min-width:140px;">Date</th>
+                    <th style="min-width:110px;">Day of Week</th>
+                    <th style="min-width:240px;">Holiday Name</th>
+                    <th style="min-width:140px; text-align:center;">Type</th>
+                    <th style="min-width:260px;">Description / Basis</th>
+                    <th style="width:80px; text-align:center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="holidayTableBody">
+                  <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">Loading official holidays...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   </div>
@@ -2061,6 +2122,77 @@ if (file_exists($zkStatusFile)) {
     </div>
   </div>
 
+  <!-- 15. ADD HOLIDAY MODAL -->
+  <div class="modal-backdrop" id="addHolidayModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i data-lucide="flag"></i> Add Official Holiday</h3>
+        <button class="btn-close-modal" onclick="closeModal('addHolidayModal')">&times;</button>
+      </div>
+      <form id="addHolidayForm" onsubmit="handleAddHolidaySubmit(event)">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Holiday Title / Name <span class="req">*</span></label>
+            <input type="text" name="title" id="holTitle" class="form-input" placeholder="e.g. Eid'l Fitr or Special Non-Working Day" required>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Date <span class="req">*</span></label>
+              <input type="date" name="holiday_date" id="holDate" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Holiday Classification <span class="req">*</span></label>
+              <select name="holiday_type" id="holType" class="form-select" required>
+                <option value="Regular">Regular Holiday (100% Paid)</option>
+                <option value="Special">Special Non-Working Day</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px;">
+            <label class="form-label">Legal Basis / Proclamation Description (Optional)</label>
+            <input type="text" name="description" id="holDesc" class="form-input" placeholder="e.g. Proclamation No. 368 / Presidential Decree">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('addHolidayModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnAddHolidayBtn">Add Holiday to Calendar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 16. AUTO-GENERATE YEAR HOLIDAYS MODAL -->
+  <div class="modal-backdrop" id="seedHolidayModal">
+    <div class="modal-window" style="max-width:440px;">
+      <div class="modal-header">
+        <h3><i data-lucide="sparkles"></i> Auto-Generate Year's Holidays</h3>
+        <button class="btn-close-modal" onclick="closeModal('seedHolidayModal')">&times;</button>
+      </div>
+      <form id="seedHolidayForm" onsubmit="handleSeedYearSubmit(event)">
+        <div class="modal-body">
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:16px;">
+            Automatically populate all 17 standard Philippine regular holidays, Holy Week observances (Maundy Thursday &amp; Good Friday), and fixed special non-working days for the selected calendar year.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Target Year <span class="req">*</span></label>
+            <select name="year" id="seedTargetYear" class="form-select" required style="font-weight:700;">
+              <?php 
+                $thisYear = (int)date('Y');
+                for ($y = $thisYear; $y <= $thisYear + 6; $y++): 
+              ?>
+                <option value="<?= $y ?>" <?= $y === $thisYear + 1 ? 'selected' : '' ?>><?= $y ?></option>
+              <?php endfor; ?>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('seedHolidayModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSeedYearBtn">Generate Standard Holidays</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- JavaScript Application Controller -->
@@ -2139,6 +2271,9 @@ if (file_exists($zkStatusFile)) {
       if (tabId === 'biometrics') {
         if (typeof loadDtrLogs === 'function') loadDtrLogs();
         if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
+      }
+      if (tabId === 'holidays') {
+        if (typeof loadHolidays === 'function') loadHolidays();
       }
       if (window.lucide) lucide.createIcons();
     }
@@ -4410,6 +4545,193 @@ if (file_exists($zkStatusFile)) {
     function refreshCalendarEvents() {
       if (calendarInstance) {
         calendarInstance.refetchEvents();
+      }
+    }
+
+    // ==========================================
+    // OFFICIAL HOLIDAYS MANAGEMENT CONTROLLER
+    // ==========================================
+    let cachedHolidays = [];
+
+    async function loadHolidays(selectedYear = null) {
+      try {
+        const yearSelect = document.getElementById('holidayYearSelect');
+        const year = selectedYear !== null ? selectedYear : (yearSelect ? yearSelect.value : '');
+        const url = 'actions/manage_holidays.php?action=get_holidays' + (year ? `&year=${year}` : '');
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.success) {
+          showToast(data.message || 'Error loading holidays', 'error');
+          return;
+        }
+
+        cachedHolidays = data.holidays || [];
+
+        // Update year select options if empty or needed
+        if (yearSelect && data.years && data.years.length > 0) {
+          const currentVal = yearSelect.value;
+          const targetYr = currentVal || (selectedYear || '<?= date('Y') ?>');
+          yearSelect.innerHTML = '<option value="">All Years</option>' + 
+            data.years.map(y => `<option value="${y}" ${String(y) === String(targetYr) ? 'selected' : ''}>${y}</option>`).join('');
+        }
+
+        renderHolidayTable(cachedHolidays);
+      } catch (e) {
+        console.error('Error fetching holidays:', e);
+      }
+    }
+
+    function renderHolidayTable(holidays) {
+      const tbody = document.getElementById('holidayTableBody');
+      const subtitle = document.getElementById('holidayCountSubtitle');
+      if (!tbody) return;
+
+      if (!holidays || holidays.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i data-lucide="calendar-x" style="width:24px;height:24px;display:block;margin:0 auto 8px;opacity:0.5;"></i>No holidays found for this filter. Click "Auto-Generate Year" or "Add Proclamation Holiday".</td></tr>';
+        if (subtitle) subtitle.innerText = '0 holidays registered';
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      if (subtitle) {
+        subtitle.innerText = `${holidays.length} official public holiday${holidays.length > 1 ? 's' : ''} on record`;
+      }
+
+      tbody.innerHTML = holidays.map(h => {
+        const isRegular = (h.holiday_type === 'Regular');
+        const badgeStyle = isRegular 
+          ? 'background:rgba(220,0,0,0.1); color:#dc0000; border:1px solid rgba(220,0,0,0.25);'
+          : 'background:rgba(217,119,6,0.1); color:#b45309; border:1px solid rgba(217,119,6,0.25);';
+        const typeLabel = isRegular ? 'Regular Holiday' : 'Special Non-Working';
+        const escapedTitle = (h.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+        return `<tr>
+          <td><strong style="color:var(--primary); font-family:monospace; font-size:13px;">${h.formatted_date || h.holiday_date}</strong></td>
+          <td style="color:var(--text-muted); font-size:12.5px;">${h.day_of_week || ''}</td>
+          <td><strong style="color:var(--text-main); font-size:13.5px;">${h.title}</strong></td>
+          <td style="text-align:center;">
+            <span style="display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; ${badgeStyle}">
+              ${typeLabel}
+            </span>
+          </td>
+          <td style="font-size:12.5px; color:var(--text-muted);">${h.description || 'Official Public Holiday'}</td>
+          <td style="text-align:center;">
+            <button class="btn-icon" title="Delete Holiday" onclick="handleDeleteHoliday(${h.id}, '${escapedTitle}')">
+              <i data-lucide="trash-2" style="width:14px;height:14px;color:var(--danger, #dc2626);"></i>
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterHolidayTable() {
+      const q = (document.getElementById('holidaySearchInput')?.value || '').toLowerCase().trim();
+      if (!q) {
+        renderHolidayTable(cachedHolidays);
+        return;
+      }
+      const filtered = cachedHolidays.filter(h => 
+        (h.title && h.title.toLowerCase().includes(q)) ||
+        (h.holiday_date && h.holiday_date.includes(q)) ||
+        (h.holiday_type && h.holiday_type.toLowerCase().includes(q)) ||
+        (h.description && h.description.toLowerCase().includes(q))
+      );
+      renderHolidayTable(filtered);
+    }
+
+    async function handleAddHolidaySubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('addHolidayForm');
+      const formData = new FormData(form);
+      formData.append('action', 'add_holiday');
+
+      const btn = document.getElementById('btnAddHolidayBtn');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('actions/manage_holidays.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('addHolidayModal');
+          form.reset();
+          const yr = document.getElementById('holidayYearSelect')?.value;
+          loadHolidays(yr);
+          if (typeof refreshCalendarEvents === 'function') refreshCalendarEvents();
+        } else {
+          showToast(data.message || 'Error adding holiday', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while saving holiday.', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function handleDeleteHoliday(id, title) {
+      const confirmed = await showConfirmDialog({
+        title: 'Delete Holiday',
+        message: `Remove "${title}" from the official holiday calendar? Staff filing leaves across this date will have leave balance deducted.`,
+        confirmText: 'Remove Holiday',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      const fd = new FormData();
+      fd.append('action', 'delete_holiday');
+      fd.append('id', id);
+
+      try {
+        const res = await fetch('actions/manage_holidays.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          const yr = document.getElementById('holidayYearSelect')?.value;
+          loadHolidays(yr);
+          if (typeof refreshCalendarEvents === 'function') refreshCalendarEvents();
+        } else {
+          showToast(data.message || 'Error deleting holiday', 'error');
+        }
+      } catch (err) {
+        showToast('Network error deleting holiday.', 'error');
+      }
+    }
+
+    function openSeedYearModal() {
+      openModal('seedHolidayModal');
+    }
+
+    async function handleSeedYearSubmit(e) {
+      e.preventDefault();
+      const year = document.getElementById('seedTargetYear')?.value;
+      const btn = document.getElementById('btnSeedYearBtn');
+      if (btn) btn.disabled = true;
+
+      const fd = new FormData();
+      fd.append('action', 'seed_year');
+      fd.append('year', year);
+
+      try {
+        const res = await fetch('actions/manage_holidays.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          closeModal('seedHolidayModal');
+          const yearSelect = document.getElementById('holidayYearSelect');
+          if (yearSelect) yearSelect.value = year;
+          loadHolidays(year);
+          if (typeof refreshCalendarEvents === 'function') refreshCalendarEvents();
+        } else {
+          showToast(data.message || 'Error generating holidays', 'error');
+        }
+      } catch (err) {
+        showToast('Network error generating holidays.', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
 

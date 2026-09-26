@@ -367,25 +367,10 @@ try {
         $balStmt->execute([$rochelleId, 12.0, 10.0, 5.0, 3.0, 0.0, 105.0, 0.0, 60.0]);
 
         // Seed Philippine Holidays
-        $holStmt = $pdo->prepare("INSERT INTO holidays (title, holiday_date, holiday_type, description) VALUES (?, ?, ?, ?)");
-        $holidays = [
-            ['New Year\'s Day', '2026-01-01', 'Regular', 'National Holiday'],
-            ['EDSA People Power Revolution', '2026-02-25', 'Special', 'Special Non-Working Day'],
-            ['Maundy Thursday', '2026-04-02', 'Regular', 'Holy Week Observance'],
-            ['Good Friday', '2026-04-03', 'Regular', 'Holy Week Observance'],
-            ['Araw ng Kagitingan', '2026-04-09', 'Regular', 'Day of Valor'],
-            ['Labor Day', '2026-05-01', 'Regular', 'Labor Day'],
-            ['Independence Day', '2026-06-12', 'Regular', 'Araw ng Kalayaan'],
-            ['National Heroes Day', '2026-08-31', 'Regular', 'National Regular Holiday'],
-            ['All Saints\' Day', '2026-11-01', 'Special', 'Special Non-Working Day'],
-            ['All Souls\' Day', '2026-11-02', 'Special', 'Special Non-Working Day'],
-            ['Bonifacio Day', '2026-11-30', 'Regular', 'National Regular Holiday'],
-            ['Christmas Day', '2026-12-25', 'Regular', 'National Holiday'],
-            ['Rizal Day', '2026-12-30', 'Regular', 'National Holiday'],
-            ['Last Day of the Year', '2026-12-31', 'Special', 'Special Non-Working Day']
-        ];
-        foreach ($holidays as $h) {
-            $holStmt->execute($h);
+        require_once __DIR__ . '/../services/holiday_service.php';
+        $currYr = (int)date('Y');
+        for ($y = min(2026, $currYr); $y <= max(2030, $currYr + 3); $y++) {
+            seedPhilippineHolidays($pdo, $y);
         }
 
         // Seed Today's realistic DTR biometric logs (ZKTeco MB460 Plus)
@@ -410,6 +395,16 @@ try {
             ");
             $bioStmt->execute([$jId, '101', $today, '08:24:12', '17:31:05', 'Face Scan', 'On-Time']);
             $bioStmt->execute([$aId, '100', $today, '08:15:30', null, 'Face Scan', 'On-Time']);
+        }
+    }
+
+    // Ensure standard Philippine holidays exist
+    $holCount = (int)$pdo->query("SELECT COUNT(*) FROM holidays")->fetchColumn();
+    if ($holCount === 0) {
+        require_once __DIR__ . '/../services/holiday_service.php';
+        $currYr = (int)date('Y');
+        for ($y = min(2026, $currYr); $y <= max(2030, $currYr + 3); $y++) {
+            seedPhilippineHolidays($pdo, $y);
         }
     }
 } catch (PDOException $e) {
