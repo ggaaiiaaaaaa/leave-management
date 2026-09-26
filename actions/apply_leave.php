@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../services/mailer.php';
 requireLogin();
+requirePostWithCsrf();
 
 header('Content-Type: application/json');
 
@@ -79,11 +80,19 @@ if ($typeRow['gender_restriction'] === 'Male' && $gender === 'female') {
 }
 
 // 2. DATE VALIDATION & AUTOMATIC HOLIDAY EXCLUSION
-$start = new DateTime($startDate);
-$end = new DateTime($endDate);
+$start = DateTime::createFromFormat('!Y-m-d', $startDate);
+$end = DateTime::createFromFormat('!Y-m-d', $endDate);
+if (!$start || !$end || $start->format('Y-m-d') !== $startDate || $end->format('Y-m-d') !== $endDate) {
+    echo json_encode(['success' => false, 'message' => 'Enter valid start and end dates.']);
+    exit;
+}
 
 if ($start > $end) {
     echo json_encode(['success' => false, 'message' => 'End date cannot be earlier than start date.']);
+    exit;
+}
+if ($start->diff($end)->days > 366) {
+    echo json_encode(['success' => false, 'message' => 'A leave request cannot span more than one year.']);
     exit;
 }
 
@@ -189,21 +198,31 @@ if ((int)$typeRow['requires_attachment'] === 1 && !$hasAttachment && !hasRole('a
 }
 
 if ($hasAttachment) {
-    $uploadDir = __DIR__ . '/../uploads/attachments';
+    $allowedMime = [
+        'pdf' => ['application/pdf'],
+        'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'],
+        'png' => ['image/png'],
+        'doc' => ['application/msword'],
+        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip']
+    ];
+    $ext = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($_FILES['attachment']['tmp_name']);
+    if ($_FILES['attachment']['size'] <= 0 || $_FILES['attachment']['size'] > 10 * 1024 * 1024 || !isset($allowedMime[$ext]) || !in_array($mime, $allowedMime[$ext], true)) {
+        echo json_encode(['success' => false, 'message' => 'Attachment must be a PDF, image, or Word document up to 10 MB.']);
+        exit;
+    }
+    $uploadDir = LEAVE_PRIVATE_DIR . '/attachments';
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
 
-    $fileInfo = pathinfo($_FILES['attachment']['name']);
-    $ext = strtolower($fileInfo['extension'] ?? '');
-    $allowedExts = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
-
-    if (in_array($ext, $allowedExts)) {
-        $cleanFileName = 'att_' . time() . '_' . substr(md5(uniqid()), 0, 8) . '.' . $ext;
-        $targetFile = $uploadDir . '/' . $cleanFileName;
-        if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
-            $attachmentPath = 'uploads/attachments/' . $cleanFileName;
-        }
+    $cleanFileName = 'att_' . bin2hex(random_bytes(16)) . '.' . $ext;
+    $targetFile = $uploadDir . '/' . $cleanFileName;
+    if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
+        $attachmentPath = 'attachments/' . $cleanFileName;
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Attachment could not be saved.']);
+        exit;
     }
 }
 
@@ -243,6 +262,8 @@ $insertStmt = $pdo->prepare("
         days_count, duration_mode, reason, attachment_path, status, approver_name, decided_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
+try {
+$pdo->beginTransaction();
 $insertStmt->execute([
     $refNo,
     $targetUserId,
@@ -260,9 +281,21 @@ $insertStmt->execute([
 ]);
 
 // Deduct balance immediately only if approved right away (e.g. Admin filing)
-if ($initialStatus === 'Approved' && $balanceCol) {
-    $deductStmt = $pdo->prepare("UPDATE leave_balances SET {$balanceCol} = MAX(0, {$balanceCol} - ?) WHERE user_id = ?");
-    $deductStmt->execute([$workingDays, $targetUserId]);
+if ($initialStatus === 'Approved' && (int)$typeRow['is_paid'] === 1) {
+    $allocUpdate = $pdo->prepare('UPDATE user_leave_allocations SET remaining_days = remaining_days - ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND leave_type_code = ? AND remaining_days >= ?');
+    $allocUpdate->execute([$workingDays, $targetUserId, $leaveType, $workingDays]);
+    if ($allocUpdate->rowCount() !== 1) throw new RuntimeException('Insufficient balance at approval time.');
+    if ($legacyCol) {
+        $pdo->prepare("UPDATE leave_balances SET {$legacyCol} = MAX(0, {$legacyCol} - ?), updated_at = CURRENT_TIMESTAMP WHERE user_id = ?")
+            ->execute([$workingDays, $targetUserId]);
+    }
+}
+$pdo->commit();
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($attachmentPath) @unlink(LEAVE_PRIVATE_DIR . '/attachments/' . basename($attachmentPath));
+    echo json_encode(['success' => false, 'message' => 'Leave could not be filed: ' . $e->getMessage()]);
+    exit;
 }
 
 // 7. FIRM STAFFING NOTICE

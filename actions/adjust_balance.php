@@ -2,6 +2,7 @@
 // actions/adjust_balance.php - Admin direct 1-click manual balance adjustment
 require_once __DIR__ . '/../auth.php';
 requireLogin();
+requirePostWithCsrf();
 
 header('Content-Type: application/json');
 

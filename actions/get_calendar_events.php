@@ -8,18 +8,25 @@ header('Content-Type: application/json');
 $filterUserId = (int)($_GET['user_id'] ?? 0);
 $filterType = $_GET['leave_type'] ?? '';
 $showHolidays = isset($_GET['show_holidays']) ? (int)$_GET['show_holidays'] : 1;
+$viewer = getCurrentUser();
+$isAdmin = $viewer['role'] === 'admin';
+if (!$isAdmin) $filterUserId = 0;
 
 $events = [];
 
 // 1. Fetch Approved & Pending Leave Requests
 $sql = "
-    SELECT r.id, r.ref_no, r.leave_type, r.leave_type_label, r.start_date, r.end_date,
+    SELECT r.id, r.user_id, r.ref_no, r.leave_type, r.leave_type_label, r.start_date, r.end_date,
            r.days_count, r.reason, r.status, r.approver_name, u.name as employee_name, u.title, u.avatar_path, u.avatar_initials
     FROM leave_requests r
     JOIN users u ON r.user_id = u.id
     WHERE r.status IN ('Approved', 'Pending')
 ";
 $params = [];
+if (!$isAdmin) {
+    $sql .= " AND (r.user_id = ? OR r.status = 'Approved')";
+    $params[] = $viewer['id'];
+}
 
 if ($filterUserId > 0) {
     $sql .= " AND r.user_id = ?";
@@ -68,7 +75,7 @@ foreach ($leaves as $l) {
             'days' => $l['days_count'],
             'start_date' => $l['start_date'],
             'end_date' => $l['end_date'],
-            'reason' => $l['reason'],
+            'reason' => ($isAdmin || (int)$l['user_id'] === (int)$viewer['id']) ? $l['reason'] : '',
             'status' => $l['status'],
             'approver' => $l['approver_name'] ?? 'Pending Signoff'
         ]

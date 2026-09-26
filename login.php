@@ -1,6 +1,6 @@
 <?php
 // login.php - Professional 2-Sided Authentication Portal for JTYEO CPAs
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/auth.php';
 
 $error = '';
 $success = '';
@@ -11,6 +11,10 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out') {
 
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if (!hash_equals(csrfToken(), $_POST['csrf_token'] ?? '')) {
+    http_response_code(403);
+    $error = 'Your sign-in form expired. Refresh and try again.';
+  } else {
   $email = trim($_POST['email'] ?? '');
   $password = $_POST['password'] ?? '';
 
@@ -22,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password'])) {
+      session_regenerate_id(true);
+      unset($_SESSION['csrf_token']);
       $_SESSION['user_id'] = $user['id'];
       $_SESSION['user_name'] = $user['name'];
       $_SESSION['role'] = $user['role'];
@@ -34,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       $error = 'Invalid email or password. Please try again.';
     }
+  }
   }
 }
 ?>
@@ -933,6 +940,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <!-- Login Form -->
           <form method="POST" action="login.php" id="loginForm">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken(), ENT_QUOTES) ?>">
             <div class="form-group">
               <label class="form-label" for="email">
                 <i data-lucide="mail"></i>

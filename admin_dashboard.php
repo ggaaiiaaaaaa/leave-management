@@ -95,7 +95,7 @@ foreach ($allocsRaw as $ar) {
 }
 
 // Live ZKTeco Hardware Status
-$zkStatusFile = __DIR__ . '/database/zkteco_status.json';
+$zkStatusFile = LEAVE_PRIVATE_DIR . '/zkteco_status.json';
 $zkIsOnline = false;
 $zkDeviceIp = 'Auto-detecting...';
 $zkDeviceSn = 'MB460-Plus';
@@ -141,6 +141,8 @@ if (file_exists($zkStatusFile)) {
     .legend-chip { display: flex; align-items: center; gap: 6px; font-weight: 600; }
     .legend-chip .dot { width: 10px; height: 10px; border-radius: 50%; }
   </style>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrfToken(), ENT_QUOTES) ?>">
+  <script src="security.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -549,7 +551,7 @@ if (file_exists($zkStatusFile)) {
                         </td>
                         <td>
                           <?php if (!empty($req['attachment_path'])): ?>
-                            <a href="<?= htmlspecialchars($req['attachment_path']) ?>" target="_blank" class="btn-icon" title="View Attached Supporting Document / Proof" style="color:var(--accent);">
+                            <a href="download_attachment.php?ref=<?= rawurlencode($req['ref_no']) ?>" target="_blank" class="btn-icon" title="View Attached Supporting Document / Proof" style="color:var(--accent);">
                               <i data-lucide="paperclip" style="width:14px;height:14px;"></i>
                             </a>
                           <?php else: ?>
@@ -567,15 +569,15 @@ if (file_exists($zkStatusFile)) {
                         <td>
                           <div style="display:flex; gap:6px;">
                             <?php if ($req['status'] === 'Pending'): ?>
-                              <button class="btn-icon approve" title="Review & Decide" onclick="openDecisionModal('<?= $req['ref_no'] ?>', '<?= htmlspecialchars(addslashes($req['employee_name'])) ?>', '<?= htmlspecialchars(addslashes($req['leave_type_label'])) ?>', '<?= $req['days_count'] ?>', '<?= htmlspecialchars(addslashes($req['reason'])) ?>', '<?= $req['start_date'] . ($req['start_date'] !== $req['end_date'] ? ' to ' . $req['end_date'] : '') ?>', '<?= htmlspecialchars(addslashes($req['attachment_path'] ?? '')) ?>')">
+                              <button class="btn-icon approve" title="Review & Decide" onclick="openDecisionModal('<?= $req['ref_no'] ?>', <?= jsAttr($req['employee_name']) ?>, <?= jsAttr($req['leave_type_label']) ?>, '<?= $req['days_count'] ?>', <?= jsAttr($req['reason']) ?>, '<?= $req['start_date'] . ($req['start_date'] !== $req['end_date'] ? ' to ' . $req['end_date'] : '') ?>', <?= jsAttr($req['attachment_path'] ?? '') ?>)">
                                 <i data-lucide="check-square" style="width:14px;height:14px;"></i>
                               </button>
                             <?php endif; ?>
-                            <button class="btn-icon" title="View Full Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['title']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>', '<?= addslashes($req['attachment_path'] ?? '') ?>')">
+                            <button class="btn-icon" title="View Full Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', <?= jsAttr($req['employee_name']) ?>, <?= jsAttr($req['title']) ?>, <?= jsAttr($req['leave_type_label']) ?>, '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', <?= jsAttr($req['reason']) ?>, '<?= $req['status'] ?>', <?= jsAttr($req['approver_name'] ?? 'Pending') ?>, <?= jsAttr($req['rejection_reason'] ?? '') ?>, <?= jsAttr($req['attachment_path'] ?? '') ?>)">
                               <i data-lucide="eye" style="width:14px;height:14px;"></i>
                             </button>
                             <?php if ($req['status'] === 'Approved'): ?>
-                              <button class="btn-icon" title="Print Official Leave Slip" onclick="printOfficialSlip('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['title']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= addslashes($req['approver_name'] ?? 'Atty. Jonathan Yeo, CPA') ?>')">
+                              <button class="btn-icon" title="Print Official Leave Slip" onclick="printOfficialSlip('<?= $req['ref_no'] ?>', <?= jsAttr($req['employee_name']) ?>, <?= jsAttr($req['title']) ?>, <?= jsAttr($req['leave_type_label']) ?>, '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', <?= jsAttr($req['reason']) ?>, <?= jsAttr($req['approver_name'] ?? 'Atty. Jonathan Yeo, CPA') ?>)">
                                 <i data-lucide="printer" style="width:14px;height:14px;"></i>
                               </button>
                             <?php endif; ?>
@@ -635,7 +637,7 @@ if (file_exists($zkStatusFile)) {
                         <td style="font-size:12.5px; max-width:260px;"><?= htmlspecialchars($p['reason']) ?></td>
                         <td>
                           <?php if (!empty($p['attachment_path'])): ?>
-                            <a href="<?= htmlspecialchars($p['attachment_path']) ?>" target="_blank" class="btn-icon" title="View Attached Supporting Document / Proof">
+                            <a href="download_attachment.php?ref=<?= rawurlencode($p['ref_no']) ?>" target="_blank" class="btn-icon" title="View Attached Supporting Document / Proof">
                               <i data-lucide="paperclip" style="width:14px;height:14px;color:var(--accent);"></i>
                             </a>
                           <?php else: ?>
@@ -643,7 +645,7 @@ if (file_exists($zkStatusFile)) {
                           <?php endif; ?>
                         </td>
                         <td>
-                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $p['ref_no'] ?>', '<?= htmlspecialchars(addslashes($p['employee_name'])) ?>', '<?= htmlspecialchars(addslashes($p['leave_type_label'])) ?>', '<?= $p['days_count'] ?>', '<?= htmlspecialchars(addslashes($p['reason'])) ?>', '<?= $p['start_date'] . ($p['start_date'] !== $p['end_date'] ? ' to ' . $p['end_date'] : '') ?>', '<?= htmlspecialchars(addslashes($p['attachment_path'] ?? '')) ?>')">
+                          <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openDecisionModal('<?= $p['ref_no'] ?>', <?= jsAttr($p['employee_name']) ?>, <?= jsAttr($p['leave_type_label']) ?>, '<?= $p['days_count'] ?>', <?= jsAttr($p['reason']) ?>, '<?= $p['start_date'] . ($p['start_date'] !== $p['end_date'] ? ' to ' . $p['end_date'] : '') ?>', <?= jsAttr($p['attachment_path'] ?? '') ?>)">
                             <i data-lucide="check-square" style="width:13px;height:13px;"></i> Review
                           </button>
                         </td>
@@ -1002,7 +1004,7 @@ if (file_exists($zkStatusFile)) {
                             <i data-lucide="scale" style="width:14px;height:14px;color:var(--accent);"></i>
                           </button>
                           <?php if ((int)$u['id'] !== (int)$user['id']): ?>
-                            <button class="btn-icon" title="Delete Associate" style="color:var(--danger);" onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name'])) ?>')">
+                            <button class="btn-icon" title="Delete Associate" style="color:var(--danger);" onclick="deleteUser(<?= $u['id'] ?>, <?= jsAttr($u['name']) ?>)">
                               <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                             </button>
                           <?php endif; ?>
@@ -1097,7 +1099,7 @@ if (file_exists($zkStatusFile)) {
                         <i data-lucide="<?= $lt['is_active'] ? 'archive' : 'rotate-ccw' ?>" style="width:14px;height:14px;color:<?= $lt['is_active'] ? 'var(--text-muted)' : 'var(--success)' ?>;"></i>
                       </button>
                       <?php if (!$isCore): ?>
-                        <button class="btn-icon" title="Permanently Delete Policy" onclick="deleteLeaveType(<?= $lt['id'] ?>, '<?= htmlspecialchars(addslashes($lt['name'])) ?>')">
+                        <button class="btn-icon" title="Permanently Delete Policy" onclick="deleteLeaveType(<?= $lt['id'] ?>, <?= jsAttr($lt['name']) ?>)">
                           <i data-lucide="trash-2" style="width:14px;height:14px;color:var(--danger, #dc2626);"></i>
                         </button>
                       <?php endif; ?>
@@ -1154,7 +1156,7 @@ if (file_exists($zkStatusFile)) {
                             <span style="color:var(--text-light); font-size:11px; font-style:italic;" title="Not eligible due to gender policy">N/A</span>
                           <?php else: ?>
                             <button type="button" class="btn-balance-chip"
-                              onclick="openQuickAdjustModal(<?= $u['id'] ?>, '<?= addslashes($u['name']) ?>', '<?= htmlspecialchars($code) ?>', '<?= addslashes($lt['name']) ?>', <?= $bal ?>)"
+                              onclick="openQuickAdjustModal(<?= $u['id'] ?>, <?= jsAttr($u['name']) ?>, '<?= htmlspecialchars($code) ?>', <?= jsAttr($lt['name']) ?>, <?= $bal ?>)"
                               title="Click to adjust <?= htmlspecialchars($lt['name']) ?> for <?= addslashes($u['name']) ?>">
                               <?= $bal ?>d
                             </button>
@@ -1602,6 +1604,10 @@ if (file_exists($zkStatusFile)) {
               </select>
             </div>
             <div class="form-group">
+              <label class="form-label">Initial Password <span class="req">*</span></label>
+              <input type="password" name="password" class="form-input" minlength="12" autocomplete="new-password" required>
+            </div>
+            <div class="form-group">
               <label class="form-label">ZKTeco Biometric PIN</label>
               <div style="display:flex; gap:8px;">
                 <input type="text" name="biometric_pin" id="addBiometricPin" class="form-input" placeholder="e.g. 103" oninput="debounceDetectPin(this.value)">
@@ -1763,10 +1769,8 @@ if (file_exists($zkStatusFile)) {
             </div>
             <div class="form-group">
               <label class="form-label">System Role <span class="req">*</span></label>
-              <select name="role" id="myProfileRole" class="form-select" required>
-                <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Managing Partner / Admin</option>
-                <option value="staff" <?= $user['role'] === 'staff' ? 'selected' : '' ?>>Staff Associate</option>
-              </select>
+      <input type="hidden" name="role" value="<?= htmlspecialchars($user['role'], ENT_QUOTES) ?>">
+      <input class="form-select" value="<?= $user['role'] === 'admin' ? 'Managing Partner / Admin' : 'Staff Associate' ?>" disabled>
             </div>
           </div>
 
@@ -1788,7 +1792,7 @@ if (file_exists($zkStatusFile)) {
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">New Password:</label>
-              <input type="password" name="new_password" class="form-input" placeholder="At least 6 characters">
+              <input type="password" name="new_password" class="form-input" placeholder="At least 12 characters">
             </div>
             <div class="form-group">
               <label class="form-label">Confirm New Password:</label>
@@ -2955,7 +2959,7 @@ if (file_exists($zkStatusFile)) {
       const attLink = document.getElementById('decModalAttachmentLink');
       if (attWrap && attLink) {
         if (attachment && attachment.trim()) {
-          attLink.href = attachment.trim();
+          attLink.href = 'download_attachment.php?ref=' + encodeURIComponent(refNo);
           attWrap.style.display = 'block';
         } else {
           attWrap.style.display = 'none';
@@ -3057,7 +3061,7 @@ if (file_exists($zkStatusFile)) {
       const attRow = document.getElementById('dtlAttachmentRow');
       const attLink = document.getElementById('dtlAttachmentLink');
       if (attachmentPath && attachmentPath.length > 3) {
-        attLink.href = attachmentPath;
+        attLink.href = 'download_attachment.php?ref=' + encodeURIComponent(ref);
         attRow.style.display = 'block';
       } else {
         attRow.style.display = 'none';
@@ -3768,7 +3772,7 @@ if (file_exists($zkStatusFile)) {
     async function syncClock() {
       showToast('Queueing Philippine Standard Time clock sync to ZKTeco MB460 Plus...', 'info');
       try {
-        const res = await fetch('actions/biometric_sync.php?action=sync_clock');
+        const res = await fetch('actions/biometric_sync.php', { method: 'POST', body: new URLSearchParams({action: 'sync_clock'}) });
         const data = await res.json();
         if (data.success) {
           showToast(data.message, 'success');
@@ -4042,7 +4046,7 @@ if (file_exists($zkStatusFile)) {
       showToast('Connecting to ZKTeco MB460 Plus over network...', 'info');
 
       try {
-        const res = await fetch('actions/biometric_sync.php?action=sync_now');
+        const res = await fetch('actions/biometric_sync.php', { method: 'POST', body: new URLSearchParams({action: 'sync_now'}) });
         const data = await res.json();
         if (data.success) {
           showToast(data.message, 'success');

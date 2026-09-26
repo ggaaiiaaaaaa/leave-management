@@ -10,6 +10,7 @@ $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['role'] === 'admin');
 
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'get_corrections');
+if ($action !== 'get_corrections') requirePostWithCsrf();
 
 // 1. GET CORRECTIONS
 if ($action === 'get_corrections') {
@@ -68,7 +69,8 @@ if ($action === 'submit_correction') {
     $timeOut = trim($_POST['time_out'] ?? '') ?: null;
     $reason = trim($_POST['reason'] ?? '');
 
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $targetDate)) {
+    $parsedDate = DateTime::createFromFormat('!Y-m-d', $targetDate);
+    if (!$parsedDate || $parsedDate->format('Y-m-d') !== $targetDate) {
         echo json_encode(['success' => false, 'message' => 'Please provide a valid date.']);
         exit;
     }
@@ -81,6 +83,12 @@ if ($action === 'submit_correction') {
     if (!$timeIn && !$breakOut && !$breakIn && !$timeOut) {
         echo json_encode(['success' => false, 'message' => 'Please provide at least one punch timestamp to adjust.']);
         exit;
+    }
+    foreach ([$timeIn, $breakOut, $breakIn, $timeOut] as $time) {
+        if ($time !== null && !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $time)) {
+            echo json_encode(['success' => false, 'message' => 'Enter valid punch times.']);
+            exit;
+        }
     }
 
     // Direct auto-approval if submitted by Admin
@@ -143,6 +151,10 @@ if ($action === 'approve_correction') {
         echo json_encode(['success' => false, 'message' => 'Correction request not found.']);
         exit;
     }
+    if ($corr['status'] !== 'Pending') {
+        echo json_encode(['success' => false, 'message' => 'This correction has already been decided.']);
+        exit;
+    }
 
     // Update correction status
     $up = $pdo->prepare("
@@ -187,6 +199,10 @@ if ($action === 'reject_correction') {
     $stmt = $pdo->prepare("SELECT * FROM attendance_corrections WHERE id = ?");
     $stmt->execute([$id]);
     $corr = $stmt->fetch();
+    if (!$corr || $corr['status'] !== 'Pending') {
+        echo json_encode(['success' => false, 'message' => 'Correction not found or already decided.']);
+        exit;
+    }
 
     $up = $pdo->prepare("
         UPDATE attendance_corrections 

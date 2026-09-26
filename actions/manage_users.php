@@ -7,6 +7,9 @@ header('Content-Type: application/json');
 
 $user = getCurrentUser();
 $action = $_POST['action'] ?? ($_GET['action'] ?? '');
+if ($action !== 'get_user') {
+    requirePostWithCsrf();
+}
 
 // Helper to generate initials
 function generateInitials($name) {
@@ -26,12 +29,11 @@ if ($action === 'update_profile') {
     $userId = $user['id'];
     $name = trim($_POST['name'] ?? $user['name']);
     $email = trim($_POST['email'] ?? $user['email']);
-    $role = trim($_POST['role'] ?? $user['role']);
     $currentPassword = $_POST['current_password'] ?? '';
     $newPassword = $_POST['new_password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
 
-    if (empty($name) || empty($email)) {
+    if (empty($name) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         echo json_encode(['success' => false, 'message' => 'Name and email are required.']);
         exit;
     }
@@ -60,8 +62,8 @@ if ($action === 'update_profile') {
     // Handle Password Change if requested
     $newHash = null;
     if (!empty($newPassword)) {
-        if (strlen($newPassword) < 6) {
-            echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters.']);
+        if (strlen($newPassword) < 12) {
+            echo json_encode(['success' => false, 'message' => 'New password must be at least 12 characters.']);
             exit;
         }
         if ($newPassword !== $confirmPassword) {
@@ -86,6 +88,12 @@ if ($action === 'update_profile') {
         $fileInfo = pathinfo($_FILES['avatar']['name']);
         $ext = strtolower($fileInfo['extension'] ?? '');
         $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+        $allowedMime = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+        $actualMime = (new finfo(FILEINFO_MIME_TYPE))->file($_FILES['avatar']['tmp_name']);
+        if ($_FILES['avatar']['size'] <= 0 || $_FILES['avatar']['size'] > 5 * 1024 * 1024 || ($allowedMime[$ext] ?? null) !== $actualMime) {
+            echo json_encode(['success' => false, 'message' => 'Avatar must be a JPG, PNG, or WebP image up to 5 MB.']);
+            exit;
+        }
 
         if (in_array($ext, $allowedExts)) {
             $filename = 'avatar_' . $userId . '_' . time() . '.' . $ext;
@@ -102,8 +110,8 @@ if ($action === 'update_profile') {
     $initials = generateInitials($name);
 
     // Update user record
-    $sql = "UPDATE users SET name = ?, email = ?, role = ?, avatar_initials = ?, avatar_path = ?";
-    $params = [$name, $email, $role, $initials, $avatarPath];
+    $sql = "UPDATE users SET name = ?, email = ?, avatar_initials = ?, avatar_path = ?";
+    $params = [$name, $email, $initials, $avatarPath];
 
     if ($newHash) {
         $sql .= ", password = ?";
@@ -115,11 +123,8 @@ if ($action === 'update_profile') {
     $pdo->prepare($sql)->execute($params);
 
     // Update session
-    $_SESSION['user']['name'] = $name;
-    $_SESSION['user']['email'] = $email;
-    $_SESSION['user']['role'] = $role;
-    $_SESSION['user']['avatar_initials'] = $initials;
-    $_SESSION['user']['avatar_path'] = $avatarPath;
+    $_SESSION['user_name'] = $name;
+    $_SESSION['avatar'] = $initials;
 
     // NOTIFY ADMIN IF EMAIL WAS CHANGED
     if ($emailChanged) {
@@ -134,7 +139,7 @@ if ($action === 'update_profile') {
 
     $msg = 'Profile updated successfully!';
     if ($emailChanged) {
-        $msg .= ' Managing Partner was notified of your email change.';
+        $msg .= ' A notification was recorded for the Managing Partner.';
     }
 
     echo json_encode([
@@ -142,7 +147,7 @@ if ($action === 'update_profile') {
         'message' => $msg,
         'name' => $name,
         'email' => $email,
-        'role' => $role,
+        'role' => $curr['role'],
         'avatar_path' => $avatarPath
     ]);
     exit;
@@ -158,7 +163,7 @@ if (!hasRole('admin')) {
 if ($action === 'add_user' || $action === 'create_user') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? 'password123';
+    $password = $_POST['password'] ?? '';
     $title = trim($_POST['title'] ?? 'Associate');
     $gender = trim($_POST['gender'] ?? 'Female');
     $role = trim($_POST['role'] ?? 'staff');
@@ -166,8 +171,8 @@ if ($action === 'add_user' || $action === 'create_user') {
     $faceEnrolled = isset($_POST['face_enrolled']) ? 1 : 0;
     $fingerprintEnrolled = isset($_POST['fingerprint_enrolled']) ? 1 : 0;
 
-    if (empty($name) || empty($email)) {
-        echo json_encode(['success' => false, 'message' => 'Associate Name and Email are required.']);
+    if (empty($name) || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12 || !in_array($role, ['staff', 'admin'], true)) {
+        echo json_encode(['success' => false, 'message' => 'Enter a name, valid email, role, and initial password of at least 12 characters.']);
         exit;
     }
 
@@ -181,6 +186,7 @@ if ($action === 'add_user' || $action === 'create_user') {
 
     $initials = generateInitials($name);
     $pwdHash = password_hash($password, PASSWORD_DEFAULT);
+    $pdo->beginTransaction();
 
     $stmt = $pdo->prepare("
         INSERT INTO users (name, email, password, role, title, gender, department, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials)
@@ -189,32 +195,34 @@ if ($action === 'add_user' || $action === 'create_user') {
     $stmt->execute([$name, $email, $pwdHash, $role, $title, $gender, $biometricPin, $faceEnrolled, $fingerprintEnrolled, $initials]);
     $newUserId = $pdo->lastInsertId();
 
-    // 1. Initialize Legacy Default Leave Balances
-    $maternityBal = ($gender === 'Female') ? 105.0 : 0.0;
-    $specialWomenBal = ($gender === 'Female') ? 60.0 : 0.0;
-    $paternityBal = ($gender === 'Male') ? 7.0 : 0.0;
+    // Initialize both balance representations from the same policy defaults.
+    $activeTypes = $pdo->query("SELECT code, default_days FROM leave_types WHERE is_active = 1")->fetchAll();
+    $defaults = array_column($activeTypes, 'default_days', 'code');
+    $maternityBal = ($gender === 'Female') ? (float)($defaults['Maternity'] ?? 0) : 0.0;
+    $specialWomenBal = ($gender === 'Female') ? (float)($defaults['SpecialWomen'] ?? 0) : 0.0;
+    $paternityBal = ($gender === 'Male') ? (float)($defaults['Paternity'] ?? 0) : 0.0;
 
     $balStmt = $pdo->prepare("
         INSERT INTO leave_balances (
             user_id, vl_balance, sl_balance, emergency_balance, bereavement_balance,
             solo_parent_balance, maternity_balance, paternity_balance, special_women_balance
-        ) VALUES (?, 15.0, 15.0, 5.0, 3.0, 7.0, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
-    $balStmt->execute([$newUserId, $maternityBal, $paternityBal, $specialWomenBal]);
+    $balStmt->execute([$newUserId, $defaults['VL'] ?? 0, $defaults['SL'] ?? 0, $defaults['Emergency'] ?? 0,
+        $defaults['Bereavement'] ?? 0, $defaults['SoloParent'] ?? 0, $maternityBal, $paternityBal, $specialWomenBal]);
 
     // 2. Initialize Dynamic Policy Allocations (user_leave_allocations)
-    $activeTypes = $pdo->query("SELECT code, default_days FROM leave_types WHERE is_active = 1")->fetchAll();
     $insAlloc = $pdo->prepare("
         INSERT OR IGNORE INTO user_leave_allocations (user_id, leave_type_code, allocated_days, remaining_days)
         VALUES (?, ?, ?, ?)
     ");
     foreach ($activeTypes as $at) {
         $days = (float)$at['default_days'];
-        if ($at['code'] === 'ML' && $gender !== 'Female') $days = 0;
-        if ($at['code'] === 'VAWC' && $gender !== 'Female') $days = 0;
-        if ($at['code'] === 'PL' && $gender !== 'Male') $days = 0;
+        if (in_array($at['code'], ['Maternity', 'SpecialWomen'], true) && $gender !== 'Female') $days = 0;
+        if ($at['code'] === 'Paternity' && $gender !== 'Male') $days = 0;
         $insAlloc->execute([$newUserId, $at['code'], $days, $days]);
     }
+    $pdo->commit();
 
     echo json_encode([
         'success' => true,
@@ -236,6 +244,10 @@ if ($action === 'edit_user') {
     $faceEnrolled = isset($_POST['face_enrolled']) ? 1 : 0;
     $fingerprintEnrolled = isset($_POST['fingerprint_enrolled']) ? 1 : 0;
     $resetPassword = $_POST['reset_password'] ?? '';
+    if ($resetPassword !== '' && strlen($resetPassword) < 12) {
+        echo json_encode(['success' => false, 'message' => 'Reset password must be at least 12 characters.']);
+        exit;
+    }
 
     if ($targetId <= 0 || empty($name) || empty($email)) {
         echo json_encode(['success' => false, 'message' => 'Invalid parameters. Name and Email are required.']);
@@ -271,6 +283,12 @@ if ($action === 'edit_user') {
         $fileInfo = pathinfo($_FILES['avatar']['name']);
         $ext = strtolower($fileInfo['extension'] ?? '');
         $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+        $allowedMime = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+        $actualMime = (new finfo(FILEINFO_MIME_TYPE))->file($_FILES['avatar']['tmp_name']);
+        if ($_FILES['avatar']['size'] <= 0 || $_FILES['avatar']['size'] > 5 * 1024 * 1024 || ($allowedMime[$ext] ?? null) !== $actualMime) {
+            echo json_encode(['success' => false, 'message' => 'Avatar must be a JPG, PNG, or WebP image up to 5 MB.']);
+            exit;
+        }
 
         if (in_array($ext, $allowedExts)) {
             $filename = 'avatar_' . $targetId . '_' . time() . '.' . $ext;
@@ -311,7 +329,7 @@ if ($action === 'edit_user') {
 
     echo json_encode([
         'success' => true,
-        'message' => "Associate profile for {$name} updated successfully!" . ($emailChanged ? " (Admin email notification dispatched)" : ""),
+        'message' => "Associate profile for {$name} updated successfully!" . ($emailChanged ? " (Admin notification recorded)" : ""),
         'avatar_path' => $avatarPath
     ]);
     exit;
@@ -371,8 +389,9 @@ if ($action === 'delete_user') {
         $leaveStmt->execute([$targetId]);
         $attachments = $leaveStmt->fetchAll(PDO::FETCH_COLUMN);
         foreach ($attachments as $att) {
-            if ($att && file_exists(__DIR__ . '/../' . $att)) {
-                @unlink(__DIR__ . '/../' . $att);
+            $stored = $att ? LEAVE_PRIVATE_DIR . '/attachments/' . basename($att) : null;
+            if ($stored && file_exists($stored)) {
+                @unlink($stored);
             }
         }
         $pdo->prepare("DELETE FROM leave_requests WHERE user_id = ?")->execute([$targetId]);

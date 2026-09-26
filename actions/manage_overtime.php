@@ -9,6 +9,7 @@ $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['role'] === 'admin');
 
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'get_ot_requests');
+if ($action !== 'get_ot_requests') requirePostWithCsrf();
 
 // 1. GET OT REQUESTS
 if ($action === 'get_ot_requests') {
@@ -58,12 +59,13 @@ if ($action === 'submit_ot') {
     $estimatedHours = floatval($_POST['estimated_hours'] ?? 0);
     $reason = trim($_POST['reason'] ?? '');
 
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $otDate)) {
+    $parsedDate = DateTime::createFromFormat('!Y-m-d', $otDate);
+    if (!$parsedDate || $parsedDate->format('Y-m-d') !== $otDate) {
         echo json_encode(['success' => false, 'message' => 'Please select a valid date.']);
         exit;
     }
 
-    if ($estimatedHours <= 0 || $estimatedHours > 16) {
+    if ($estimatedHours < 0.5 || $estimatedHours > 16) {
         echo json_encode(['success' => false, 'message' => 'Please enter a valid estimated overtime duration (0.5 to 16 hrs).']);
         exit;
     }
@@ -126,6 +128,10 @@ if ($action === 'approve_ot') {
         echo json_encode(['success' => false, 'message' => 'Overtime request not found.']);
         exit;
     }
+    if ($ot['status'] !== 'Pending') {
+        echo json_encode(['success' => false, 'message' => 'This overtime request has already been decided.']);
+        exit;
+    }
 
     $up = $pdo->prepare("
         UPDATE overtime_requests 
@@ -176,6 +182,10 @@ if ($action === 'reject_ot') {
     $stmt = $pdo->prepare("SELECT * FROM overtime_requests WHERE id = ?");
     $stmt->execute([$id]);
     $ot = $stmt->fetch();
+    if (!$ot || $ot['status'] !== 'Pending') {
+        echo json_encode(['success' => false, 'message' => 'Overtime request not found or already decided.']);
+        exit;
+    }
 
     $up = $pdo->prepare("
         UPDATE overtime_requests 

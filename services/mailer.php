@@ -301,7 +301,9 @@ function sendLeaveNotification($pdo, $type, $data) {
 
     if (!$sendSuccess) {
         // Fallback to PHP mail()
-        $mailSent = @mail($recipientEmail, $subject, $htmlBody, "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: no-reply@jtyeocpa.ph");
+        $mailSent = getenv('LEAVE_ALLOW_PHP_MAIL') === '1'
+            ? @mail($recipientEmail, $subject, $htmlBody, "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: no-reply@jtyeocpa.ph")
+            : false;
         if ($mailSent && $status === 'Logged') {
             $status = 'Sent (mail)';
         }
@@ -314,5 +316,5 @@ function sendLeaveNotification($pdo, $type, $data) {
     ");
     $stmt->execute([$recipientEmail, $recipientName, $subject, $htmlBody, $type, $status]);
 
-    return true;
+    return $sendSuccess || $mailSent;
 }

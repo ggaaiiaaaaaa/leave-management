@@ -12,17 +12,19 @@ if (file_exists(__DIR__ . '/../config/db.php')) {
 $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = $_SERVER['REQUEST_URI'] ?? '';
+$allowedIps = array_filter(array_map('trim', explode(',', getenv('LEAVE_DEVICE_IPS') ?: '')));
+if (!in_array($clientIp, $allowedIps, true)) {
+    http_response_code(403);
+    exit('Forbidden');
+}
 $rawBody = file_get_contents('php://input');
-@file_put_contents(__DIR__ . '/adms_debug.log', date('Y-m-d H:i:s') . " [{$clientIp}] {$method} {$uri} | BODY: " . substr($rawBody, 0, 200) . "\n", FILE_APPEND);
 
 $sn = $_GET['SN'] ?? ($_GET['sn'] ?? 'UNKNOWN');
 $table = $_GET['table'] ?? '';
 
 // Automatically record live heartbeat for zero-click status detection
 if ($clientIp !== 'unknown' && $clientIp !== '::1') {
-    $statusFile = file_exists(__DIR__ . '/../database')
-        ? __DIR__ . '/../database/zkteco_status.json'
-        : __DIR__ . '/../leave-jtyeo/database/zkteco_status.json';
+    $statusFile = LEAVE_PRIVATE_DIR . '/zkteco_status.json';
     $existing = file_exists($statusFile) ? (json_decode(file_get_contents($statusFile), true) ?: []) : [];
     $effectiveSn = (!empty($sn) && $sn !== 'UNKNOWN') ? $sn : ($existing['sn'] ?? 'TTQ5261200350');
     @file_put_contents($statusFile, json_encode([
@@ -36,7 +38,7 @@ if ($clientIp !== 'unknown' && $clientIp !== '::1') {
 
 if (strpos($uri, 'getrequest') !== false) {
     header('Content-Type: text/plain');
-    $cmdFile = __DIR__ . '/pending_cmd.txt';
+    $cmdFile = LEAVE_PRIVATE_DIR . '/pending_cmd.txt';
     if (file_exists($cmdFile) && filesize($cmdFile) > 0) {
         $cmd = trim(file_get_contents($cmdFile));
         @unlink($cmdFile);

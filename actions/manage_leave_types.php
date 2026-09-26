@@ -2,6 +2,7 @@
 // actions/manage_leave_types.php - Manage custom leave types and bulk/individual allocation matrix
 require_once __DIR__ . '/../auth.php';
 requireLogin();
+requirePostWithCsrf();
 
 header('Content-Type: application/json');
 
@@ -299,8 +300,6 @@ try {
                 $uid = $u['id'];
                 $allocStmt = $pdo->prepare("SELECT leave_type_code, allocated_days, remaining_days FROM user_leave_allocations WHERE user_id = ?");
                 $allocStmt->execute([$uid]);
-                $allocs = $allocStmt->fetchAll(PDO::FETCH_KEY_PAIR | PDO::FETCH_GROUP); // or associative
-
                 $userAllocs = [];
                 foreach ($allocStmt->fetchAll() as $row) {
                     $userAllocs[$row['leave_type_code']] = (float)$row['remaining_days'];

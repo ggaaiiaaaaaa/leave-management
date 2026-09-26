@@ -2,23 +2,30 @@
 // config/db.php - Database connection, auto-initialization & migration
 
 if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    ini_set('session.use_strict_mode', '1');
+    session_set_cookie_params([
+        'httponly' => true,
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
 
-$dbDir = __DIR__ . '/../database';
+$dbDir = getenv('LEAVE_DATA_DIR') ?: dirname(__DIR__, 3) . '/leave-jtyeo-data';
+if (!defined('LEAVE_PRIVATE_DIR')) define('LEAVE_PRIVATE_DIR', $dbDir);
 if (!file_exists($dbDir)) {
-    mkdir($dbDir, 0777, true);
+    mkdir($dbDir, 0700, true);
 }
 
 // Ensure upload directories exist
 $uploadDirs = [
     __DIR__ . '/../uploads',
     __DIR__ . '/../uploads/avatars',
-    __DIR__ . '/../uploads/attachments'
+    $dbDir . '/attachments'
 ];
 foreach ($uploadDirs as $dir) {
     if (!file_exists($dir)) {
-        mkdir($dir, 0777, true);
+        mkdir($dir, $dir === $dbDir . '/attachments' ? 0700 : 0755, true);
     }
 }
 
@@ -28,6 +35,7 @@ try {
     $pdo = new PDO('sqlite:' . $dbPath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $pdo->exec('PRAGMA foreign_keys = ON');
 
     // Initialize core tables
     $pdo->exec("
@@ -250,8 +258,8 @@ try {
     }
 
     // Auto-seed user_leave_allocations for any user missing records
-    $allUsers = $pdo->query("SELECT id FROM users")->fetchAll(PDO::FETCH_COLUMN);
-    $allTypes = $pdo->query("SELECT code, default_days FROM leave_types WHERE is_active = 1")->fetchAll();
+    $allUsers = $pdo->query("SELECT id, gender FROM users")->fetchAll();
+    $allTypes = $pdo->query("SELECT code, default_days, gender_restriction FROM leave_types WHERE is_active = 1")->fetchAll();
 
     $insAlloc = $pdo->prepare("
         INSERT OR IGNORE INTO user_leave_allocations (user_id, leave_type_code, allocated_days, remaining_days)
@@ -269,14 +277,16 @@ try {
         'SpecialWomen' => 'special_women_balance'
     ];
 
-    foreach ($allUsers as $uid) {
+    foreach ($allUsers as $account) {
+        $uid = $account['id'];
         $bStmt = $pdo->prepare("SELECT * FROM leave_balances WHERE user_id = ?");
         $bStmt->execute([$uid]);
         $legacy = $bStmt->fetch();
 
         foreach ($allTypes as $t) {
             $code = $t['code'];
-            $defaultDays = (float)$t['default_days'];
+            $defaultDays = ($t['gender_restriction'] !== 'All' && $t['gender_restriction'] !== $account['gender'])
+                ? 0.0 : (float)$t['default_days'];
             $rem = $defaultDays;
             if ($legacy && isset($codeToLegacy[$code]) && isset($legacy[$codeToLegacy[$code]])) {
                 $rem = (float)$legacy[$codeToLegacy[$code]];
@@ -287,7 +297,7 @@ try {
 
     // Seed users if empty
     $userCount = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-    if ($userCount == 0) {
+    if ($userCount == 0 && getenv('LEAVE_SEED_DEMO') === '1') {
         $defaultPassword = password_hash('password123', PASSWORD_DEFAULT);
 
         // 1. Jessica Alcantara, CPA (Female Senior Associate)
@@ -387,16 +397,10 @@ try {
         $bioStmt->execute([$jessicaId, '101', $today, '08:24:12', '17:31:05', 'Face Scan', 'On-Time']);
         $bioStmt->execute([$markId, '102', $today, '08:29:40', '17:35:10', 'Fingerprint', 'On-Time']);
         $bioStmt->execute([$rochelleId, '103', $today, '08:44:18', '17:30:00', 'Face Scan', 'On-Time']);
-    } else {
-    // Ensure existing users have gender and biometric pins set accurately
-    $pdo->exec("UPDATE users SET gender = 'Male' WHERE name LIKE '%Jonathan%' OR name LIKE '%Mark%'");
-    $pdo->exec("UPDATE users SET gender = 'Female' WHERE name LIKE '%Jessica%' OR name LIKE '%Rochelle%'");
-    $pdo->exec("UPDATE users SET biometric_pin = '101' WHERE email = 'jessica@jtyeocpa.ph' AND (biometric_pin IS NULL OR biometric_pin = '')");
-    $pdo->exec("UPDATE users SET biometric_pin = '100' WHERE email = 'admin@jtyeocpa.ph' AND (biometric_pin IS NULL OR biometric_pin = '')");
-        
+    } elseif ($userCount > 0) {
         // Seed today's sample biometric logs if empty
         $logCount = $pdo->query("SELECT COUNT(*) FROM biometric_logs")->fetchColumn();
-        if ($logCount == 0) {
+        if ($logCount == 0 && getenv('LEAVE_SEED_DEMO') === '1') {
             $today = date('Y-m-d');
             $jId = $pdo->query("SELECT id FROM users WHERE email = 'jessica@jtyeocpa.ph'")->fetchColumn() ?: 1;
             $aId = $pdo->query("SELECT id FROM users WHERE email = 'admin@jtyeocpa.ph'")->fetchColumn() ?: 2;

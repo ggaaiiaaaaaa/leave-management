@@ -13,7 +13,7 @@ $currentMonthStart = date('Y-m-01');
 $currentMonthEnd = date('Y-m-t');
 
 // 1. ZKTeco Hardware Status
-$zkStatusFile = __DIR__ . '/../database/zkteco_status.json';
+$zkStatusFile = LEAVE_PRIVATE_DIR . '/zkteco_status.json';
 $zkIsOnline = false;
 $zkData = [];
 if (file_exists($zkStatusFile)) {

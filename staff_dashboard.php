@@ -90,6 +90,8 @@ $leaveIconMap = [
     .legend-chip { display: flex; align-items: center; gap: 6px; font-weight: 600; }
     .legend-chip .dot { width: 10px; height: 10px; border-radius: 50%; }
   </style>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrfToken(), ENT_QUOTES) ?>">
+  <script src="security.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -519,7 +521,7 @@ $leaveIconMap = [
                         </td>
                         <td>
                           <?php if (!empty($req['attachment_path'])): ?>
-                            <a href="<?= htmlspecialchars($req['attachment_path']) ?>" target="_blank" class="btn-icon" title="View Uploaded Document" style="color:var(--accent);">
+                            <a href="download_attachment.php?ref=<?= rawurlencode($req['ref_no']) ?>" target="_blank" class="btn-icon" title="View Uploaded Document" style="color:var(--accent);">
                               <i data-lucide="paperclip" style="width:14px;height:14px;"></i>
                             </a>
                           <?php else: ?>
@@ -536,11 +538,11 @@ $leaveIconMap = [
                         </td>
                         <td>
                           <div style="display:flex; gap:6px;">
-                            <button class="btn-icon" title="View Full Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['title']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= $req['status'] ?>', '<?= addslashes($req['approver_name'] ?? 'Pending') ?>', '<?= addslashes($req['rejection_reason'] ?? '') ?>', '<?= addslashes($req['attachment_path'] ?? '') ?>')">
+                            <button class="btn-icon" title="View Full Details" onclick="viewDetailsModal('<?= $req['ref_no'] ?>', <?= jsAttr($req['employee_name']) ?>, <?= jsAttr($req['title']) ?>, <?= jsAttr($req['leave_type_label']) ?>, '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', <?= jsAttr($req['reason']) ?>, '<?= $req['status'] ?>', <?= jsAttr($req['approver_name'] ?? 'Pending') ?>, <?= jsAttr($req['rejection_reason'] ?? '') ?>, <?= jsAttr($req['attachment_path'] ?? '') ?>)">
                               <i data-lucide="eye" style="width:14px;height:14px;"></i>
                             </button>
                             <?php if ($req['status'] === 'Approved'): ?>
-                              <button class="btn-icon" title="Print Official Leave Slip" onclick="printOfficialSlip('<?= $req['ref_no'] ?>', '<?= addslashes($req['employee_name']) ?>', '<?= addslashes($req['title']) ?>', '<?= addslashes($req['leave_type_label']) ?>', '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', '<?= addslashes($req['reason']) ?>', '<?= addslashes($req['approver_name'] ?? 'Atty. Jonathan Yeo, CPA') ?>')">
+                              <button class="btn-icon" title="Print Official Leave Slip" onclick="printOfficialSlip('<?= $req['ref_no'] ?>', <?= jsAttr($req['employee_name']) ?>, <?= jsAttr($req['title']) ?>, <?= jsAttr($req['leave_type_label']) ?>, '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', <?= jsAttr($req['reason']) ?>, <?= jsAttr($req['approver_name'] ?? 'Atty. Jonathan Yeo, CPA') ?>)">
                                 <i data-lucide="printer" style="width:14px;height:14px;"></i>
                               </button>
                             <?php endif; ?>
@@ -1045,7 +1047,7 @@ $leaveIconMap = [
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">New Password:</label>
-              <input type="password" name="new_password" class="form-input" placeholder="At least 6 characters">
+              <input type="password" name="new_password" class="form-input" placeholder="At least 12 characters">
             </div>
             <div class="form-group">
               <label class="form-label">Confirm New Password:</label>
@@ -1741,7 +1743,7 @@ $leaveIconMap = [
       const attRow = document.getElementById('dtlAttachmentRow');
       const attLink = document.getElementById('dtlAttachmentLink');
       if (attachmentPath && attachmentPath.length > 3) {
-        attLink.href = attachmentPath;
+        attLink.href = 'download_attachment.php?ref=' + encodeURIComponent(ref);
         attRow.style.display = 'block';
       } else {
         attRow.style.display = 'none';

@@ -9,6 +9,9 @@ header('Content-Type: application/json');
 $startDate = $_GET['start_date'] ?? ($_GET['date'] ?? date('Y-m-d'));
 $endDate = $_GET['end_date'] ?? $startDate;
 $filterUserId = !empty($_GET['user_id']) ? intval($_GET['user_id']) : null;
+if (!hasRole('admin')) {
+    $filterUserId = (int)getCurrentUser()['id'];
+}
 
 // Validate dates
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
@@ -57,6 +60,9 @@ $leaveStmt = $pdo->prepare("
 ");
 $leaveStmt->execute([$startDate, $endDate]);
 $approvedLeaves = $leaveStmt->fetchAll();
+$holidayStmt = $pdo->prepare('SELECT holiday_date FROM holidays WHERE holiday_date BETWEEN ? AND ?');
+$holidayStmt->execute([$startDate, $endDate]);
+$holidayDates = array_fill_keys($holidayStmt->fetchAll(PDO::FETCH_COLUMN), true);
 
 $format12h = function($t) {
     if (empty($t) || $t === '--:--' || $t === '-') return null;
@@ -86,7 +92,7 @@ if ($isSingleDay) {
     // Index leaves by user_id for today
     $dayLeaves = [];
     foreach ($approvedLeaves as $lv) {
-        if ($singleDate >= $lv['start_date'] && $singleDate <= $lv['end_date']) {
+        if ($singleDate >= $lv['start_date'] && $singleDate <= $lv['end_date'] && (int)date('N', strtotime($singleDate)) <= 5 && !isset($holidayDates[$singleDate])) {
             $dayLeaves[$lv['user_id']] = $lv;
         }
     }
@@ -207,7 +213,7 @@ if ($isSingleDay) {
                 break;
             }
         }
-        $isOnLeave = !empty($leave);
+        $isOnLeave = !empty($leave) && (int)date('N', strtotime($logDate)) <= 5 && !isset($holidayDates[$logDate]);
 
         $metrics = calculateAttendanceMetrics(
             $bio['time_in'] ?? null,
@@ -288,7 +294,7 @@ if ($isSingleDay) {
         while ($curTs <= $endTs) {
             $dayStr = date('Y-m-d', $curTs);
             $dow = intval(date('N', $curTs)); // 1-7 (7=Sun)
-            if ($dow < 7 && empty($userDateLogsMap[$uid . '_' . $dayStr])) {
+            if ($dow <= 5 && !isset($holidayDates[$dayStr]) && empty($userDateLogsMap[$uid . '_' . $dayStr])) {
                 $userDateLogsMap[$uid . '_' . $dayStr] = true;
                 $onLeaveCount++;
                 $hours = $isPaidLeave ? 8.0 : 0.0;

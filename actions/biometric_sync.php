@@ -6,6 +6,14 @@ requireLogin();
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? ($_GET['action'] ?? 'simulate_punch');
+if (!hasRole('admin')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Admin access required.']);
+    exit;
+}
+if (!in_array($action, ['get_status', 'check_device_pin'], true)) {
+    requirePostWithCsrf();
+}
 
 require_once __DIR__ . '/../services/attendance_calculator.php';
 
@@ -145,7 +153,7 @@ if ($action === 'check_device_pin') {
 
 // 2.5 GET LIVE STATUS (Heartbeat & ADMS Polling)
 if ($action === 'get_status') {
-    $statusFile = __DIR__ . '/../database/zkteco_status.json';
+    $statusFile = LEAVE_PRIVATE_DIR . '/zkteco_status.json';
     $isOnline = false;
     $deviceData = [];
     if (file_exists($statusFile)) {
@@ -164,7 +172,7 @@ if ($action === 'get_status') {
 
 // 3. 1-CLICK DEVICE SYNC (Real Network Socket & Ping)
 if ($action === 'sync_now') {
-    $statusFile = __DIR__ . '/../database/zkteco_status.json';
+    $statusFile = LEAVE_PRIVATE_DIR . '/zkteco_status.json';
     $autoDetectedIp = '';
     if (file_exists($statusFile)) {
         $st = json_decode(file_get_contents($statusFile), true) ?: [];
@@ -264,13 +272,7 @@ if ($action === 'sync_clock') {
     $cmd = "C:1:SET TIME {$nowFormatted}";
     
     // Write command to pending_cmd.txt for ADMS terminal polling
-    $cmdFiles = [
-        __DIR__ . '/../iclock/pending_cmd.txt',
-        __DIR__ . '/../../iclock/pending_cmd.txt'
-    ];
-    foreach ($cmdFiles as $cf) {
-        @file_put_contents($cf, $cmd);
-    }
+    file_put_contents(LEAVE_PRIVATE_DIR . '/pending_cmd.txt', $cmd, LOCK_EX);
 
     echo json_encode([
         'success' => true,
