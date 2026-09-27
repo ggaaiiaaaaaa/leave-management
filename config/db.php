@@ -11,8 +11,25 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_start();
 }
 
-$dbDir = getenv('LEAVE_DATA_DIR') ?: dirname(__DIR__, 3) . '/leave-jtyeo-data';
-if (!defined('LEAVE_PRIVATE_DIR')) define('LEAVE_PRIVATE_DIR', $dbDir);
+$dbDir = getenv('LEAVE_DATA_DIR');
+if (!$dbDir) {
+    $parent4 = dirname(__DIR__, 4) . '/leave-jtyeo-data';
+    $parent3 = dirname(__DIR__, 3) . '/leave-jtyeo-data';
+    $parent2 = dirname(__DIR__, 2) . '/leave-jtyeo-data';
+
+    // Prioritize populated database (the 144 KB uploaded file)
+    if (file_exists($parent4 . '/leave_system.sqlite') && filesize($parent4 . '/leave_system.sqlite') > 100000) {
+        $dbDir = $parent4;
+    } elseif (file_exists($parent3 . '/leave_system.sqlite') && filesize($parent3 . '/leave_system.sqlite') > 100000) {
+        $dbDir = $parent3;
+    } elseif (is_dir($parent3)) {
+        $dbDir = $parent3;
+    } else {
+        $dbDir = $parent2;
+    }
+}
+if (!defined('LEAVE_PRIVATE_DIR'))
+    define('LEAVE_PRIVATE_DIR', $dbDir);
 if (!file_exists($dbDir)) {
     mkdir($dbDir, 0700, true);
 }
@@ -286,10 +303,10 @@ try {
         foreach ($allTypes as $t) {
             $code = $t['code'];
             $defaultDays = ($t['gender_restriction'] !== 'All' && $t['gender_restriction'] !== $account['gender'])
-                ? 0.0 : (float)$t['default_days'];
+                ? 0.0 : (float) $t['default_days'];
             $rem = $defaultDays;
             if ($legacy && isset($codeToLegacy[$code]) && isset($legacy[$codeToLegacy[$code]])) {
-                $rem = (float)$legacy[$codeToLegacy[$code]];
+                $rem = (float) $legacy[$codeToLegacy[$code]];
             }
             $insAlloc->execute([$uid, $code, $defaultDays, $rem]);
         }
@@ -368,7 +385,7 @@ try {
 
         // Seed Philippine Holidays
         require_once __DIR__ . '/../services/holiday_service.php';
-        $currYr = (int)date('Y');
+        $currYr = (int) date('Y');
         for ($y = min(2026, $currYr); $y <= max(2030, $currYr + 3); $y++) {
             seedPhilippineHolidays($pdo, $y);
         }
@@ -399,10 +416,10 @@ try {
     }
 
     // Ensure standard Philippine holidays exist
-    $holCount = (int)$pdo->query("SELECT COUNT(*) FROM holidays")->fetchColumn();
+    $holCount = (int) $pdo->query("SELECT COUNT(*) FROM holidays")->fetchColumn();
     if ($holCount === 0) {
         require_once __DIR__ . '/../services/holiday_service.php';
-        $currYr = (int)date('Y');
+        $currYr = (int) date('Y');
         for ($y = min(2026, $currYr); $y <= max(2030, $currYr + 3); $y++) {
             seedPhilippineHolidays($pdo, $y);
         }

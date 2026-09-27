@@ -13,7 +13,7 @@ $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = $_SERVER['REQUEST_URI'] ?? '';
 $allowedIps = array_filter(array_map('trim', explode(',', getenv('LEAVE_DEVICE_IPS') ?: '')));
-if (!in_array($clientIp, $allowedIps, true)) {
+if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {
     http_response_code(403);
     exit('Forbidden');
 }
