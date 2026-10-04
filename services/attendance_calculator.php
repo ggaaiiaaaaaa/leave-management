@@ -2,8 +2,64 @@
 // services/attendance_calculator.php - Actual Rendered Hours & Attendance Engine
 
 /**
+ * Retrieves the current office schedule settings from system_settings or defaults.
+ * 
+ * @param PDO|null $pdo
+ * @return array
+ */
+function getOfficeScheduleSettings($pdo = null) {
+    static $cachedSettings = null;
+    if ($cachedSettings !== null && $pdo === null) {
+        return $cachedSettings;
+    }
+
+    $defaults = [
+        'work_start_time' => '08:30:00',
+        'work_end_time' => '17:30:00',
+        'grace_period_mins' => 0,
+        'break_start_time' => '12:00:00',
+        'break_end_time' => '13:00:00',
+        'required_daily_hours' => 8.0,
+        'work_days' => 'Mon,Tue,Wed,Thu,Fri'
+    ];
+
+    if (!$pdo) {
+        global $pdo;
+    }
+
+    if ($pdo) {
+        try {
+            $rows = $pdo->query("SELECT setting_key, setting_value FROM system_settings")->fetchAll(PDO::FETCH_KEY_PAIR);
+            if (!empty($rows)) {
+                foreach ($defaults as $k => $defVal) {
+                    if (isset($rows[$k])) {
+                        if ($k === 'grace_period_mins') {
+                            $defaults[$k] = intval($rows[$k]);
+                        } elseif ($k === 'required_daily_hours') {
+                            $defaults[$k] = floatval($rows[$k]);
+                        } else {
+                            $defaults[$k] = trim($rows[$k]);
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // Fallback to defaults
+        }
+    }
+
+    $defaults['work_start_12'] = formatTimeTo12Hour($defaults['work_start_time']);
+    $defaults['work_end_12'] = formatTimeTo12Hour($defaults['work_end_time']);
+    $defaults['break_start_12'] = formatTimeTo12Hour($defaults['break_start_time']);
+    $defaults['break_end_12'] = formatTimeTo12Hour($defaults['break_end_time']);
+
+    $cachedSettings = $defaults;
+    return $defaults;
+}
+
+/**
  * Calculates rendered hours, break duration, and real-time punch status.
- * Note: No fixed 8:30-5:30 shift constraints are applied per firm policy.
+ * Evaluates tardiness and undertime against dynamic firm office schedule.
  * Status is dynamically derived: Present, On Break, Completed, or Absent.
  * 
  * @param string|null $timeIn     HH:MM:SS or HH:MM format
@@ -11,9 +67,15 @@
  * @param string|null $breakIn    HH:MM:SS or HH:MM format
  * @param string|null $timeOut    HH:MM:SS or HH:MM format
  * @param float $approvedOtHours  Approved overtime hours
+ * @param string|null $logDate    YYYY-MM-DD
+ * @param array|null $schedule    Custom schedule settings array
  * @return array
  */
-function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $approvedOtHours = 0, $logDate = null) {
+function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $approvedOtHours = 0, $logDate = null, $schedule = null) {
+    if ($schedule === null) {
+        $schedule = getOfficeScheduleSettings();
+    }
+
     $metrics = [
         'rendered_hours' => 0.0,
         'rendered_formatted' => '0 hrs',
@@ -25,6 +87,13 @@ function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $app
         'tardy_minutes' => 0,
         'is_tardy' => false,
         'tardy_formatted' => 'On Time',
+        'undertime_minutes' => 0,
+        'is_undertime' => false,
+        'undertime_formatted' => 'Standard',
+        'shift_start' => $schedule['work_start_12'] ?? '8:30 AM',
+        'shift_end' => $schedule['work_end_12'] ?? '5:30 PM',
+        'tardy_tooltip' => "Tardy: Arrival past " . ($schedule['work_start_12'] ?? '8:30 AM') . " official schedule",
+        'undertime_tooltip' => "Undertime: Departure before " . ($schedule['work_end_12'] ?? '5:30 PM') . " official schedule",
         'is_incomplete' => false,
         'exception_type' => null,
         'exception_label' => null
@@ -40,11 +109,14 @@ function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $app
         return $metrics;
     }
 
-    // Official Firm Start Time: 8:30 AM
-    $shiftStartTs = strtotime("2000-01-01 08:30:00");
+    // Dynamic Firm Start Time & Grace Period
+    $shiftStartTime = $schedule['work_start_time'] ?? '08:30:00';
+    $graceMins = intval($schedule['grace_period_mins'] ?? 0);
+    $shiftStartTs = strtotime("2000-01-01 " . $shiftStartTime);
+    $graceLimitTs = $shiftStartTs + ($graceMins * 60);
     $inTs = strtotime("2000-01-01 " . $timeIn);
 
-    if ($inTs > $shiftStartTs) {
+    if ($inTs > $graceLimitTs) {
         $tardyMins = round(($inTs - $shiftStartTs) / 60);
         $metrics['tardy_minutes'] = $tardyMins;
         $metrics['is_tardy'] = true;
@@ -85,6 +157,20 @@ function calculateAttendanceMetrics($timeIn, $breakOut, $breakIn, $timeOut, $app
             $metrics['rendered_hours'] = $hours;
             $metrics['rendered_formatted'] = formatHoursToReadable($hours);
             $metrics['is_completed'] = true;
+
+            // Check undertime against official work_end_time
+            $shiftEndTime = $schedule['work_end_time'] ?? '17:30:00';
+            $shiftEndTs = strtotime("2000-01-01 " . $shiftEndTime);
+            if ($outTs < $shiftEndTs) {
+                $undertimeMins = round(($shiftEndTs - $outTs) / 60);
+                if ($undertimeMins > 0) {
+                    $metrics['undertime_minutes'] = $undertimeMins;
+                    $metrics['is_undertime'] = true;
+                    $metrics['undertime_formatted'] = ($undertimeMins >= 60) 
+                        ? floor($undertimeMins / 60) . 'h ' . ($undertimeMins % 60) . 'm early' 
+                        : "{$undertimeMins}m early";
+                }
+            }
         }
     } else {
         // Check for Missing Out exception on past days or late in the evening

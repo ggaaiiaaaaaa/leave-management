@@ -1,7 +1,9 @@
 <?php
 // admin_dashboard.php - Managing Partner & HR Executive Portal (JTYeo CPA Accounting Office)
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/services/attendance_calculator.php';
 $user = requireLogin();
+$officeSchedule = getOfficeScheduleSettings($pdo);
 
 if (!hasRole('admin')) {
     header('Location: staff_dashboard.php');
@@ -700,6 +702,37 @@ if (file_exists($zkStatusFile)) {
               <button class="btn-primary" onclick="openModal('testPunchModal')">
                 <i data-lucide="play-circle"></i>
                 <span>Simulate Test Punch</span>
+              </button>
+              <button class="btn-secondary" onclick="openOfficeHoursModal()" style="border-color:var(--primary); color:var(--primary);">
+                <i data-lucide="sliders"></i>
+                <span>Adjust Office Hours</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Official Office Hours & Shift Policy Banner -->
+          <div class="dashboard-card" style="margin-top:14px; background:linear-gradient(135deg, rgba(220,0,0,0.02) 0%, rgba(255,255,255,1) 100%); border-left:4px solid var(--primary); padding:14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:38px; height:38px; border-radius:10px; background:rgba(220,0,0,0.08); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i data-lucide="clock-4" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-weight:700; font-size:13.5px; color:var(--text-main);">Official Firm Office Hours &amp; Shift Schedule</span>
+                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:10.5px; padding:2px 7px; font-weight:600;">Active Policy</span>
+                  </div>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                    Work Hours: <strong id="schedDisplayHours" style="color:var(--text-main); font-weight:700;"><?= htmlspecialchars(($officeSchedule['work_start_12'] ?? '8:30 AM') . ' – ' . ($officeSchedule['work_end_12'] ?? '5:30 PM')) ?></strong> &bull;
+                    Lunch Break: <strong id="schedDisplayBreak" style="color:var(--text-main); font-weight:700;"><?= htmlspecialchars(($officeSchedule['break_start_12'] ?? '12:00 PM') . ' – ' . ($officeSchedule['break_end_12'] ?? '1:00 PM')) ?></strong> &bull;
+                    Grace Period: <strong id="schedDisplayGrace" style="color:var(--text-main); font-weight:700;"><?= intval($officeSchedule['grace_period_mins'] ?? 0) ?> mins</strong> &bull;
+                    Days: <strong id="schedDisplayDays" style="color:var(--text-main); font-weight:700;"><?= htmlspecialchars($officeSchedule['work_days'] ?? 'Mon–Fri') ?></strong>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn-secondary" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px;" onclick="openOfficeHoursModal()">
+                <i data-lucide="sliders" style="width:13px;height:13px;"></i>
+                <span>Configure Schedule</span>
               </button>
             </div>
           </div>
@@ -1620,6 +1653,93 @@ if (file_exists($zkStatusFile)) {
         <div class="modal-footer">
           <button type="button" class="btn-secondary" onclick="closeModal('adminEditPunchModal')">Cancel</button>
           <button type="submit" class="btn-primary" id="btnSavePunchEdit">Save DTR Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6.6 OFFICE HOURS & SHIFT POLICY MODAL -->
+  <div class="modal-backdrop" id="officeHoursModal">
+    <div class="modal-window" style="max-width:560px;">
+      <div class="modal-header">
+        <h3><i data-lucide="sliders"></i> Adjust Official Office Hours &amp; Shift Policy</h3>
+        <button class="btn-close-modal" onclick="closeModal('officeHoursModal')">&times;</button>
+      </div>
+      <form id="officeHoursForm" onsubmit="handleOfficeHoursSubmit(event)">
+        <div class="modal-body">
+          <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:var(--text-muted); line-height:1.5;">
+            <i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:middle;color:var(--primary);margin-right:4px;"></i>
+            Configure the firm's standard daily arrival, departure, and lunch break targets. All attendance ledger metrics, tardiness calculations, undertime alerts, and Form 48 DTR sheets dynamically synchronize with these settings.
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Official Work Start (Time In) <span class="req">*</span></label>
+              <input type="time" step="60" name="work_start_time" id="schedWorkStart" class="form-input" required value="<?= htmlspecialchars(substr($officeSchedule['work_start_time'] ?? '08:30:00', 0, 5)) ?>">
+              <span style="font-size:11px; color:var(--text-muted);">Standard morning arrival target</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Official Work End (Time Out) <span class="req">*</span></label>
+              <input type="time" step="60" name="work_end_time" id="schedWorkEnd" class="form-input" required value="<?= htmlspecialchars(substr($officeSchedule['work_end_time'] ?? '17:30:00', 0, 5)) ?>">
+              <span style="font-size:11px; color:var(--text-muted);">Standard evening departure target</span>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top:14px;">
+            <div class="form-group">
+              <label class="form-label">Lunch Break Start</label>
+              <input type="time" step="60" name="break_start_time" id="schedBreakStart" class="form-input" value="<?= htmlspecialchars(substr($officeSchedule['break_start_time'] ?? '12:00:00', 0, 5)) ?>">
+              <span style="font-size:11px; color:var(--text-muted);">Standard lunch departure</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lunch Break End</label>
+              <input type="time" step="60" name="break_end_time" id="schedBreakEnd" class="form-input" value="<?= htmlspecialchars(substr($officeSchedule['break_end_time'] ?? '13:00:00', 0, 5)) ?>">
+              <span style="font-size:11px; color:var(--text-muted);">Standard lunch return</span>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top:14px;">
+            <div class="form-group">
+              <label class="form-label">Grace Period (Minutes)</label>
+              <input type="number" min="0" max="120" name="grace_period_mins" id="schedGracePeriod" class="form-input" placeholder="0" value="<?= intval($officeSchedule['grace_period_mins'] ?? 0) ?>">
+              <span style="font-size:11px; color:var(--text-muted);">0 = late immediately after start time</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Required Regular Hours / Day</label>
+              <input type="number" step="0.5" min="1" max="14" name="required_daily_hours" id="schedReqHours" class="form-input" placeholder="8.0" value="<?= floatval($officeSchedule['required_daily_hours'] ?? 8.0) ?>">
+              <span style="font-size:11px; color:var(--text-muted);">Expected daily productive hours</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label class="form-label">Official Working Days of the Week</label>
+            <?php 
+              $activeDays = explode(',', $officeSchedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri');
+              $activeDays = array_map('trim', $activeDays);
+              $allWeekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            ?>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;" id="schedWorkDaysWrap">
+              <?php foreach ($allWeekDays as $day): ?>
+                <label style="display:inline-flex; align-items:center; gap:5px; font-size:12.5px; cursor:pointer; background:var(--bg-subtle); padding:4px 8px; border-radius:6px; border:1px solid var(--border-color);">
+                  <input type="checkbox" name="work_day_cb" value="<?= $day ?>" <?= in_array($day, $activeDays) ? 'checked' : '' ?>> <?= $day ?>
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+
+          <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px 12px; margin-top:16px;">
+            <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; font-size:12px; color:#991b1b; font-weight:600;">
+              <input type="checkbox" name="recalculate_logs" id="schedRecalculate" value="1" checked style="margin-top:2px;">
+              <span>Recalculate historical biometric logs to align with the new schedule</span>
+            </label>
+            <div style="font-size:11px; color:#7f1d1d; margin-left:22px; margin-top:2px;">
+              Automatically updates past rendered hours and On-Time vs. Late statuses in the ledger.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('officeHoursModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnSaveSchedule">Save Office Hours</button>
         </div>
       </form>
     </div>
@@ -3655,6 +3775,9 @@ if (file_exists($zkStatusFile)) {
         const data = await res.json();
         if (data.success && data.records) {
           cachedDtrRecords = data.records;
+          if (data.schedule) {
+            updateScheduleBannerUI(data.schedule);
+          }
 
           // Update KPI Summary Cards
           const presentEl = document.getElementById('kpiPresentCount');
@@ -3718,13 +3841,18 @@ if (file_exists($zkStatusFile)) {
             if (r.time_in) {
               timeInCell = `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_in}</span>`;
               if (r.is_tardy) {
-                timeInCell += ` <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 5px;" title="Tardy: Arrival past 8:30 AM official schedule">${r.tardy_formatted}</span>`;
+                const tardyTip = r.tardy_tooltip || ('Tardy: Arrival past ' + (r.shift_start || '8:30 AM') + ' official schedule');
+                timeInCell += ` <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 5px;" title="${tardyTip}">${r.tardy_formatted}</span>`;
               }
             }
 
             let timeOutCell = '<span style="color:var(--text-light); font-size:11px;">--:-- --</span>';
             if (r.time_out) {
               timeOutCell = `<span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:12px;">${r.time_out}</span>`;
+              if (r.is_undertime) {
+                const underTip = r.undertime_tooltip || ('Undertime: Departure before ' + (r.shift_end || '5:30 PM') + ' official schedule');
+                timeOutCell += ` <span class="badge" style="background:#ffedd5; color:#c2410c; font-size:10px; padding:1px 5px;" title="${underTip}">${r.undertime_formatted}</span>`;
+              }
             } else if (r.is_incomplete && r.exception_type === 'missing_out') {
               timeOutCell = `<span class="badge" style="background:#fef3c7; color:#b45309; font-size:10px; padding:2px 6px;" title="No time-out registered on terminal">Missing Out</span>`;
             }
@@ -3867,6 +3995,98 @@ if (file_exists($zkStatusFile)) {
       a.click();
       document.body.removeChild(a);
       showToast('Leave history exported to CSV successfully.', 'success');
+    }
+
+    function updateScheduleBannerUI(sched) {
+      if (!sched) return;
+      const hoursEl = document.getElementById('schedDisplayHours');
+      const breakEl = document.getElementById('schedDisplayBreak');
+      const graceEl = document.getElementById('schedDisplayGrace');
+      const daysEl = document.getElementById('schedDisplayDays');
+
+      if (hoursEl) hoursEl.innerText = `${sched.work_start_12 || sched.work_start_time} – ${sched.work_end_12 || sched.work_end_time}`;
+      if (breakEl) breakEl.innerText = `${sched.break_start_12 || sched.break_start_time} – ${sched.break_end_12 || sched.break_end_time}`;
+      if (graceEl) graceEl.innerText = `${sched.grace_period_mins ?? 0} mins`;
+      if (daysEl) daysEl.innerText = sched.work_days || 'Mon–Fri';
+    }
+
+    async function openOfficeHoursModal() {
+      try {
+        const res = await fetch('actions/manage_office_schedule.php?action=get');
+        const data = await res.json();
+        if (data.success && data.schedule) {
+          const s = data.schedule;
+          const startEl = document.getElementById('schedWorkStart');
+          const endEl = document.getElementById('schedWorkEnd');
+          const bStartEl = document.getElementById('schedBreakStart');
+          const bEndEl = document.getElementById('schedBreakEnd');
+          const graceEl = document.getElementById('schedGracePeriod');
+          const reqEl = document.getElementById('schedReqHours');
+
+          if (startEl && s.work_start_time) startEl.value = s.work_start_time.substring(0, 5);
+          if (endEl && s.work_end_time) endEl.value = s.work_end_time.substring(0, 5);
+          if (bStartEl && s.break_start_time) bStartEl.value = s.break_start_time.substring(0, 5);
+          if (bEndEl && s.break_end_time) bEndEl.value = s.break_end_time.substring(0, 5);
+          if (graceEl) graceEl.value = s.grace_period_mins ?? 0;
+          if (reqEl) reqEl.value = s.required_daily_hours ?? 8.0;
+
+          // Checkboxes for days
+          const activeDays = (s.work_days || 'Mon,Tue,Wed,Thu,Fri').split(',').map(d => d.trim());
+          document.querySelectorAll('input[name="work_day_cb"]').forEach(cb => {
+            cb.checked = activeDays.includes(cb.value);
+          });
+
+          updateScheduleBannerUI(s);
+        }
+      } catch (err) {
+        console.error('Error fetching office schedule:', err);
+      }
+      openModal('officeHoursModal');
+    }
+
+    async function handleOfficeHoursSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('officeHoursForm');
+      const formData = new FormData(form);
+      formData.append('action', 'save');
+
+      // Collect checked working days
+      const checkedDays = [];
+      document.querySelectorAll('input[name="work_day_cb"]:checked').forEach(cb => {
+        checkedDays.push(cb.value);
+      });
+      formData.set('work_days', checkedDays.join(','));
+
+      const btn = document.getElementById('btnSaveSchedule');
+      const origText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = 'Saving Policy...';
+
+      try {
+        const res = await fetch('actions/manage_office_schedule.php', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerText = origText;
+
+        if (data.success) {
+          showToast(data.message, 'success');
+          if (data.schedule) {
+            updateScheduleBannerUI(data.schedule);
+          }
+          closeModal('officeHoursModal');
+          // Reload attendance ledger to show immediate effect
+          loadDtrLogs();
+        } else {
+          showToast(data.message || 'Failed to save office schedule.', 'error');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = origText;
+        showToast('Network error saving office schedule.', 'error');
+      }
     }
 
     function openAdminEditPunch(userId, userName, pin, date, tIn, bOut, bIn, tOut) {

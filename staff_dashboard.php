@@ -1993,11 +1993,15 @@ $leaveIconMap = [
 
             let timeInHtml = r.time_in || '—';
             if (r.time_in && r.is_tardy) {
-              timeInHtml += ` <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 5px;" title="Tardy: Arrival past 8:30 AM official schedule">${r.tardy_formatted}</span>`;
+              const tardyTip = r.tardy_tooltip || ('Tardy: Arrival past ' + (r.shift_start || '8:30 AM') + ' official schedule');
+              timeInHtml += ` <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 5px;" title="${tardyTip}">${r.tardy_formatted}</span>`;
             }
 
             let timeOutHtml = r.time_out || '—';
-            if (!r.time_out && r.is_incomplete && r.exception_type === 'missing_out') {
+            if (r.time_out && r.is_undertime) {
+              const underTip = r.undertime_tooltip || ('Undertime: Departure before ' + (r.shift_end || '5:30 PM') + ' official schedule');
+              timeOutHtml += ` <span class="badge" style="background:#ffedd5; color:#c2410c; font-size:10px; padding:1px 5px;" title="${underTip}">${r.undertime_formatted}</span>`;
+            } else if (!r.time_out && r.is_incomplete && r.exception_type === 'missing_out') {
               timeOutHtml = `<span class="badge" style="background:#fef3c7; color:#b45309; font-size:10px; padding:2px 6px;" title="No time-out registered on terminal">Missing Out</span>`;
             }
 

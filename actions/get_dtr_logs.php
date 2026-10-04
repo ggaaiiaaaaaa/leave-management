@@ -181,6 +181,13 @@ if ($isSingleDay) {
             'tardy_minutes' => $metrics['tardy_minutes'] ?? 0,
             'is_tardy' => $metrics['is_tardy'] ?? false,
             'tardy_formatted' => $metrics['tardy_formatted'] ?? 'On Time',
+            'tardy_tooltip' => $metrics['tardy_tooltip'] ?? null,
+            'undertime_minutes' => $metrics['undertime_minutes'] ?? 0,
+            'is_undertime' => $metrics['is_undertime'] ?? false,
+            'undertime_formatted' => $metrics['undertime_formatted'] ?? 'Standard',
+            'undertime_tooltip' => $metrics['undertime_tooltip'] ?? null,
+            'shift_start' => $metrics['shift_start'] ?? '8:30 AM',
+            'shift_end' => $metrics['shift_end'] ?? '5:30 PM',
             'is_incomplete' => $metrics['is_incomplete'] ?? false,
             'exception_type' => $metrics['exception_type'] ?? null,
             'exception_label' => $metrics['exception_label'] ?? null
@@ -274,6 +281,13 @@ if ($isSingleDay) {
             'tardy_minutes' => $metrics['tardy_minutes'] ?? 0,
             'is_tardy' => $metrics['is_tardy'] ?? false,
             'tardy_formatted' => $metrics['tardy_formatted'] ?? 'On Time',
+            'tardy_tooltip' => $metrics['tardy_tooltip'] ?? null,
+            'undertime_minutes' => $metrics['undertime_minutes'] ?? 0,
+            'is_undertime' => $metrics['is_undertime'] ?? false,
+            'undertime_formatted' => $metrics['undertime_formatted'] ?? 'Standard',
+            'undertime_tooltip' => $metrics['undertime_tooltip'] ?? null,
+            'shift_start' => $metrics['shift_start'] ?? '8:30 AM',
+            'shift_end' => $metrics['shift_end'] ?? '5:30 PM',
             'is_incomplete' => $metrics['is_incomplete'] ?? false,
             'exception_type' => $metrics['exception_type'] ?? null,
             'exception_label' => $metrics['exception_label'] ?? null
@@ -375,5 +389,6 @@ echo json_encode([
     'total_tardy_minutes' => $totalTardyMinutes,
     'total_tardy_formatted' => ($totalTardyMinutes >= 60) ? floor($totalTardyMinutes / 60) . 'h ' . ($totalTardyMinutes % 60) . 'm' : "{$totalTardyMinutes}m",
     'total_exceptions_count' => $totalExceptionsCount,
+    'schedule' => getOfficeScheduleSettings($pdo),
     'records' => $dtrRecords
 ]);

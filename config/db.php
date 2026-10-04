@@ -197,6 +197,13 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS system_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT NOT NULL,
+            description TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     ");
 
     // Dynamic Column Migration Helper for existing databases
@@ -272,6 +279,21 @@ try {
         foreach ($defaultTypes as $dt) {
             $insType->execute($dt);
         }
+    }
+
+    // Seed default system settings if missing
+    $defaultSettings = [
+        'work_start_time' => ['08:30:00', 'Official morning work start time / time-in target'],
+        'work_end_time' => ['17:30:00', 'Official evening work end time / time-out target'],
+        'grace_period_mins' => ['0', 'Grace period in minutes before employee is marked tardy'],
+        'break_start_time' => ['12:00:00', 'Official lunch break start time'],
+        'break_end_time' => ['13:00:00', 'Official lunch break end time'],
+        'required_daily_hours' => ['8.0', 'Standard daily regular work hours required'],
+        'work_days' => ['Mon,Tue,Wed,Thu,Fri', 'Official working days of the week']
+    ];
+    $insSetting = $pdo->prepare("INSERT OR IGNORE INTO system_settings (setting_key, setting_value, description) VALUES (?, ?, ?)");
+    foreach ($defaultSettings as $k => $v) {
+        $insSetting->execute([$k, $v[0], $v[1]]);
     }
 
     // Auto-seed user_leave_allocations for any user missing records

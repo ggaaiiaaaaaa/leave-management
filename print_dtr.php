@@ -4,6 +4,8 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/services/attendance_calculator.php';
 requireLogin();
 
+$officeSchedule = getOfficeScheduleSettings($pdo);
+
 $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['role'] === 'admin');
 
@@ -468,7 +470,7 @@ if ($isAdmin) {
         </div>
 
         <div class="prescribed-text">
-            Official hours for arrival and departure: Regular Days (Productive Work Rendered)
+            Official hours for arrival and departure: Regular Days (<?= htmlspecialchars($officeSchedule['work_start_12'] . ' – ' . $officeSchedule['work_end_12']) ?>)
         </div>
 
         <table class="dtr-table">
@@ -538,9 +540,10 @@ if ($isAdmin) {
                     } elseif ($leaveLabel) {
                         $rowClass = 'leave-row';
                         $rowNote = "ON LEAVE ({$leaveLabel})";
-                        // Automatically credit 8.00 hours for paid authorized leave days on working days
+                        // Automatically credit standard hours for paid authorized leave days on working days
+                        $reqDailyHours = floatval($officeSchedule['required_daily_hours'] ?? 8.0);
                         if (empty($tIn) && $isPaidLeave && !$isWeekend) {
-                            $renderedHours = 8.00;
+                            $renderedHours = $reqDailyHours;
                         }
                     } elseif ($isWeekend && empty($tIn)) {
                         $rowClass = 'weekend-row';
