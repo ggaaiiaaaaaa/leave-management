@@ -1995,7 +1995,7 @@ if (file_exists($zkStatusFile)) {
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" onclick="closeModal('profileModal')">Cancel</button>
-          <button type="submit" class="btn-primary" id="btnUpdateProfile">Save Profile Updates</button>
+          <button type="submit" class="btn-primary" id="btnUpdateProfile">Save Changes</button>
         </div>
       </form>
     </div>

@@ -1142,6 +1142,7 @@ body {
   overflow: hidden;
   animation: modalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   max-height: 90vh;
+  max-height: 90dvh;
   display: flex;
   flex-direction: column;
 }
@@ -1152,6 +1153,17 @@ body {
 
 .modal-window.narrow {
   max-width: 440px;
+}
+
+/* Ensure form inside modal-window behaves as flex container filling available height */
+.modal-window > form,
+.modal-window form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
 }
 
 @keyframes modalPop {
@@ -1173,6 +1185,7 @@ body {
   align-items: center;
   justify-content: space-between;
   background: linear-gradient(180deg, #ffffff 0%, var(--bg-subtle) 100%);
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -1218,6 +1231,28 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(220, 0, 0, 0.25) transparent;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(220, 0, 0, 0.2);
+  border-radius: 999px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
 
 .modal-footer {
@@ -1228,6 +1263,7 @@ body {
   justify-content: flex-end;
   gap: 12px;
   background: var(--bg-subtle);
+  flex-shrink: 0;
 }
 
 /* Custom Prompt / Confirmation Modal Styles */
@@ -2735,15 +2771,19 @@ body.sidebar-open {
 
   .modal-header {
     padding: 14px 18px;
+    flex-shrink: 0 !important;
   }
 
   .modal-body {
     padding: 16px 18px;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .modal-footer {
     padding: 14px 18px;
     flex-wrap: wrap;
+    flex-shrink: 0 !important;
   }
 
   .modal-footer button {
