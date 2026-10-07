@@ -1144,8 +1144,8 @@ $leaveIconMap = [
           </div>
 
           <div class="form-group" style="margin-top:12px;">
-            <label class="form-label">Engagement / Audit Purpose <span class="req">*</span></label>
-            <textarea name="reason" id="otReason" class="form-input" rows="3" placeholder="e.g. BIR Monthly VAT Return & Withholding Tax finalization for client ABC Corp." required></textarea>
+            <label class="form-label">Engagement / Audit Purpose (Optional)</label>
+            <textarea name="reason" id="otReason" class="form-input" rows="3" placeholder="e.g. BIR Monthly VAT Return & Withholding Tax finalization (Optional)"></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -2132,7 +2132,7 @@ $leaveIconMap = [
               <tr>
                 <td><strong>${r.ot_date_formatted}</strong></td>
                 <td><strong style="color:#0284c7;">${r.estimated_hours} hrs</strong></td>
-                <td><span style="font-size:11.5px;" title="${r.reason}">${r.reason}</span></td>
+                <td><span style="font-size:11.5px; color:${r.reason ? 'inherit' : 'var(--text-muted)'};" title="${r.reason || 'None specified'}">${r.reason || '—'}</span></td>
                 <td><span class="badge ${badge}">${r.status}</span></td>
               </tr>
             `;

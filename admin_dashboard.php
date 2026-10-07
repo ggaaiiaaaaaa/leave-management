@@ -4320,7 +4320,7 @@ if (file_exists($zkStatusFile)) {
                 <td><strong>${r.user_name}</strong></td>
                 <td>${r.ot_date_formatted}</td>
                 <td><strong style="color:#0284c7;">${r.estimated_hours} hrs</strong></td>
-                <td><span style="font-size:11.5px;" title="${r.reason}">${r.reason}</span></td>
+                <td><span style="font-size:11.5px; color:${r.reason ? 'inherit' : 'var(--text-muted)'};" title="${r.reason || 'None specified'}">${r.reason || '—'}</span></td>
                 <td>${actionHtml}</td>
               </tr>
             `;

@@ -70,10 +70,7 @@ if ($action === 'submit_ot') {
         exit;
     }
 
-    if (empty($reason)) {
-        echo json_encode(['success' => false, 'message' => 'Please provide the project / audit reason for overtime.']);
-        exit;
-    }
+    // Overtime reason is optional
 
     $initialStatus = $isAdmin ? 'Approved' : 'Pending';
     $approvedBy = $isAdmin ? $currentUser['id'] : null;

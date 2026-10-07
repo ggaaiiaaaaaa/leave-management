@@ -140,6 +140,7 @@ function sendLeaveNotification($pdo, $type, $data) {
         $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=biometrics";
 
         $subject = "New Overtime Pre-Approval Filed: {$data['employee_name']} ({$data['estimated_hours']} hrs on {$data['ot_date']})";
+        $otReason = !empty($data['reason']) ? htmlspecialchars($data['reason']) : 'None specified (General Overtime)';
         $htmlBody = "
             <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;'>
                 <div style='border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 16px;'>
@@ -152,7 +153,7 @@ function sendLeaveNotification($pdo, $type, $data) {
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px; width: 140px;'>Associate Name:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0f172a;'>{$data['employee_name']}</td></tr>
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Overtime Date:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['ot_date']}</td></tr>
                     <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Estimated Hours:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: bold; color: #0284c7;'>{$data['estimated_hours']} Hours</td></tr>
-                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Reason / Project:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$data['reason']}</td></tr>
+                    <tr><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;'>Reason / Project:</td><td style='padding: 8px; border-bottom: 1px solid #f1f5f9; color: #0f172a;'>{$otReason}</td></tr>
                 </table>
                 <div style='margin: 22px 0; text-align: center;'>
                     <a href='{$reviewLink}' style='display: inline-block; background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;'>
