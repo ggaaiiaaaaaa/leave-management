@@ -167,7 +167,7 @@ if ($method === 'POST') {
                     $targetCol = 'time_in';
                     if ($stateCode === 2) $targetCol = 'break_out';
                     elseif ($stateCode === 3) $targetCol = 'break_in';
-                    elseif ($stateCode === 1) $targetCol = 'time_out';
+                    elseif ($stateCode === 1 || $stateCode === 4 || $stateCode === 5) $targetCol = 'time_out';
 
                     $ins = $pdo->prepare("
                         INSERT INTO biometric_logs (user_id, biometric_pin, log_date, {$targetCol}, verification_method, status, device_model)
@@ -184,7 +184,7 @@ if ($method === 'POST') {
                         $targetCol = 'break_out';
                     } elseif ($stateCode === 3) {
                         $targetCol = 'break_in';
-                    } elseif ($stateCode === 1) {
+                    } elseif ($stateCode === 1 || $stateCode === 4 || $stateCode === 5) {
                         $targetCol = 'time_out';
                     } else {
                         // Smart automated progression if state key wasn't explicitly pressed on device:
