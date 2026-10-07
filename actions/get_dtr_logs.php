@@ -70,11 +70,30 @@ $format12h = function($t) {
     return $ts ? date('g:i:s A', $ts) : $t;
 };
 
+$schedule = getOfficeScheduleSettings($pdo);
+$workEndTime = $schedule['work_end_time'] ?? '17:30:00';
+$todayDate = date('Y-m-d');
+$currentTime = date('H:i:s');
+
+// Helper: check if official working hours have concluded for a given date
+$isWorkingHoursDone = function(string $d) use ($todayDate, $currentTime, $workEndTime): bool {
+    if ($d < $todayDate) return true; // Past dates are completely finished
+    if ($d === $todayDate) return ($currentTime >= $workEndTime); // Current date only after official work end time
+    return false; // Future dates are not finished
+};
+
+// Helper: check if date is a standard working day (Monday to Friday, not a statutory holiday)
+$isWorkingDay = function(string $d) use ($holidayDates): bool {
+    $dow = (int)date('N', strtotime($d));
+    return ($dow <= 5 && !isset($holidayDates[$d]));
+};
+
 $dtrRecords = [];
 $presentCount = 0;
 $onBreakCount = 0;
 $onLeaveCount = 0;
 $expectedCount = 0;
+$absentCount = 0;
 $totalRenderedHours = 0;
 
 if ($isSingleDay) {
@@ -147,7 +166,24 @@ if ($isSingleDay) {
             }
             $totalRenderedHours += $metrics['rendered_hours'];
         } else {
-            $expectedCount++;
+            // Did not punch and not on approved leave
+            if ($isWorkingDay($singleDate) && $isWorkingHoursDone($singleDate)) {
+                $status = 'Absent';
+                $statusType = 'danger';
+                $statusText = 'Absent';
+                $absentCount++;
+            } else {
+                $status = 'Expected';
+                $statusType = 'neutral';
+                if (isset($holidayDates[$singleDate])) {
+                    $statusText = 'Holiday';
+                } elseif ((int)date('N', strtotime($singleDate)) > 5) {
+                    $statusText = 'Weekend / Rest Day';
+                } else {
+                    $statusText = 'Not Yet Clocked In';
+                }
+                $expectedCount++;
+            }
         }
 
         $dtrRecords[] = [
@@ -354,6 +390,60 @@ if ($isSingleDay) {
         }
     }
 
+    // Synthesize entries for unpunched working days whose hours are already done (Absent)
+    foreach ($users as $u) {
+        $uid = $u['id'];
+        if ($filterUserId && $uid != $filterUserId) continue;
+
+        $curTs = strtotime($startDate);
+        $endTs = strtotime($endDate);
+
+        while ($curTs <= $endTs) {
+            $dayStr = date('Y-m-d', $curTs);
+            if ($isWorkingDay($dayStr) && $isWorkingHoursDone($dayStr) && empty($userDateLogsMap[$uid . '_' . $dayStr])) {
+                $userDateLogsMap[$uid . '_' . $dayStr] = true;
+                $absentCount++;
+
+                $dtrRecords[] = [
+                    'id' => null,
+                    'user_id' => $u['id'],
+                    'log_date' => $dayStr,
+                    'log_date_formatted' => date('M j, Y (D)', $curTs),
+                    'name' => $u['name'],
+                    'title' => $u['title'],
+                    'avatar_path' => $u['avatar_path'],
+                    'avatar_initials' => $u['avatar_initials'],
+                    'biometric_pin' => $u['biometric_pin'] ?: strval($u['id']),
+                    'time_in' => null,
+                    'break_out' => null,
+                    'break_in' => null,
+                    'time_out' => null,
+                    'raw_time_in' => null,
+                    'raw_break_out' => null,
+                    'raw_break_in' => null,
+                    'raw_time_out' => null,
+                    'rendered_hours' => 0.0,
+                    'rendered_formatted' => '0.00 hrs (Absent)',
+                    'break_formatted' => '0 mins',
+                    'overtime_hours' => 0.0,
+                    'verification_method' => '—',
+                    'status' => 'Absent',
+                    'status_type' => 'danger',
+                    'status_text' => 'Absent',
+                    'is_on_leave' => false,
+                    'leave_info' => null,
+                    'tardy_minutes' => 0,
+                    'is_tardy' => false,
+                    'tardy_formatted' => '—',
+                    'is_incomplete' => false,
+                    'exception_type' => null,
+                    'exception_label' => null
+                ];
+            }
+            $curTs = strtotime('+1 day', $curTs);
+        }
+    }
+
     // Sort descending by date, then by associate name
     usort($dtrRecords, function($a, $b) {
         $c = strcmp($b['log_date'], $a['log_date']);
@@ -384,11 +474,12 @@ echo json_encode([
     'on_break_count' => $onBreakCount,
     'on_leave_count' => $onLeaveCount,
     'expected_count' => $expectedCount,
+    'absent_count' => $absentCount,
     'total_rendered_hours' => round($totalRenderedHours, 2),
     'total_rendered_formatted' => formatHoursToReadable($totalRenderedHours),
     'total_tardy_minutes' => $totalTardyMinutes,
     'total_tardy_formatted' => ($totalTardyMinutes >= 60) ? floor($totalTardyMinutes / 60) . 'h ' . ($totalTardyMinutes % 60) . 'm' : "{$totalTardyMinutes}m",
     'total_exceptions_count' => $totalExceptionsCount,
-    'schedule' => getOfficeScheduleSettings($pdo),
+    'schedule' => $schedule,
     'records' => $dtrRecords
 ]);

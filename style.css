@@ -949,6 +949,16 @@ body {
   box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
 }
 
+.status-pill.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-pill.danger .status-dot {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
 /* Table Action Buttons */
 .action-btn-group {
   display: flex;
@@ -1948,6 +1958,19 @@ body {
   background: #fff1f2;
   color: #be123c;
   border: 1px solid #fecdd3;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.badge-absent {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
   padding: 4px 10px;
   border-radius: 20px;
   font-weight: 700;

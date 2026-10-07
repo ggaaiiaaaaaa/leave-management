@@ -2915,9 +2915,10 @@ if (file_exists($zkStatusFile)) {
               : `<div style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:10px;">${u.avatar_initials || 'A'}</div>`;
 
             let pillClass = 'inactive';
-            if (u.state === 'present') pillClass = 'active';
+            if (u.state === 'present' || u.state === 'completed') pillClass = 'active';
             else if (u.state === 'on_break') pillClass = 'warning';
             else if (u.state === 'on_leave') pillClass = 'info';
+            else if (u.state === 'absent') pillClass = 'danger';
 
             return `
               <div class="presence-roster-item">
@@ -3812,6 +3813,8 @@ if (file_exists($zkStatusFile)) {
               statusBadge = `<span class="badge-pending"><i data-lucide="coffee" style="width:12px;height:12px;"></i> On Break</span>`;
             } else if (r.status === 'Present') {
               statusBadge = `<span class="badge-ontime"><i data-lucide="check" style="width:12px;height:12px;"></i> Present</span>`;
+            } else if (r.status === 'Absent') {
+              statusBadge = `<span class="badge-absent"><i data-lucide="user-x" style="width:12px;height:12px;"></i> Absent</span>`;
             } else {
               statusBadge = `<span style="color:var(--text-light); font-size:12px; font-weight:600;">Not Yet Clocked In</span>`;
             }
@@ -4168,6 +4171,7 @@ if (file_exists($zkStatusFile)) {
             else if (m.state === 'on_break') dotColor = '#f59e0b';
             else if (m.state === 'on_leave') dotColor = '#3b82f6';
             else if (m.state === 'completed') dotColor = '#059669';
+            else if (m.state === 'absent') dotColor = '#ef4444';
 
             html += `
               <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; min-width:220px; flex:1 1 calc(33.333% - 12px);">

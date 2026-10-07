@@ -287,6 +287,11 @@ if ($isAdmin) {
             font-style: italic;
         }
 
+        .absent-row {
+            background-color: #fef2f2;
+            font-style: italic;
+        }
+
         .totals-row td {
             font-weight: 700;
             background-color: #f1f5f9;
@@ -534,6 +539,11 @@ if ($isAdmin) {
                     $rowClass = '';
                     $rowNote = '';
 
+                    $todayStr = date('Y-m-d');
+                    $currentTimeStr = date('H:i:s');
+                    $workEndTime = $officeSchedule['work_end_time'] ?? '17:30:00';
+                    $isWorkHoursEnded = ($currentDateStr < $todayStr) || ($currentDateStr === $todayStr && $currentTimeStr >= $workEndTime);
+
                     if ($holidayTitle) {
                         $rowClass = 'holiday-row';
                         $rowNote = "HOLIDAY ({$holidayTitle})";
@@ -548,6 +558,9 @@ if ($isAdmin) {
                     } elseif ($isWeekend && empty($tIn)) {
                         $rowClass = 'weekend-row';
                         $rowNote = ($dayOfWeek == 6) ? 'SATURDAY' : 'SUNDAY';
+                    } elseif (!$isWeekend && empty($tIn) && $isWorkHoursEnded) {
+                        $rowClass = 'absent-row';
+                        $rowNote = 'ABSENT';
                     }
 
                     $totalRenderedHoursMonth += $renderedHours;
@@ -556,7 +569,7 @@ if ($isAdmin) {
                     <tr class="<?= $rowClass ?>">
                         <td><strong><?= $d ?></strong></td>
                         <?php if (!empty($rowNote) && empty($tIn)): ?>
-                            <td colspan="4" style="text-align: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; color: <?= $leaveLabel ? '#1e40af' : '#475569' ?>;"><?= $rowNote ?></td>
+                            <td colspan="4" style="text-align: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; color: <?= $leaveLabel ? '#1e40af' : ($rowClass === 'absent-row' ? '#b91c1c' : '#475569') ?>;"><?= $rowNote ?></td>
                             <td style="font-weight:<?= ($renderedHours > 0) ? '700' : 'normal' ?>;"><?= ($renderedHours > 0) ? number_format($renderedHours, 2) : '—' ?></td>
                             <td><?= ($otHours > 0) ? number_format($otHours, 2) : '—' ?></td>
                         <?php else: ?>

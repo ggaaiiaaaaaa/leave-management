@@ -31,11 +31,25 @@ foreach ($leaveStmt->fetchAll() as $lv) {
     $leaveMap[$lv['user_id']] = $lv;
 }
 
+// Check if today is a public holiday or weekend
+$holidayStmt = $pdo->prepare('SELECT holiday_date, title FROM holidays WHERE holiday_date = ?');
+$holidayStmt->execute([$today]);
+$todayHoliday = $holidayStmt->fetch();
+$isHolidayToday = !empty($todayHoliday);
+
+// Fetch office hours policy to check if working hours have concluded
+$schedule = getOfficeScheduleSettings($pdo);
+$workEndTime = $schedule['work_end_time'] ?? '17:30:00';
+$isWeekday = ((int)date('N', strtotime($today)) <= 5);
+$isDayDone = (date('H:i:s') >= $workEndTime);
+$isWorkingHoursDoneToday = ($isWeekday && !$isHolidayToday && $isDayDone);
+
 $roster = [];
 $counts = [
     'present' => 0,
     'on_break' => 0,
     'on_leave' => 0,
+    'absent' => 0,
     'not_in' => 0
 ];
 
@@ -75,10 +89,26 @@ foreach ($users as $u) {
             $lastAction = 'Arrived at ' . formatTimeTo12Hour($bio['time_in']);
             $counts['present']++;
         } else {
-            $counts['not_in']++;
+            if ($isWorkingHoursDoneToday) {
+                $state = 'absent';
+                $stateLabel = 'Absent';
+                $stateColor = 'rose';
+                $lastAction = 'No punch recorded (Work hours ended)';
+                $counts['absent']++;
+            } else {
+                $counts['not_in']++;
+            }
         }
     } else {
-        $counts['not_in']++;
+        if ($isWorkingHoursDoneToday) {
+            $state = 'absent';
+            $stateLabel = 'Absent';
+            $stateColor = 'rose';
+            $lastAction = 'No punch recorded (Work hours ended)';
+            $counts['absent']++;
+        } else {
+            $counts['not_in']++;
+        }
     }
 
     $roster[] = [

@@ -1458,9 +1458,10 @@ $leaveIconMap = [
               : `<div style="width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:10px;">${u.avatar_initials || 'A'}</div>`;
 
             let pillClass = 'inactive';
-            if (u.state === 'present') pillClass = 'active';
+            if (u.state === 'present' || u.state === 'completed') pillClass = 'active';
             else if (u.state === 'on_break') pillClass = 'warning';
             else if (u.state === 'on_leave') pillClass = 'info';
+            else if (u.state === 'absent') pillClass = 'danger';
 
             return `
               <div class="presence-roster-item" style="padding:6px 8px;">
@@ -1990,6 +1991,7 @@ $leaveIconMap = [
             if (r.status_type === 'success') badgeClass = 'badge-approved';
             else if (r.status_type === 'warning') badgeClass = 'badge-pending';
             else if (r.status_type === 'leave') badgeClass = 'badge-secondary';
+            else if (r.status_type === 'danger' || r.status === 'Absent') badgeClass = 'badge-rejected';
 
             let timeInHtml = r.time_in || '—';
             if (r.time_in && r.is_tardy) {
@@ -2058,6 +2060,7 @@ $leaveIconMap = [
             else if (m.state === 'on_break') dotColor = '#f59e0b';
             else if (m.state === 'on_leave') dotColor = '#3b82f6';
             else if (m.state === 'completed') dotColor = '#059669';
+            else if (m.state === 'absent') dotColor = '#ef4444';
 
             html += `
               <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; min-width:220px; flex:1 1 calc(33.333% - 12px);">
