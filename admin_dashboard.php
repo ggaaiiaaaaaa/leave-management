@@ -1312,11 +1312,6 @@ if (file_exists($zkStatusFile)) {
           </div>
         </div>
 
-        <div class="overlap-banner safe" id="decModalOverlap">
-          <i data-lucide="shield-check"></i>
-          <div><strong>Firm Coverage Status:</strong> No other staff leaves conflict with this request.</div>
-        </div>
-
         <div class="form-group" style="margin-top:14px;">
           <label class="form-label">Reviewer Note / Feedback (Optional):</label>
           <textarea id="decModalNote" class="form-textarea" placeholder="Enter optional notes for the associate..."></textarea>
