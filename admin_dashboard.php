@@ -1761,7 +1761,7 @@ if (file_exists($zkStatusFile)) {
           </div>
           <div class="form-group" style="margin-bottom:14px;">
             <label class="form-label">Email Address <span class="req">*</span></label>
-            <input type="email" name="email" class="form-input" placeholder="e.g. maria@jtyeocpa.ph" required>
+            <input type="email" name="email" class="form-input" placeholder="e.g. maria@jtyeoaccounting.com" required>
           </div>
           <div class="form-grid">
             <div class="form-group">

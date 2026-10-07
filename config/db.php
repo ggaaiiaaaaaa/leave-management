@@ -1,37 +1,102 @@
 <?php
 // config/db.php - Database connection, auto-initialization & migration
 
+// 1. Auto-load .env file if present in project root
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile) && is_readable($envFile)) {
+    $lines = @file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) continue;
+        if (str_contains($line, '=')) {
+            [$k, $v] = explode('=', $line, 2);
+            $k = trim($k);
+            $v = trim($v, " \t\n\r\0\x0B\"'");
+            if (!isset($_SERVER[$k])) $_SERVER[$k] = $v;
+            if (!isset($_ENV[$k])) $_ENV[$k] = $v;
+            putenv("{$k}={$v}");
+        }
+    }
+}
+
+// 2. Secure Session Initialization (Proxy & SSL Aware)
 if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     ini_set('session.use_strict_mode', '1');
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
     session_set_cookie_params([
         'httponly' => true,
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'secure' => $isSecure,
         'samesite' => 'Lax'
     ]);
     session_start();
 }
 
-$dbDir = getenv('LEAVE_DATA_DIR');
+// 3. Database Location Discovery (Resilient against open_basedir restrictions)
+$dbDir = getenv('LEAVE_DATA_DIR') ?: ($_SERVER['LEAVE_DATA_DIR'] ?? ($_ENV['LEAVE_DATA_DIR'] ?? null));
 if (!$dbDir) {
-    $parent4 = dirname(__DIR__, 4) . '/leave-jtyeo-data';
-    $parent3 = dirname(__DIR__, 3) . '/leave-jtyeo-data';
-    $parent2 = dirname(__DIR__, 2) . '/leave-jtyeo-data';
+    $candidates = [
+        dirname(__DIR__, 4) . '/leave-jtyeo-data',
+        dirname(__DIR__, 3) . '/leave-jtyeo-data',
+        dirname(__DIR__, 2) . '/leave-jtyeo-data',
+        dirname(__DIR__) . '/leave-jtyeo-data',
+        __DIR__ . '/../database' // internal protected fallback
+    ];
 
-    // Prioritize populated database (the 144 KB uploaded file)
-    if (file_exists($parent4 . '/leave_system.sqlite') && filesize($parent4 . '/leave_system.sqlite') > 100000) {
-        $dbDir = $parent4;
-    } elseif (file_exists($parent3 . '/leave_system.sqlite') && filesize($parent3 . '/leave_system.sqlite') > 100000) {
-        $dbDir = $parent3;
-    } elseif (is_dir($parent3)) {
-        $dbDir = $parent3;
-    } else {
-        $dbDir = $parent2;
+    // Priority A: Populated database (>100KB)
+    foreach ($candidates as $cand) {
+        if (@file_exists($cand . '/leave_system.sqlite') && @filesize($cand . '/leave_system.sqlite') > 100000) {
+            $dbDir = $cand;
+            break;
+        }
+    }
+
+    // Priority B: Existing sqlite database file
+    if (!$dbDir) {
+        foreach ($candidates as $cand) {
+            if (@file_exists($cand . '/leave_system.sqlite')) {
+                $dbDir = $cand;
+                break;
+            }
+        }
+    }
+
+    // Priority C: Existing writable directory
+    if (!$dbDir) {
+        foreach ($candidates as $cand) {
+            if (@is_dir($cand) && @is_writable($cand)) {
+                $dbDir = $cand;
+                break;
+            }
+        }
+    }
+
+    // Priority D: Attempt to create external directory
+    if (!$dbDir) {
+        foreach ($candidates as $cand) {
+            if (!@file_exists($cand)) {
+                if (@mkdir($cand, 0700, true)) {
+                    $dbDir = $cand;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Final fallback: internal protected database folder
+    if (!$dbDir) {
+        $dbDir = dirname(__DIR__) . '/database';
+        if (!@file_exists($dbDir)) {
+            @mkdir($dbDir, 0700, true);
+        }
     }
 }
 if (!defined('LEAVE_PRIVATE_DIR'))
     define('LEAVE_PRIVATE_DIR', $dbDir);
 if (!file_exists($dbDir)) {
-    mkdir($dbDir, 0700, true);
+    @mkdir($dbDir, 0700, true);
 }
 
 // Ensure upload directories exist
@@ -42,7 +107,7 @@ $uploadDirs = [
 ];
 foreach ($uploadDirs as $dir) {
     if (!file_exists($dir)) {
-        mkdir($dir, $dir === $dbDir . '/attachments' ? 0700 : 0755, true);
+        @mkdir($dir, $dir === $dbDir . '/attachments' ? 0700 : 0755, true);
     }
 }
 

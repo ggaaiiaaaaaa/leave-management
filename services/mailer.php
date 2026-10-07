@@ -1,6 +1,36 @@
 <?php
 // services/mailer.php - Email notification engine for JTYeo CPA Leave System
 
+/**
+ * Resolves the base URL for emails dynamically, supporting both root domain and subfolder installs
+ */
+function getLeaveSystemBaseUrl() {
+    $envBase = getenv('LEAVE_BASE_URL');
+    if ($envBase) {
+        return rtrim($envBase, '/');
+    }
+
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+    $protocol = $isHttps ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'jtyeoaccounting.com';
+
+    $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+    $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
+    if ($basePath === '/' || $basePath === '\\') {
+        $basePath = '';
+    }
+
+    // Fallback to /leave-jtyeo only when running in local development environment
+    if (empty($basePath) && (str_contains($host, 'localhost') || str_contains($host, '127.0.0.1'))) {
+        $basePath = '/leave-jtyeo';
+    }
+
+    return $protocol . $host . (empty($basePath) ? '' : '/' . trim($basePath, '/'));
+}
+
 function sendLeaveNotification($pdo, $type, $data) {
     // $data includes: ref_no, employee_name, employee_email, leave_type_label, start_date, end_date, days_count, approver_name, rejection_reason
 
@@ -13,17 +43,10 @@ function sendLeaveNotification($pdo, $type, $data) {
         // Sent to Managing Partner / Admin
         $adminStmt = $pdo->query("SELECT email, name FROM users WHERE role = 'admin' LIMIT 1");
         $admin = $adminStmt->fetch();
-        $recipientEmail = $admin['email'] ?? 'admin@jtyeocpa.ph';
+        $recipientEmail = $admin['email'] ?? 'admin@jtyeoaccounting.com';
         $recipientName = $admin['name'] ?? 'Atty. Jonathan Yeo, CPA';
 
-        // Determine base URL dynamically
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
-        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
-        $baseUrl = $protocol . $host . rtrim($basePath, '/');
-
+        $baseUrl = getLeaveSystemBaseUrl();
         $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=approvals&ref=" . urlencode($data['ref_no']);
 
         $subject = "New Leave Application Filed: {$data['employee_name']} ({$data['leave_type_label']})";
@@ -56,13 +79,7 @@ function sendLeaveNotification($pdo, $type, $data) {
         $recipientEmail = $data['employee_email'];
         $recipientName = $data['employee_name'];
 
-        // Determine base URL dynamically
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
-        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
-        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+        $baseUrl = getLeaveSystemBaseUrl();
         $slipLink = "{$baseUrl}/staff_dashboard.php?tab=my-portal&print_ref=" . urlencode($data['ref_no']);
 
         $subject = "Leave Application Approved: {$data['leave_type_label']} ({$data['ref_no']})";
@@ -116,15 +133,10 @@ function sendLeaveNotification($pdo, $type, $data) {
         // Sent to Managing Partner / Admin
         $adminStmt = $pdo->query("SELECT email, name FROM users WHERE role = 'admin' LIMIT 1");
         $admin = $adminStmt->fetch();
-        $recipientEmail = $admin['email'] ?? 'admin@jtyeocpa.ph';
+        $recipientEmail = $admin['email'] ?? 'admin@jtyeoaccounting.com';
         $recipientName = $admin['name'] ?? 'Atty. Jonathan Yeo, CPA';
 
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
-        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
-        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+        $baseUrl = getLeaveSystemBaseUrl();
         $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=biometrics";
 
         $subject = "New Overtime Pre-Approval Filed: {$data['employee_name']} ({$data['estimated_hours']} hrs on {$data['ot_date']})";
@@ -194,15 +206,10 @@ function sendLeaveNotification($pdo, $type, $data) {
         // Sent to Managing Partner / Admin
         $adminStmt = $pdo->query("SELECT email, name FROM users WHERE role = 'admin' LIMIT 1");
         $admin = $adminStmt->fetch();
-        $recipientEmail = $admin['email'] ?? 'admin@jtyeocpa.ph';
+        $recipientEmail = $admin['email'] ?? 'admin@jtyeoaccounting.com';
         $recipientName = $admin['name'] ?? 'Atty. Jonathan Yeo, CPA';
 
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = preg_replace('#/(actions|services)/.*#', '', $scriptPath);
-        if (empty($basePath) || $basePath === '/') $basePath = '/leave-jtyeo';
-        $baseUrl = $protocol . $host . rtrim($basePath, '/');
+        $baseUrl = getLeaveSystemBaseUrl();
         $reviewLink = "{$baseUrl}/admin_dashboard.php?tab=biometrics";
 
         $punchParts = [];
@@ -301,8 +308,9 @@ function sendLeaveNotification($pdo, $type, $data) {
 
     if (!$sendSuccess) {
         // Fallback to PHP mail()
+        $fromEmail = !empty($smtpConfig['from_email']) ? $smtpConfig['from_email'] : 'no-reply@jtyeoaccounting.com';
         $mailSent = getenv('LEAVE_ALLOW_PHP_MAIL') === '1'
-            ? @mail($recipientEmail, $subject, $htmlBody, "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: no-reply@jtyeocpa.ph")
+            ? @mail($recipientEmail, $subject, $htmlBody, "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: {$fromEmail}")
             : false;
         if ($mailSent && $status === 'Logged') {
             $status = 'Sent (mail)';

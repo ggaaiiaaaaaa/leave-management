@@ -947,7 +947,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span>Work Email</span>
               </label>
               <div class="input-wrapper">
-                <input type="email" id="email" name="email" class="form-input" placeholder="name@jtyeocpa.ph" required
+                <input type="email" id="email" name="email" class="form-input" placeholder="name@jtyeoaccounting.com" required
                   value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" autocomplete="email">
               </div>
             </div>

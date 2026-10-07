@@ -8,14 +8,26 @@ if (file_exists(__DIR__ . '/../config/db.php')) {
     require_once __DIR__ . '/../leave-jtyeo/services/attendance_calculator.php';
 }
 
-// Log incoming request for diagnostics
-$clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+// Log incoming request for diagnostics (proxy and Cloudflare aware)
+$rawIp = $_SERVER['HTTP_CF_CONNECTING_IP']
+    ?? ($_SERVER['HTTP_X_REAL_IP']
+    ?? ($_SERVER['HTTP_X_FORWARDED_FOR']
+    ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown')));
+if (str_contains($rawIp, ',')) {
+    $rawIp = trim(explode(',', $rawIp)[0]);
+}
+$clientIp = $rawIp;
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = $_SERVER['REQUEST_URI'] ?? '';
-$allowedIps = array_filter(array_map('trim', explode(',', getenv('LEAVE_DEVICE_IPS') ?: '')));
-if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {
-    http_response_code(403);
-    exit('Forbidden');
+
+$envIps = getenv('LEAVE_DEVICE_IPS') ?: ($_SERVER['LEAVE_DEVICE_IPS'] ?? ($_ENV['LEAVE_DEVICE_IPS'] ?? ''));
+$allowedIps = array_filter(array_map('trim', explode(',', $envIps)));
+if (!empty($allowedIps)) {
+    $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '';
+    if (!in_array($clientIp, $allowedIps, true) && !in_array($remoteAddr, $allowedIps, true)) {
+        http_response_code(403);
+        exit('Forbidden');
+    }
 }
 $rawBody = file_get_contents('php://input');
 

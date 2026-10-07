@@ -10,3 +10,6 @@ uploads/*
 uploads/attachments/*
 !uploads/attachments/.htaccess
 iclock/pending_cmd.txt
+.env
+config/local_smtp.php
+leave-jtyeo-data/

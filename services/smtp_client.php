@@ -58,11 +58,18 @@ class SmtpClient {
             return $this->abort($socket, "Server greeting failed: {$response}");
         }
 
+        // Determine client domain for RFC compliant SMTP handshake
+        $clientDomain = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? 'jtyeoaccounting.com');
+        $clientDomain = preg_replace('/:[0-9]+$/', '', $clientDomain);
+        if (empty($clientDomain) || $clientDomain === 'localhost' || $clientDomain === '127.0.0.1') {
+            $clientDomain = 'jtyeoaccounting.com';
+        }
+
         // 2. Initial EHLO
-        $this->write($socket, "EHLO localhost");
+        $this->write($socket, "EHLO {$clientDomain}");
         $response = $this->readResponse($socket);
         if (!$this->isCode($response, 250)) {
-            $this->write($socket, "HELO localhost");
+            $this->write($socket, "HELO {$clientDomain}");
             $response = $this->readResponse($socket);
             if (!$this->isCode($response, 250)) {
                 return $this->abort($socket, "EHLO/HELO rejected: {$response}");
@@ -84,7 +91,7 @@ class SmtpClient {
             $this->log("TLS encryption established successfully.");
 
             // Re-send EHLO after TLS negotiation
-            $this->write($socket, "EHLO localhost");
+            $this->write($socket, "EHLO {$clientDomain}");
             $response = $this->readResponse($socket);
             if (!$this->isCode($response, 250)) {
                 return $this->abort($socket, "Post-TLS EHLO rejected: {$response}");

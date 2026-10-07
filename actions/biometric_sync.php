@@ -158,7 +158,8 @@ if ($action === 'get_status') {
     $deviceData = [];
     if (file_exists($statusFile)) {
         $deviceData = json_decode(file_get_contents($statusFile), true) ?: [];
-        if (!empty($deviceData['last_seen']) && (time() - $deviceData['last_seen']) < 60) {
+        // Heartbeat threshold: 180 seconds (3 minutes) to cover standard ZKTeco ADMS poll cycle
+        if (!empty($deviceData['last_seen']) && (time() - $deviceData['last_seen']) < 180) {
             $isOnline = true;
         }
     }
@@ -170,54 +171,59 @@ if ($action === 'get_status') {
     exit;
 }
 
-// 3. 1-CLICK DEVICE SYNC (Real Network Socket & Ping)
+// 3. 1-CLICK DEVICE SYNC (ADMS Cloud Status & Network Socket Probe)
 if ($action === 'sync_now') {
     $statusFile = LEAVE_PRIVATE_DIR . '/zkteco_status.json';
     $autoDetectedIp = '';
+    $deviceData = [];
     if (file_exists($statusFile)) {
-        $st = json_decode(file_get_contents($statusFile), true) ?: [];
-        if (!empty($st['ip']) && $st['ip'] !== 'unknown') {
-            $autoDetectedIp = $st['ip'];
+        $deviceData = json_decode(file_get_contents($statusFile), true) ?: [];
+        if (!empty($deviceData['ip']) && $deviceData['ip'] !== 'unknown') {
+            $autoDetectedIp = $deviceData['ip'];
         }
     }
 
     $deviceIp = trim($_POST['device_ip'] ?? ($_GET['device_ip'] ?? $autoDetectedIp));
 
-    if (empty($deviceIp) || $deviceIp === 'Auto-detecting...') {
-        echo json_encode([
-            'success' => false,
-            'message' => "No biometric device detected on the local network yet. Please configure the Cloud Server IP on the device first.",
-            'device_ip' => 'Auto-detecting...',
-            'status' => 'Waiting for device',
-            'sync_time' => date('Y-m-d H:i:s')
-        ]);
-        exit;
-    }
-    
-    // Perform real network probe to ZKTeco hardware
+    // A. Check if device has recent ADMS push heartbeat (essential for cloud hosting)
     $isOnline = false;
-    $errno = 0;
-    $errstr = '';
-    
-    // 1. Probe via ICMP ping (Fast & accurate across LAN)
-    $pingCmd = "ping -n 1 -w 800 " . escapeshellarg($deviceIp);
-    exec($pingCmd, $pingOut, $pingCode);
-    if ($pingCode === 0) {
+    if (!empty($deviceData['last_seen']) && (time() - $deviceData['last_seen']) < 180) {
         $isOnline = true;
-    } else {
+    }
+
+    // B. If no recent push, attempt network probe (works in local LAN setup)
+    if (!$isOnline && !empty($deviceIp) && $deviceIp !== 'Auto-detecting...') {
+        $errno = 0;
+        $errstr = '';
+        
+        // 1. Probe via ICMP ping if exec() is available
+        if (function_exists('exec')) {
+            $isWin = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
+            $pingCmd = $isWin 
+                ? "ping -n 1 -w 800 " . escapeshellarg($deviceIp)
+                : "ping -c 1 -W 1 " . escapeshellarg($deviceIp) . " 2>&1";
+            @exec($pingCmd, $pingOut, $pingCode);
+            if ($pingCode === 0) {
+                $isOnline = true;
+            }
+        }
+        
         // 2. Probe port 4370 (Standard ZKTeco Protocol)
-        $socket = @fsockopen($deviceIp, 4370, $errno, $errstr, 0.8);
-        if ($socket) {
-            $isOnline = true;
-            fclose($socket);
+        if (!$isOnline) {
+            $socket = @fsockopen($deviceIp, 4370, $errno, $errstr, 1.0);
+            if ($socket) {
+                $isOnline = true;
+                fclose($socket);
+            }
         }
     }
 
     if (!$isOnline) {
+        $displayIp = (!empty($deviceIp) && $deviceIp !== 'Auto-detecting...') ? $deviceIp : 'the terminal';
         echo json_encode([
             'success' => false,
-            'message' => "ZKTeco MB460 Plus is OFFLINE / Unreachable at {$deviceIp}. Please ensure it is connected to the office network.",
-            'device_ip' => $deviceIp,
+            'message' => "ZKTeco MB460 Plus is currently OFFLINE / Unreachable at {$displayIp}. Please ensure the device is powered on, connected to the network, and pushing to the server.",
+            'device_ip' => $deviceIp ?: 'Auto-detecting...',
             'status' => 'Offline',
             'sync_time' => date('Y-m-d H:i:s')
         ]);
@@ -230,7 +236,9 @@ if ($action === 'sync_now') {
         $existing['online'] = true;
         $existing['last_seen'] = time();
         $existing['last_seen_formatted'] = date('Y-m-d H:i:s');
-        $existing['ip'] = $deviceIp;
+        if (!empty($deviceIp) && $deviceIp !== 'Auto-detecting...') {
+            $existing['ip'] = $deviceIp;
+        }
         @file_put_contents($statusFile, json_encode($existing));
     }
 
