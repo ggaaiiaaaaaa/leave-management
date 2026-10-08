@@ -8,18 +8,22 @@ require_once __DIR__ . '/../config/db.php';
 $email = trim($argv[1] ?? '');
 $name = trim($argv[2] ?? '');
 $gender = trim($argv[3] ?? '');
+$password = trim($argv[4] ?? '');
+
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $name === '' || !in_array($gender, ['Female', 'Male'], true)) {
-    fwrite(STDERR, "Usage: php scripts/create_admin.php email@example.com \"Full Name\" Female|Male\n");
+    fwrite(STDERR, "Usage: php scripts/create_admin.php email@example.com \"Full Name\" Female|Male [password]\n");
     exit(1);
 }
 if ((int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() !== 0) {
     fwrite(STDERR, "Accounts already exist. Use the administrator interface.\n");
     exit(1);
 }
-fwrite(STDOUT, "Enter a unique password of at least 8 characters: ");
-$password = rtrim(fgets(STDIN) ?: '', "\r\n");
+if ($password === '') {
+    fwrite(STDOUT, "Enter a unique password of at least 8 characters: ");
+    $password = rtrim(fgets(STDIN) ?: '', "\r\n");
+}
 if (strlen($password) < 8) {
-    fwrite(STDERR, "Password is too short.\n");
+    fwrite(STDERR, "Password is too short (minimum 8 characters).\n");
     exit(1);
 }
 $parts = preg_split('/\s+/', $name);

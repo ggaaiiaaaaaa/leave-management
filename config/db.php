@@ -404,71 +404,83 @@ try {
     if ($userCount == 0 && getenv('LEAVE_SEED_DEMO') === '1') {
         $defaultPassword = password_hash('password123', PASSWORD_DEFAULT);
 
-        // 1. Jessica Alcantara, CPA (Female Senior Associate)
+        // 1. Joseph Yeo, CPA (Managing Partner)
         $stmt = $pdo->prepare("
-            INSERT INTO users (name, email, password, role, title, gender, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
+            INSERT INTO users (name, email, password, role, title, gender, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials, department)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            'Jessica Alcantara, CPA',
-            'jessica@jtyeocpa.ph',
-            $defaultPassword,
-            'staff',
-            'Senior Tax Associate',
-            'Female',
-            '101',
-            'JA'
-        ]);
-        $jessicaId = $pdo->lastInsertId();
-
-        // 2. Atty. Jonathan Yeo, CPA (Managing Partner)
-        $stmt->execute([
-            'Atty. Jonathan Yeo, CPA',
-            'admin@jtyeocpa.ph',
+            'Joseph Yeo, CPA',
+            'josephtyeo@gmail.com',
             $defaultPassword,
             'admin',
-            'Managing Partner & HR Head',
+            'Managing Partner',
             'Male',
             '100',
-            'JY'
+            1,
+            1,
+            'JY',
+            'Management & HR'
         ]);
-        $adminId = $pdo->lastInsertId();
+        $josephId = $pdo->lastInsertId();
 
-        // 3. Mark Santos, CPA (Male Senior Associate)
+        // 2. Joan Alfonso (Accounting Compliance Supervisor)
         $stmt->execute([
-            'Mark Santos, CPA',
-            'mark@jtyeocpa.ph',
+            'Joan Alfonso',
+            'iamjoanalfonso@gmail.com',
             $defaultPassword,
             'staff',
-            'Audit & Assurance Senior Associate',
-            'Male',
-            '102',
-            'MS'
-        ]);
-        $markId = $pdo->lastInsertId();
-
-        // 4. Rochelle Perez (Female Accounting Associate)
-        $stmt->execute([
-            'Rochelle Perez',
-            'rochelle@jtyeocpa.ph',
-            $defaultPassword,
-            'staff',
-            'Junior Audit Associate',
+            'Accounting Compliance Supervisor',
             'Female',
-            '103',
-            'RP'
+            '101',
+            0,
+            1,
+            'JA',
+            'Accounting & Compliance'
         ]);
-        $rochelleId = $pdo->lastInsertId();
+        $joanId = $pdo->lastInsertId();
 
-        // Seed Default Leave Balances
+        // 3. Jessel Bacaling (Accounting Compliance Supervisor)
+        $stmt->execute([
+            'Jessel Bacaling',
+            'jesselbacaling@gmail.com',
+            $defaultPassword,
+            'staff',
+            'Accounting Compliance Supervisor',
+            'Female',
+            '102',
+            1,
+            0,
+            'JB',
+            'Accounting & Compliance'
+        ]);
+        $jesselId = $pdo->lastInsertId();
+
+        // 4. itmonster-dev (IT)
+        $stmt->execute([
+            'itmonster-dev',
+            'rhonjames95@gmail.com',
+            $defaultPassword,
+            'admin',
+            'IT',
+            'Male',
+            '7',
+            0,
+            0,
+            'I',
+            'Information Technology'
+        ]);
+        $itId = $pdo->lastInsertId();
+
+        // Seed Default Leave Balances matching production
         $balStmt = $pdo->prepare("
-            INSERT INTO leave_balances (user_id, vl_balance, sl_balance, emergency_balance, bereavement_balance, solo_parent_balance, maternity_balance, paternity_balance, special_women_balance)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO leave_balances (user_id, vl_balance, sl_balance, emergency_balance, bereavement_balance, solo_parent_balance, maternity_balance, paternity_balance, special_women_balance, sil_balance)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $balStmt->execute([$jessicaId, 12.0, 10.0, 5.0, 3.0, 7.0, 105.0, 0.0, 60.0]);
-        $balStmt->execute([$adminId, 15.0, 10.0, 5.0, 3.0, 0.0, 0.0, 7.0, 0.0]);
-        $balStmt->execute([$markId, 12.0, 10.0, 5.0, 3.0, 0.0, 0.0, 7.0, 0.0]);
-        $balStmt->execute([$rochelleId, 12.0, 10.0, 5.0, 3.0, 0.0, 105.0, 0.0, 60.0]);
+        $balStmt->execute([$josephId, 20.0, 10.0, 5.0, 3.0, 0.0, 0.0, 7.0, 0.0, 5.0]);
+        $balStmt->execute([$joanId, 13.0, 2.0, 5.0, 3.0, 7.0, 0.0, 0.0, 60.0, 5.0]);
+        $balStmt->execute([$jesselId, 13.0, 10.0, 5.0, 3.0, 7.0, 105.0, 0.0, 60.0, 5.0]);
+        $balStmt->execute([$itId, 13.0, 10.0, 5.0, 3.0, 0.0, 0.0, 7.0, 0.0, 5.0]);
 
         // Seed Philippine Holidays
         require_once __DIR__ . '/../services/holiday_service.php';
@@ -483,22 +495,20 @@ try {
             INSERT INTO biometric_logs (user_id, biometric_pin, log_date, time_in, time_out, verification_method, status, device_model)
             VALUES (?, ?, ?, ?, ?, ?, ?, 'ZKTeco MB460 Plus')
         ");
-        $bioStmt->execute([$jessicaId, '101', $today, '08:24:12', '17:31:05', 'Face Scan', 'On-Time']);
-        $bioStmt->execute([$markId, '102', $today, '08:29:40', '17:35:10', 'Fingerprint', 'On-Time']);
-        $bioStmt->execute([$rochelleId, '103', $today, '08:44:18', '17:30:00', 'Face Scan', 'On-Time']);
+        $bioStmt->execute([$josephId, '100', $today, '08:24:12', '17:31:05', 'Face Scan', 'On-Time']);
+        $bioStmt->execute([$joanId, '101', $today, '08:29:40', '17:35:10', 'Fingerprint', 'On-Time']);
+        $bioStmt->execute([$jesselId, '102', $today, '08:44:18', '17:30:00', 'Face Scan', 'On-Time']);
     } elseif ($userCount > 0) {
-        // Seed today's sample biometric logs if empty
+        // Seed today's sample biometric logs if empty and explicitly requested
         $logCount = $pdo->query("SELECT COUNT(*) FROM biometric_logs")->fetchColumn();
         if ($logCount == 0 && getenv('LEAVE_SEED_DEMO') === '1') {
             $today = date('Y-m-d');
-            $jId = $pdo->query("SELECT id FROM users WHERE email = 'jessica@jtyeocpa.ph'")->fetchColumn() ?: 1;
-            $aId = $pdo->query("SELECT id FROM users WHERE email = 'admin@jtyeocpa.ph'")->fetchColumn() ?: 2;
+            $jId = $pdo->query("SELECT id FROM users WHERE email = 'josephtyeo@gmail.com'")->fetchColumn() ?: 1;
             $bioStmt = $pdo->prepare("
                 INSERT INTO biometric_logs (user_id, biometric_pin, log_date, time_in, time_out, verification_method, status, device_model)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'ZKTeco MB460 Plus')
             ");
-            $bioStmt->execute([$jId, '101', $today, '08:24:12', '17:31:05', 'Face Scan', 'On-Time']);
-            $bioStmt->execute([$aId, '100', $today, '08:15:30', null, 'Face Scan', 'On-Time']);
+            $bioStmt->execute([$jId, '100', $today, '08:24:12', '17:31:05', 'Face Scan', 'On-Time']);
         }
     }
 
