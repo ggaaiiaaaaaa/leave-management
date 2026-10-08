@@ -21,8 +21,10 @@ $year = isset($_GET['year']) ? intval($_GET['year']) : intval(date('Y'));
 $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
 $period = $_GET['period'] ?? 'full'; // 'full', '1st_half', '2nd_half'
 
-if ($month < 1 || $month > 12) $month = intval(date('m'));
-if ($year < 2020 || $year > 2035) $year = intval(date('Y'));
+if ($month < 1 || $month > 12)
+    $month = intval(date('m'));
+if ($year < 2020 || $year > 2035)
+    $year = intval(date('Y'));
 
 $numDaysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
@@ -76,8 +78,9 @@ foreach ($holidaysStmt->fetchAll() as $h) {
     $holidaysMap[$h['holiday_date']] = $h['title'];
 }
 
-$formatTimeShort = function($t) {
-    if (empty($t) || $t === '--:--' || $t === '-') return '';
+$formatTimeShort = function ($t) {
+    if (empty($t) || $t === '--:--' || $t === '-')
+        return '';
     $ts = strtotime("2000-01-01 " . $t);
     return $ts ? date('g:i', $ts) : $t;
 };
@@ -90,13 +93,16 @@ if ($isAdmin) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Civil Service Form 48 - <?= htmlspecialchars($targetUser['name']) ?> (<?= $periodLabel ?>)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
     <script src="lucide.js"></script>
     <style>
         :root {
@@ -110,7 +116,8 @@ if ($isAdmin) {
             padding: 0;
         }
 
-        html, body {
+        html,
+        body {
             overflow-x: hidden;
             max-width: 100vw;
         }
@@ -139,7 +146,7 @@ if ($isAdmin) {
             border-radius: 12px;
             padding: 16px 20px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -153,7 +160,8 @@ if ($isAdmin) {
             gap: 10px;
         }
 
-        .toolbar-select, .toolbar-btn {
+        .toolbar-select,
+        .toolbar-btn {
             height: 38px;
             padding: 0 14px;
             border-radius: 8px;
@@ -186,7 +194,7 @@ if ($isAdmin) {
             max-width: 800px;
             background: #ffffff;
             padding: 36px 40px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
             border-radius: 4px;
             color: #000000;
             font-size: 11px;
@@ -258,7 +266,8 @@ if ($isAdmin) {
             font-size: 10px;
         }
 
-        .dtr-table th, .dtr-table td {
+        .dtr-table th,
+        .dtr-table td {
             border: 1px solid #000;
             padding: 3px 4px;
             text-align: center;
@@ -360,7 +369,8 @@ if ($isAdmin) {
                 gap: 8px;
             }
 
-            .toolbar-select, .toolbar-btn {
+            .toolbar-select,
+            .toolbar-btn {
                 width: 100%;
                 font-size: 13px;
                 padding: 8px 12px;
@@ -404,6 +414,7 @@ if ($isAdmin) {
         }
     </style>
 </head>
+
 <body>
 
     <!-- Toolbar (Hidden on Print) -->
@@ -445,7 +456,8 @@ if ($isAdmin) {
                 <i data-lucide="printer" style="width: 16px; height: 16px;"></i>
                 Print Form 48 DTR
             </button>
-            <a href="admin_dashboard.php" class="toolbar-btn" style="display: inline-flex; align-items: center; text-decoration: none;">
+            <a href="admin_dashboard.php" class="toolbar-btn"
+                style="display: inline-flex; align-items: center; text-decoration: none;">
                 Back to Dashboard
             </a>
         </div>
@@ -453,169 +465,176 @@ if ($isAdmin) {
 
     <!-- Official Civil Service Form No. 48 Sheet -->
     <div class="dtr-sheet-container">
-      <div class="dtr-sheet">
-        <div class="header-block">
-            <div class="form-num">Civil Service Form No. 48</div>
-            <div class="main-title">DAILY TIME RECORD</div>
-            <div class="firm-title">J.T. YEO CPA ACCOUNTING OFFICE</div>
-        </div>
+        <div class="dtr-sheet">
+            <div class="header-block">
+                <div class="form-num">Civil Service Form No. 48</div>
+                <div class="main-title">DAILY TIME RECORD</div>
+                <div class="firm-title">J.T. YEO CPA ACCOUNTING OFFICE</div>
+            </div>
 
-        <div class="info-row">
-            <span class="info-label">NAME:</span>
-            <span class="info-value"><?= htmlspecialchars($targetUser['name']) ?></span>
-            <span class="info-label">DESIGNATION:</span>
-            <span class="info-value"><?= htmlspecialchars($targetUser['title']) ?></span>
-        </div>
+            <div class="info-row">
+                <span class="info-label">NAME:</span>
+                <span class="info-value"><?= htmlspecialchars($targetUser['name']) ?></span>
+                <span class="info-label">DESIGNATION:</span>
+                <span class="info-value"><?= htmlspecialchars($targetUser['title']) ?></span>
+            </div>
 
-        <div class="info-row" style="margin-bottom: 6px;">
-            <span class="info-label">FOR THE PERIOD:</span>
-            <span class="info-value"><?= $periodLabel ?></span>
-            <span class="info-label">PIN:</span>
-            <span class="info-value"><?= htmlspecialchars($targetUser['biometric_pin'] ?: $targetUser['id']) ?></span>
-        </div>
+            <div class="info-row" style="margin-bottom: 6px;">
+                <span class="info-label">FOR THE PERIOD:</span>
+                <span class="info-value"><?= $periodLabel ?></span>
+                <span class="info-label">PIN:</span>
+                <span
+                    class="info-value"><?= htmlspecialchars($targetUser['biometric_pin'] ?: $targetUser['id']) ?></span>
+            </div>
 
-        <div class="prescribed-text">
-            Official hours for arrival and departure: Regular Days (<?= htmlspecialchars($officeSchedule['work_start_12'] . ' – ' . $officeSchedule['work_end_12']) ?>)
-        </div>
+            <div class="prescribed-text">
+                Official hours for arrival and departure: Regular Days
+                (<?= htmlspecialchars($officeSchedule['work_start_12'] . ' – ' . $officeSchedule['work_end_12']) ?>)
+            </div>
 
-        <table class="dtr-table">
-            <thead>
-                <tr>
-                    <th rowspan="2" style="width: 32px;">Day</th>
-                    <th colspan="2">A. M.</th>
-                    <th colspan="2">P. M.</th>
-                    <th rowspan="2" style="width: 70px;">Rendered<br>Hours</th>
-                    <th rowspan="2" style="width: 60px;">Overtime<br>(Hours)</th>
-                </tr>
-                <tr>
-                    <th style="width: 65px;">Arrival</th>
-                    <th style="width: 65px;">Departure</th>
-                    <th style="width: 65px;">Arrival</th>
-                    <th style="width: 65px;">Departure</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $totalRenderedHoursMonth = 0;
-                $totalOtHoursMonth = 0;
-
-                for ($d = $startDay; $d <= $endDay; $d++):
-                    $currentDateStr = sprintf("%04d-%02d-%02d", $year, $month, $d);
-                    $dayOfWeek = date('N', strtotime($currentDateStr)); // 1 (Mon) - 7 (Sun)
-                    $isWeekend = ($dayOfWeek >= 6);
-                    $log = $logsMap[$currentDateStr] ?? null;
-
-                    // Check holiday
-                    $holidayTitle = $holidaysMap[$currentDateStr] ?? null;
-
-                    // Check approved leave
-                    $leaveLabel = null;
-                    $isPaidLeave = true;
-                    foreach ($leaves as $lv) {
-                        if ($currentDateStr >= $lv['start_date'] && $currentDateStr <= $lv['end_date']) {
-                            $leaveLabel = $lv['leave_type_label'];
-                            $isPaidLeave = ($lv['leave_type'] !== 'LWOP');
-                            break;
-                        }
-                    }
-
-                    $tIn = $formatTimeShort($log['time_in'] ?? null);
-                    $bOut = $formatTimeShort($log['break_out'] ?? null);
-                    $bIn = $formatTimeShort($log['break_in'] ?? null);
-                    $tOut = $formatTimeShort($log['time_out'] ?? null);
-
-                    $metrics = calculateAttendanceMetrics(
-                        $log['time_in'] ?? null,
-                        $log['break_out'] ?? null,
-                        $log['break_in'] ?? null,
-                        $log['time_out'] ?? null,
-                        $log['overtime_hours'] ?? 0,
-                        $currentDateStr
-                    );
-
-                    $renderedHours = $metrics['rendered_hours'];
-                    $otHours = floatval($log['overtime_hours'] ?? 0);
-
-                    $rowClass = '';
-                    $rowNote = '';
-
-                    $todayStr = date('Y-m-d');
-                    $currentTimeStr = date('H:i:s');
-                    $workEndTime = $officeSchedule['work_end_time'] ?? '17:30:00';
-                    $isWorkHoursEnded = ($currentDateStr < $todayStr) || ($currentDateStr === $todayStr && $currentTimeStr >= $workEndTime);
-
-                    if ($holidayTitle) {
-                        $rowClass = 'holiday-row';
-                        $rowNote = "HOLIDAY ({$holidayTitle})";
-                    } elseif ($leaveLabel) {
-                        $rowClass = 'leave-row';
-                        $rowNote = "ON LEAVE ({$leaveLabel})";
-                        // Automatically credit standard hours for paid authorized leave days on working days
-                        $reqDailyHours = floatval($officeSchedule['required_daily_hours'] ?? 8.0);
-                        if (empty($tIn) && $isPaidLeave && !$isWeekend) {
-                            $renderedHours = $reqDailyHours;
-                        }
-                    } elseif ($isWeekend && empty($tIn)) {
-                        $rowClass = 'weekend-row';
-                        $rowNote = ($dayOfWeek == 6) ? 'SATURDAY' : 'SUNDAY';
-                    } elseif (!$isWeekend && empty($tIn) && $isWorkHoursEnded) {
-                        $rowClass = 'absent-row';
-                        $rowNote = 'ABSENT';
-                    }
-
-                    $totalRenderedHoursMonth += $renderedHours;
-                    $totalOtHoursMonth += $otHours;
-                ?>
-                    <tr class="<?= $rowClass ?>">
-                        <td><strong><?= $d ?></strong></td>
-                        <?php if (!empty($rowNote) && empty($tIn)): ?>
-                            <td colspan="4" style="text-align: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; color: <?= $leaveLabel ? '#1e40af' : ($rowClass === 'absent-row' ? '#b91c1c' : '#475569') ?>;"><?= $rowNote ?></td>
-                            <td style="font-weight:<?= ($renderedHours > 0) ? '700' : 'normal' ?>;"><?= ($renderedHours > 0) ? number_format($renderedHours, 2) : '—' ?></td>
-                            <td><?= ($otHours > 0) ? number_format($otHours, 2) : '—' ?></td>
-                        <?php else: ?>
-                            <td><?= $tIn ?: '' ?></td>
-                            <td><?= $bOut ?: '' ?></td>
-                            <td><?= $bIn ?: '' ?></td>
-                            <td><?= $tOut ?: '' ?></td>
-                            <td><?= ($renderedHours > 0) ? number_format($renderedHours, 2) : '' ?></td>
-                            <td><?= ($otHours > 0) ? number_format($otHours, 2) : '' ?></td>
-                        <?php endif; ?>
+            <table class="dtr-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 32px;">Day</th>
+                        <th colspan="2">A. M.</th>
+                        <th colspan="2">P. M.</th>
+                        <th rowspan="2" style="width: 70px;">Rendered<br>Hours</th>
+                        <th rowspan="2" style="width: 60px;">Overtime<br>(Hours)</th>
                     </tr>
-                <?php endfor; ?>
+                    <tr>
+                        <th style="width: 65px;">Arrival</th>
+                        <th style="width: 65px;">Departure</th>
+                        <th style="width: 65px;">Arrival</th>
+                        <th style="width: 65px;">Departure</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $totalRenderedHoursMonth = 0;
+                    $totalOtHoursMonth = 0;
 
-                <!-- Totals Row -->
-                <tr class="totals-row">
-                    <td colspan="5" style="text-align: right; padding-right: 12px;">TOTAL ACCUMULATED HOURS:</td>
-                    <td><?= number_format($totalRenderedHoursMonth, 2) ?> hrs</td>
-                    <td><?= ($totalOtHoursMonth > 0) ? number_format($totalOtHoursMonth, 2) . ' hrs' : '—' ?></td>
-                </tr>
-            </tbody>
-        </table>
+                    for ($d = $startDay; $d <= $endDay; $d++):
+                        $currentDateStr = sprintf("%04d-%02d-%02d", $year, $month, $d);
+                        $dayOfWeek = date('N', strtotime($currentDateStr)); // 1 (Mon) - 7 (Sun)
+                        $isWeekend = ($dayOfWeek >= 6);
+                        $log = $logsMap[$currentDateStr] ?? null;
 
-        <div class="cert-block">
-            <p class="cert-paragraph">
-                I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and at the time of departure from office.
-            </p>
+                        // Check holiday
+                        $holidayTitle = $holidaysMap[$currentDateStr] ?? null;
 
-            <div class="sig-block">
-                <div class="sig-col">
-                    <div class="sig-line"></div>
-                    <div class="sig-name"><?= htmlspecialchars($targetUser['name']) ?></div>
-                    <div class="sig-title">Associate Signature</div>
-                </div>
+                        // Check approved leave
+                        $leaveLabel = null;
+                        $isPaidLeave = true;
+                        foreach ($leaves as $lv) {
+                            if ($currentDateStr >= $lv['start_date'] && $currentDateStr <= $lv['end_date']) {
+                                $leaveLabel = $lv['leave_type_label'];
+                                $isPaidLeave = ($lv['leave_type'] !== 'LWOP');
+                                break;
+                            }
+                        }
 
-                <div class="sig-col">
-                    <div class="sig-line"></div>
-                    <div class="sig-name">Atty. Jonathan T. Yeo, CPA</div>
-                    <div class="sig-title">Managing Partner</div>
+                        $tIn = $formatTimeShort($log['time_in'] ?? null);
+                        $bOut = $formatTimeShort($log['break_out'] ?? null);
+                        $bIn = $formatTimeShort($log['break_in'] ?? null);
+                        $tOut = $formatTimeShort($log['time_out'] ?? null);
+
+                        $metrics = calculateAttendanceMetrics(
+                            $log['time_in'] ?? null,
+                            $log['break_out'] ?? null,
+                            $log['break_in'] ?? null,
+                            $log['time_out'] ?? null,
+                            $log['overtime_hours'] ?? 0,
+                            $currentDateStr
+                        );
+
+                        $renderedHours = $metrics['rendered_hours'];
+                        $otHours = floatval($log['overtime_hours'] ?? 0);
+
+                        $rowClass = '';
+                        $rowNote = '';
+
+                        $todayStr = date('Y-m-d');
+                        $currentTimeStr = date('H:i:s');
+                        $workEndTime = $officeSchedule['work_end_time'] ?? '17:30:00';
+                        $isWorkHoursEnded = ($currentDateStr < $todayStr) || ($currentDateStr === $todayStr && $currentTimeStr >= $workEndTime);
+
+                        if ($holidayTitle) {
+                            $rowClass = 'holiday-row';
+                            $rowNote = "HOLIDAY ({$holidayTitle})";
+                        } elseif ($leaveLabel) {
+                            $rowClass = 'leave-row';
+                            $rowNote = "ON LEAVE ({$leaveLabel})";
+                            // Automatically credit standard hours for paid authorized leave days on working days
+                            $reqDailyHours = floatval($officeSchedule['required_daily_hours'] ?? 8.0);
+                            if (empty($tIn) && $isPaidLeave && !$isWeekend) {
+                                $renderedHours = $reqDailyHours;
+                            }
+                        } elseif ($isWeekend && empty($tIn)) {
+                            $rowClass = 'weekend-row';
+                            $rowNote = ($dayOfWeek == 6) ? 'SATURDAY' : 'SUNDAY';
+                        } elseif (!$isWeekend && empty($tIn) && $isWorkHoursEnded) {
+                            $rowClass = 'absent-row';
+                            $rowNote = 'ABSENT';
+                        }
+
+                        $totalRenderedHoursMonth += $renderedHours;
+                        $totalOtHoursMonth += $otHours;
+                        ?>
+                        <tr class="<?= $rowClass ?>">
+                            <td><strong><?= $d ?></strong></td>
+                            <?php if (!empty($rowNote) && empty($tIn)): ?>
+                                <td colspan="4"
+                                    style="text-align: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; color: <?= $leaveLabel ? '#1e40af' : ($rowClass === 'absent-row' ? '#b91c1c' : '#475569') ?>;">
+                                    <?= $rowNote ?></td>
+                                <td style="font-weight:<?= ($renderedHours > 0) ? '700' : 'normal' ?>;">
+                                    <?= ($renderedHours > 0) ? number_format($renderedHours, 2) : '—' ?></td>
+                                <td><?= ($otHours > 0) ? number_format($otHours, 2) : '—' ?></td>
+                            <?php else: ?>
+                                <td><?= $tIn ?: '' ?></td>
+                                <td><?= $bOut ?: '' ?></td>
+                                <td><?= $bIn ?: '' ?></td>
+                                <td><?= $tOut ?: '' ?></td>
+                                <td><?= ($renderedHours > 0) ? number_format($renderedHours, 2) : '' ?></td>
+                                <td><?= ($otHours > 0) ? number_format($otHours, 2) : '' ?></td>
+                            <?php endif; ?>
+                        </tr>
+                    <?php endfor; ?>
+
+                    <!-- Totals Row -->
+                    <tr class="totals-row">
+                        <td colspan="5" style="text-align: right; padding-right: 12px;">TOTAL ACCUMULATED HOURS:</td>
+                        <td><?= number_format($totalRenderedHoursMonth, 2) ?> hrs</td>
+                        <td><?= ($totalOtHoursMonth > 0) ? number_format($totalOtHoursMonth, 2) . ' hrs' : '—' ?></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="cert-block">
+                <p class="cert-paragraph">
+                    I certify on my honor that the above is a true and correct report of the hours of work performed,
+                    record of which was made daily at the time of arrival and at the time of departure from office.
+                </p>
+
+                <div class="sig-block">
+                    <div class="sig-col">
+                        <div class="sig-line"></div>
+                        <div class="sig-name"><?= htmlspecialchars($targetUser['name']) ?></div>
+                        <div class="sig-title">Associate Signature</div>
+                    </div>
+
+                    <div class="sig-col">
+                        <div class="sig-line"></div>
+                        <div class="sig-name">Joseph T. Yeo, CPA</div>
+                        <div class="sig-title">Managing Partner</div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     </div>
 
     <script>
         lucide.createIcons();
     </script>
 </body>
+
 </html>

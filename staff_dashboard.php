@@ -532,9 +532,9 @@ $leaveIconMap = [
                           <?php
                             $statusBadge = 'badge-pending';
                             if ($req['status'] === 'Approved') $statusBadge = 'badge-approved';
-                            if ($req['status'] === 'Rejected') $statusBadge = 'badge-rejected';
+                            if ($req['status'] === 'Rejected' || $req['status'] === 'Cancelled') $statusBadge = 'badge-rejected';
                           ?>
-                          <span class="badge <?= $statusBadge ?>"><?= $req['status'] ?></span>
+                          <span class="badge <?= $statusBadge ?>"><?= htmlspecialchars($req['status']) ?></span>
                         </td>
                         <td>
                           <div style="display:flex; gap:6px;">
@@ -544,6 +544,11 @@ $leaveIconMap = [
                             <?php if ($req['status'] === 'Approved'): ?>
                               <button class="btn-icon" title="Print Official Leave Slip" onclick="printOfficialSlip('<?= $req['ref_no'] ?>', <?= jsAttr($req['employee_name']) ?>, <?= jsAttr($req['title']) ?>, <?= jsAttr($req['leave_type_label']) ?>, '<?= $req['days_count'] ?>', '<?= $req['start_date'] ?>', '<?= $req['end_date'] ?>', <?= jsAttr($req['reason']) ?>, <?= jsAttr($req['approver_name'] ?? 'Atty. Jonathan Yeo, CPA') ?>)">
                                 <i data-lucide="printer" style="width:14px;height:14px;"></i>
+                              </button>
+                            <?php endif; ?>
+                            <?php if (in_array($req['status'], ['Pending', 'Approved']) && $req['end_date'] >= date('Y-m-d')): ?>
+                              <button class="btn-icon" title="Cancel Application" style="color:var(--danger);" onclick="openCancelModal('<?= $req['ref_no'] ?>', <?= jsAttr($req['leave_type_label']) ?>)">
+                                <i data-lucide="x-circle" style="width:14px;height:14px;"></i>
                               </button>
                             <?php endif; ?>
                           </div>
@@ -930,10 +935,16 @@ $leaveIconMap = [
       </div>
       <div class="modal-footer" style="justify-content:space-between;">
         <button type="button" class="btn-secondary" onclick="closeModal('detailsModal')">Close</button>
-        <button type="button" class="btn-primary" id="dtlPrintBtn" style="display:none;">
-          <i data-lucide="printer"></i>
-          <span>Print Official Leave Slip</span>
-        </button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-secondary" id="dtlCancelBtn" style="color:var(--danger); border-color:#fca5a5; display:none;">
+            <i data-lucide="x-circle"></i>
+            <span>Cancel Application</span>
+          </button>
+          <button type="button" class="btn-primary" id="dtlPrintBtn" style="display:none;">
+            <i data-lucide="printer"></i>
+            <span>Print Official Leave Slip</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -981,6 +992,38 @@ $leaveIconMap = [
         <button type="button" class="btn-primary" onclick="window.print()">
           <i data-lucide="printer"></i>
           <span>Print Document (Ctrl+P)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3B. IN-APP CANCEL LEAVE CONFIRMATION MODAL -->
+  <div class="modal-backdrop" id="cancelModal">
+    <div class="modal-window" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 style="color:var(--danger); display:flex; align-items:center; gap:8px;">
+          <i data-lucide="alert-triangle" style="width:20px;height:20px;color:var(--danger);"></i> Cancel Leave Application
+        </h3>
+        <button class="btn-close-modal" onclick="closeModal('cancelModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:14px; color:var(--text-main); margin-bottom:12px; line-height:1.5;">
+          Are you sure you want to cancel application <strong id="cancelModalRef" style="color:var(--primary); font-family:monospace;"></strong> (<span id="cancelModalType"></span>)?
+        </p>
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:var(--radius-sm); padding:10px 12px; font-size:12.5px; color:#991b1b; margin-bottom:14px; line-height:1.4; display:flex; align-items:flex-start; gap:8px;">
+          <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"></i>
+          <span>This will withdraw your request and immediately free up your scheduled dates.</span>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:5px;">Reason for Cancellation (Optional):</label>
+          <textarea id="cancelModalReason" class="form-input" style="width:100%; min-height:65px; resize:vertical;" placeholder="e.g. Schedule change, Sickness, Family emergency..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end; gap:8px;">
+        <button type="button" class="btn-secondary" onclick="closeModal('cancelModal')">Keep Application</button>
+        <button type="button" class="btn-primary" id="btnConfirmCancel" style="background:var(--danger); border-color:var(--danger);" onclick="submitCancelLeave()">
+          <i data-lucide="x-circle"></i>
+          <span>Confirm Cancellation</span>
         </button>
       </div>
     </div>
@@ -1722,6 +1765,7 @@ $leaveIconMap = [
       let statusBadge = `<span class="badge badge-pending">${status}</span>`;
       if (status === 'Approved') statusBadge = `<span class="badge badge-approved">Approved</span>`;
       if (status === 'Rejected') statusBadge = `<span class="badge badge-rejected">Rejected</span>`;
+      if (status === 'Cancelled') statusBadge = `<span class="badge badge-rejected">Cancelled</span>`;
       document.getElementById('dtlStatusBadge').innerHTML = statusBadge;
 
       const appEl = document.getElementById('dtlApprover');
@@ -1740,10 +1784,34 @@ $leaveIconMap = [
           rejEl.style.display = 'none';
         }
         document.getElementById('dtlPrintBtn').style.display = 'none';
+      } else if (status === 'Cancelled') {
+        appEl.innerHTML = `<span style="color:var(--text-light);"><i data-lucide="slash" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Application Cancelled / Withdrawn</span>`;
+        if (rejEl && rejectReason) {
+          rejEl.innerText = rejectReason;
+          rejEl.style.display = 'block';
+        } else if (rejEl) {
+          rejEl.style.display = 'none';
+        }
+        document.getElementById('dtlPrintBtn').style.display = 'none';
       } else {
         appEl.innerHTML = `<span style="color:var(--warning);"><i data-lucide="clock" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Pending Review by Managing Partner</span>`;
         if (rejEl) rejEl.style.display = 'none';
         document.getElementById('dtlPrintBtn').style.display = 'none';
+      }
+
+      // Cancel button handling
+      const cancelBtn = document.getElementById('dtlCancelBtn');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (cancelBtn) {
+        if (status === 'Pending' || (status === 'Approved' && end >= todayStr)) {
+          cancelBtn.style.display = 'inline-flex';
+          cancelBtn.onclick = () => {
+            closeModal('detailsModal');
+            openCancelModal(ref, type);
+          };
+        } else {
+          cancelBtn.style.display = 'none';
+        }
       }
 
       // Attachment handling
@@ -1762,6 +1830,55 @@ $leaveIconMap = [
       };
 
       openModal('detailsModal');
+    }
+
+    // In-App Modal Cancel Leave Request
+    let pendingCancelRef = null;
+
+    function openCancelModal(refNo, leaveType) {
+      pendingCancelRef = refNo;
+      document.getElementById('cancelModalRef').innerText = refNo;
+      document.getElementById('cancelModalType').innerText = leaveType;
+      document.getElementById('cancelModalReason').value = '';
+      const btn = document.getElementById('btnConfirmCancel');
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="x-circle"></i><span>Confirm Cancellation</span>';
+      openModal('cancelModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function submitCancelLeave() {
+      if (!pendingCancelRef) return;
+      const btn = document.getElementById('btnConfirmCancel');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>Processing...</span>';
+
+      const reason = document.getElementById('cancelModalReason').value.trim() || 'Cancelled by applicant';
+
+      try {
+        const res = await fetch('actions/cancel_leave.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref_no: pendingCancelRef, reason: reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeModal('cancelModal');
+          showToast(data.message, 'success');
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          showToast(data.message || 'Could not cancel application.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+          if (window.lucide) lucide.createIcons();
+        }
+      } catch (err) {
+        showToast('Network error while processing cancellation.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      }
     }
 
     // Print Official Slip
