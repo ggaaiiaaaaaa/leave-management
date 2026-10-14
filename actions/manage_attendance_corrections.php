@@ -234,6 +234,45 @@ if ($action === 'reject_correction') {
     exit;
 }
 
+// 5. DELETE CORRECTION LOG (Admin only)
+if ($action === 'delete_correction') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized. Admin access required.']);
+        exit;
+    }
+
+    $id = intval($_POST['id'] ?? 0);
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid adjustment request ID.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM attendance_corrections WHERE id = ?");
+    $stmt->execute([$id]);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Adjustment request log deleted successfully.'
+    ]);
+    exit;
+}
+
+// 6. CLEAR RESOLVED CORRECTIONS (Admin only)
+if ($action === 'clear_resolved') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized. Admin access required.']);
+        exit;
+    }
+
+    $affected = $pdo->exec("DELETE FROM attendance_corrections WHERE status IN ('Approved', 'Rejected')");
+
+    echo json_encode([
+        'success' => true,
+        'message' => "Cleared {$affected} resolved adjustment request(s)."
+    ]);
+    exit;
+}
+
 /**
  * Helper: Upsert corrected punches into biometric_logs and recalculate rendered hours
  */

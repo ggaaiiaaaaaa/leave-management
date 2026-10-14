@@ -844,6 +844,10 @@ if (file_exists($zkStatusFile)) {
                   <h4 style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700;"><i data-lucide="edit-3"></i> Missed Punch Adjustment Requests</h4>
                   <span class="badge badge-pending" id="adminCorrectionsBadge" style="display:none;">0</span>
                 </div>
+                <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;" onclick="clearResolvedCorrections()" title="Clear resolved (Approved/Rejected) adjustment history">
+                  <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                  <span>Clear History</span>
+                </button>
               </div>
               <div class="table-responsive">
                 <table class="custom-table" style="font-size:12px;">
@@ -870,6 +874,10 @@ if (file_exists($zkStatusFile)) {
                   <h4 style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700;"><i data-lucide="clock"></i> Overtime Pre-Approval Requests</h4>
                   <span class="badge badge-pending" id="adminOtBadge" style="display:none;">0</span>
                 </div>
+                <button type="button" class="btn-secondary" style="font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;" onclick="clearResolvedOt()" title="Clear resolved (Approved/Rejected) overtime history">
+                  <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                  <span>Clear History</span>
+                </button>
               </div>
               <div class="table-responsive">
                 <table class="custom-table" style="font-size:12px;">
@@ -4454,14 +4462,20 @@ if (file_exists($zkStatusFile)) {
             let actionHtml = '';
             if (c.status === 'Pending') {
               actionHtml = `
-                <div style="display:flex; gap:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
                   <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="approveCorrection(${c.id})">Approve</button>
                   <button class="btn-secondary" style="padding:4px 8px; font-size:11px; color:var(--danger);" onclick="rejectCorrection(${c.id})">Reject</button>
+                  <button class="btn-icon" style="padding:3px; color:var(--text-muted);" title="Delete Request Record" onclick="deleteCorrection(${c.id}, '${escapeJs(c.user_name)}', '${c.target_date_formatted}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
                 </div>
               `;
             } else {
               let bClass = c.status === 'Approved' ? 'badge-approved' : 'badge-rejected';
-              actionHtml = `<span class="badge ${bClass}">${c.status}</span>`;
+              actionHtml = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge ${bClass}">${c.status}</span>
+                  <button class="btn-icon" style="padding:3px; color:var(--text-muted);" title="Delete Record" onclick="deleteCorrection(${c.id}, '${escapeJs(c.user_name)}', '${c.target_date_formatted}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
+                </div>
+              `;
             }
 
             html += `
@@ -4484,6 +4498,7 @@ if (file_exists($zkStatusFile)) {
             }
           }
           tbody.innerHTML = html;
+          if (window.lucide) lucide.createIcons();
         });
     }
 
@@ -4526,6 +4541,64 @@ if (file_exists($zkStatusFile)) {
       }
     }
 
+    async function deleteCorrection(id, userName, dateStr) {
+      const confirmed = await showConfirmDialog({
+        title: 'Delete Adjustment Request',
+        message: `Are you sure you want to delete the punch adjustment request for ${userName} (${dateStr})?`,
+        confirmText: 'Delete Record',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      const fd = new FormData();
+      fd.append('action', 'delete_correction');
+      fd.append('id', id);
+
+      try {
+        const res = await fetch('actions/manage_attendance_corrections.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Adjustment record deleted.', 'success');
+          loadAdminCorrections();
+          loadAdminOverallDashboard();
+        } else {
+          showToast(data.message || 'Error deleting adjustment.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error deleting adjustment.', 'error');
+      }
+    }
+
+    async function clearResolvedCorrections() {
+      const confirmed = await showConfirmDialog({
+        title: 'Clear Adjustment History',
+        message: 'Are you sure you want to clear all approved and rejected punch adjustment requests? Any pending requests awaiting review will be preserved.',
+        confirmText: 'Clear Resolved History',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      const fd = new FormData();
+      fd.append('action', 'clear_resolved');
+
+      try {
+        const res = await fetch('actions/manage_attendance_corrections.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Resolved adjustment records cleared.', 'success');
+          loadAdminCorrections();
+        } else {
+          showToast(data.message || 'Error clearing adjustment history.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error clearing history.', 'error');
+      }
+    }
+
     function loadAdminOt() {
       const tbody = document.getElementById('adminOtTbody');
       const badge = document.getElementById('adminOtBadge');
@@ -4548,14 +4621,20 @@ if (file_exists($zkStatusFile)) {
             let actionHtml = '';
             if (r.status === 'Pending') {
               actionHtml = `
-                <div style="display:flex; gap:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
                   <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="approveOt(${r.id})">Approve</button>
                   <button class="btn-secondary" style="padding:4px 8px; font-size:11px; color:var(--danger);" onclick="rejectOt(${r.id})">Reject</button>
+                  <button class="btn-icon" style="padding:3px; color:var(--text-muted);" title="Delete Record" onclick="deleteOtRequest(${r.id}, '${escapeJs(r.user_name)}', '${r.ot_date_formatted}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
                 </div>
               `;
             } else {
               let bClass = r.status === 'Approved' ? 'badge-approved' : 'badge-rejected';
-              actionHtml = `<span class="badge ${bClass}">${r.status}</span>`;
+              actionHtml = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge ${bClass}">${r.status}</span>
+                  <button class="btn-icon" style="padding:3px; color:var(--text-muted);" title="Delete Record" onclick="deleteOtRequest(${r.id}, '${escapeJs(r.user_name)}', '${r.ot_date_formatted}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
+                </div>
+              `;
             }
 
             html += `
@@ -4578,6 +4657,7 @@ if (file_exists($zkStatusFile)) {
             }
           }
           tbody.innerHTML = html;
+          if (window.lucide) lucide.createIcons();
         });
     }
 
@@ -4617,6 +4697,64 @@ if (file_exists($zkStatusFile)) {
         }
       } catch (e) {
         showToast('Network error rejecting overtime.', 'error');
+      }
+    }
+
+    async function deleteOtRequest(id, userName, dateStr) {
+      const confirmed = await showConfirmDialog({
+        title: 'Delete Overtime Request',
+        message: `Are you sure you want to delete the overtime request for ${userName} (${dateStr})?`,
+        confirmText: 'Delete Record',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      const fd = new FormData();
+      fd.append('action', 'delete_ot');
+      fd.append('id', id);
+
+      try {
+        const res = await fetch('actions/manage_overtime.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Overtime record deleted.', 'success');
+          loadAdminOt();
+          loadAdminOverallDashboard();
+        } else {
+          showToast(data.message || 'Error deleting overtime request.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error deleting overtime request.', 'error');
+      }
+    }
+
+    async function clearResolvedOt() {
+      const confirmed = await showConfirmDialog({
+        title: 'Clear Overtime History',
+        message: 'Are you sure you want to clear all approved and rejected overtime requests? Any pending requests awaiting review will be preserved.',
+        confirmText: 'Clear Resolved History',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      const fd = new FormData();
+      fd.append('action', 'clear_resolved');
+
+      try {
+        const res = await fetch('actions/manage_overtime.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Resolved overtime records cleared.', 'success');
+          loadAdminOt();
+        } else {
+          showToast(data.message || 'Error clearing overtime history.', 'error');
+        }
+      } catch (e) {
+        showToast('Network error clearing history.', 'error');
       }
     }
 

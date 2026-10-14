@@ -215,4 +215,43 @@ if ($action === 'reject_ot') {
     exit;
 }
 
+// 5. DELETE OVERTIME REQUEST LOG (Admin only)
+if ($action === 'delete_ot') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized. Admin access required.']);
+        exit;
+    }
+
+    $id = intval($_POST['id'] ?? 0);
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid overtime request ID.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM overtime_requests WHERE id = ?");
+    $stmt->execute([$id]);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Overtime request log deleted successfully.'
+    ]);
+    exit;
+}
+
+// 6. CLEAR RESOLVED OVERTIME REQUESTS (Admin only)
+if ($action === 'clear_resolved') {
+    if (!$isAdmin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized. Admin access required.']);
+        exit;
+    }
+
+    $affected = $pdo->exec("DELETE FROM overtime_requests WHERE status IN ('Approved', 'Rejected')");
+
+    echo json_encode([
+        'success' => true,
+        'message' => "Cleared {$affected} resolved overtime request(s)."
+    ]);
+    exit;
+}
+
 echo json_encode(['success' => false, 'message' => 'Unknown action.']);
