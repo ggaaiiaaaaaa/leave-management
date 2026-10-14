@@ -931,6 +931,21 @@ if (file_exists($zkStatusFile)) {
                 <span>Show Philippine Public Holidays</span>
               </label>
             </div>
+
+            <div class="filter-group">
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="calToggleBirthdays" checked onchange="refreshCalendarEvents()">
+                <i data-lucide="cake" style="width:13px;height:13px;color:#db2777;"></i>
+                <span>Show Birthdays</span>
+              </label>
+            </div>
+
+            <div class="filter-group" style="margin-left:auto;">
+              <button type="button" class="btn-primary" style="padding:6px 14px; font-size:12px; display:inline-flex; align-items:center; gap:6px;" onclick="openBirthdayModal()">
+                <i data-lucide="cake"></i>
+                <span>+ Add Birthday</span>
+              </button>
+            </div>
           </div>
 
           <div class="dashboard-card">
@@ -945,6 +960,7 @@ if (file_exists($zkStatusFile)) {
               <?php endforeach; ?>
               <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Regular Holiday</div>
               <div class="legend-chip"><span class="dot" style="background:#7c2d12;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Special Holiday</div>
+              <div class="legend-chip"><span class="dot" style="background:#ec4899;"></span> <i data-lucide="cake" style="width:12px;height:12px;color:#db2777;"></i> Firm Birthdays</div>
             </div>
           </div>
         </div>
@@ -1814,6 +1830,10 @@ if (file_exists($zkStatusFile)) {
               <input type="text" name="title" class="form-input" placeholder="e.g. Audit Associate" required>
             </div>
           </div>
+          <div class="form-group" style="margin-top:14px;">
+            <label class="form-label">Date of Birth (Optional - Appears on Firm Calendar)</label>
+            <input type="date" name="birth_date" class="form-input">
+          </div>
           <div class="form-grid" style="margin-top:14px;">
             <div class="form-group">
               <label class="form-label">Role <span class="req">*</span></label>
@@ -1921,6 +1941,10 @@ if (file_exists($zkStatusFile)) {
               <input type="text" name="title" id="editUserTitle" class="form-input" required>
             </div>
           </div>
+          <div class="form-group" style="margin-top:14px;">
+            <label class="form-label">Date of Birth (Appears on Firm Calendar)</label>
+            <input type="date" name="birth_date" id="editUserBirthDate" class="form-input">
+          </div>
           <div class="form-grid" style="margin-top:14px;">
             <div class="form-group">
               <label class="form-label">Role <span class="req">*</span></label>
@@ -2011,6 +2035,11 @@ if (file_exists($zkStatusFile)) {
             <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">
               <i data-lucide="bell" style="width:11px;height:11px; vertical-align:middle;"></i> Changing your email address will automatically dispatch a security notice to the Managing Partner.
             </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Date of Birth (Visible to firm on Team Calendar)</label>
+            <input type="date" name="birth_date" id="myProfileBirthDate" class="form-input" value="<?= htmlspecialchars($user['birth_date'] ?? '') ?>">
           </div>
 
           <hr style="border:none; border-top:1px solid var(--border-color); margin:18px 0;">
@@ -2360,6 +2389,103 @@ if (file_exists($zkStatusFile)) {
           <button type="submit" class="btn-primary" id="btnSeedYearBtn">Generate Standard Holidays</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- 17. ADD BIRTHDAY TO CALENDAR MODAL -->
+  <div class="modal-backdrop" id="addBirthdayModal">
+    <div class="modal-window" style="max-width:500px;">
+      <div class="modal-header">
+        <h3><i data-lucide="cake"></i> Add Birthday to Calendar</h3>
+        <button class="btn-close-modal" onclick="closeModal('addBirthdayModal')">&times;</button>
+      </div>
+      <form id="addBirthdayForm" onsubmit="handleAddBirthdaySubmit(event)">
+        <input type="hidden" name="action" value="add_birthday">
+        <div class="modal-body">
+          <div style="background:linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%); border:1px solid #fbcfe8; border-radius:var(--radius-md); padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:#9d174d; display:flex; align-items:flex-start; gap:10px;">
+            <i data-lucide="party-popper" style="width:20px; height:20px; color:#db2777; flex-shrink:0; margin-top:2px;"></i>
+            <div>
+              <strong>Firm Celebrations Calendar:</strong> Birthdays added here will recur annually on the Team Calendar and can be viewed by all firm associates.
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Select Firm Associate (Optional)</label>
+            <select name="user_id" id="bdayUserId" class="form-select" onchange="handleBdayUserSelect(this)">
+              <option value="0">-- Custom / Other Colleague or Person --</option>
+              <?php foreach ($allUsers as $u): ?>
+                <option value="<?= $u['id'] ?>" data-name="<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>" data-title="<?= htmlspecialchars($u['title'] ?? '', ENT_QUOTES) ?>" data-birthdate="<?= htmlspecialchars($u['birth_date'] ?? '', ENT_QUOTES) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['title'] ?? 'Associate') ?>)</option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Person's Full Name <span class="req">*</span></label>
+            <input type="text" name="person_name" id="bdayPersonName" class="form-input" placeholder="e.g. Joan Alfonso" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Date of Birth <span class="req">*</span></label>
+            <input type="date" name="birth_date" id="bdayDate" class="form-input" required>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Includes birth year (so milestones can be celebrated) and repeats automatically every year.</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Department / Note / Greeting (Optional)</label>
+            <input type="text" name="notes" id="bdayNotes" class="form-input" placeholder="e.g. Accounting Compliance, Audit Team, loves dark chocolate">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('addBirthdayModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="btnAddBirthdayBtn">
+            <i data-lucide="cake"></i>
+            <span>Add Birthday to Calendar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 18. VIEW / MANAGE BIRTHDAY DETAILS MODAL -->
+  <div class="modal-backdrop" id="birthdayDetailsModal">
+    <div class="modal-window" style="max-width:440px; padding:0; overflow:hidden;">
+      <div class="birthday-modal-hero">
+        <button class="btn-close-modal" onclick="closeModal('birthdayDetailsModal')" style="position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.7); border-radius:50%; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:none; cursor:pointer;">&times;</button>
+        <div class="cake-circle">
+          <i data-lucide="cake" style="width:28px; height:28px;"></i>
+        </div>
+        <h3 id="bdayViewName">Associate Birthday</h3>
+        <p id="bdayViewSubtitle">Firm Birthday Celebration</p>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <div class="bday-highlight-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:11px; font-weight:700; color:#9d174d; text-transform:uppercase; letter-spacing:0.5px;">Annual Date:</span>
+            <span id="bdayViewDate" style="font-weight:700; color:var(--primary); font-size:13px;">October 25</span>
+          </div>
+          <div id="bdayAgeBadgeRow" style="display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed #fbcfe8;">
+            <span style="font-size:11px; font-weight:700; color:#9d174d; text-transform:uppercase; letter-spacing:0.5px;">Milestone:</span>
+            <span id="bdayViewAge" class="badge" style="background:#fce7f3; color:#9d174d; border:1px solid #fbcfe8; font-weight:700; font-size:12px; padding:3px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="party-popper" style="width:13px;height:13px;"></i> <span id="bdayViewAgeText">Turning 32 this year</span></span>
+          </div>
+        </div>
+
+        <div id="bdayNotesRow" style="margin-top:14px; font-size:13px; color:var(--text-main); background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:none;">
+          <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Notes / Greeting:</div>
+          <div id="bdayViewNotes" style="font-weight:500;"></div>
+        </div>
+
+        <div id="bdayCreatorRow" style="margin-top:12px; font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+          <i data-lucide="user" style="width:12px; height:12px;"></i>
+          <span>Added by <strong id="bdayViewCreator">Managing Partner</strong></span>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:14px 20px; justify-content:space-between; background:var(--bg-subtle);">
+        <button type="button" class="btn-secondary" id="btnDeleteBirthday" style="color:var(--danger, #dc2626); border-color:#fca5a5; display:none;" onclick="handleDeleteCurrentBirthday()">
+          <i data-lucide="trash-2"></i>
+          <span>Delete Birthday</span>
+        </button>
+        <button type="button" class="btn-primary" style="margin-left:auto;" onclick="closeModal('birthdayDetailsModal')">Close</button>
+      </div>
     </div>
   </div>
 
@@ -4760,6 +4886,8 @@ if (file_exists($zkStatusFile)) {
           document.getElementById('editUserGender').value = u.gender || 'Female';
           document.getElementById('editUserRole').value = u.role || 'staff';
           document.getElementById('editUserPin').value = u.biometric_pin || '';
+          const bdayInput = document.getElementById('editUserBirthDate');
+          if (bdayInput) bdayInput.value = u.birth_date || '';
           document.getElementById('editUserFace').checked = (parseInt(u.face_enrolled) === 1);
           document.getElementById('editUserFingerprint').checked = (parseInt(u.fingerprint_enrolled) === 1);
 
@@ -4903,17 +5031,22 @@ if (file_exists($zkStatusFile)) {
         },
         height: 'auto',
         events: function(info, successCallback, failureCallback) {
-          const uId = document.getElementById('calFilterUser').value;
-          const type = document.getElementById('calFilterType').value;
-          const showHolidays = document.getElementById('calToggleHolidays').checked ? 1 : 0;
-          fetch(`actions/get_calendar_events.php?user_id=${uId}&leave_type=${type}&show_holidays=${showHolidays}`)
+          const uId = document.getElementById('calFilterUser')?.value || 0;
+          const type = document.getElementById('calFilterType')?.value || 'ALL';
+          const showHolidays = document.getElementById('calToggleHolidays')?.checked ? 1 : 0;
+          const showBirthdays = document.getElementById('calToggleBirthdays')?.checked ? 1 : 0;
+          const startStr = info.startStr ? encodeURIComponent(info.startStr) : '';
+          const endStr = info.endStr ? encodeURIComponent(info.endStr) : '';
+          fetch(`actions/get_calendar_events.php?user_id=${uId}&leave_type=${type}&show_holidays=${showHolidays}&show_birthdays=${showBirthdays}&start=${startStr}&end=${endStr}`)
             .then(res => res.json())
             .then(data => successCallback(data))
             .catch(err => failureCallback(err));
         },
         eventClick: function(info) {
           const props = info.event.extendedProps;
-          if (props.is_holiday) {
+          if (props.is_birthday) {
+            openBirthdayDetailsModal(props);
+          } else if (props.is_holiday) {
             showToast(`${info.event.title} - ${props.description}`, 'info');
           } else {
             viewDetailsModal(
@@ -4930,6 +5063,135 @@ if (file_exists($zkStatusFile)) {
     function refreshCalendarEvents() {
       if (calendarInstance) {
         calendarInstance.refetchEvents();
+      }
+    }
+
+    // ==========================================
+    // FIRM BIRTHDAY MANAGEMENT CONTROLLER
+    // ==========================================
+    let currentViewingBirthday = null;
+
+    function openBirthdayModal() {
+      const form = document.getElementById('addBirthdayForm');
+      if (form) form.reset();
+      const sel = document.getElementById('bdayUserId');
+      if (sel) sel.value = '0';
+      openModal('addBirthdayModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function handleBdayUserSelect(sel) {
+      const opt = sel.options[sel.selectedIndex];
+      const nameInput = document.getElementById('bdayPersonName');
+      const dateInput = document.getElementById('bdayDate');
+      const notesInput = document.getElementById('bdayNotes');
+      if (parseInt(sel.value) > 0) {
+        if (nameInput) nameInput.value = opt.getAttribute('data-name') || '';
+        const bdate = opt.getAttribute('data-birthdate');
+        if (dateInput && bdate) dateInput.value = bdate;
+        const title = opt.getAttribute('data-title');
+        if (notesInput && title && !notesInput.value) notesInput.value = title;
+      }
+    }
+
+    async function handleAddBirthdaySubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('addBirthdayForm');
+      const formData = new FormData(form);
+      const btn = document.getElementById('btnAddBirthdayBtn');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('actions/manage_birthdays.php', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Birthday added to calendar!', 'success');
+          closeModal('addBirthdayModal');
+          form.reset();
+          if (typeof refreshCalendarEvents === 'function') refreshCalendarEvents();
+        } else {
+          showToast(data.message || 'Failed to add birthday.', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while saving birthday.', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function openBirthdayDetailsModal(props) {
+      currentViewingBirthday = props;
+      document.getElementById('bdayViewName').innerText = props.person_name || 'Associate Birthday';
+      document.getElementById('bdayViewDate').innerText = props.month_day || props.birth_month_day || props.target_date;
+
+      const ageRow = document.getElementById('bdayAgeBadgeRow');
+      const ageText = document.getElementById('bdayViewAgeText');
+      if (props.turning_age && props.turning_age > 0) {
+        if (ageText) ageText.innerText = `Turning ${props.turning_age} this year`;
+        ageRow.style.display = 'flex';
+      } else {
+        ageRow.style.display = 'none';
+      }
+
+      const notesRow = document.getElementById('bdayNotesRow');
+      const notesText = document.getElementById('bdayViewNotes');
+      if (props.notes && props.notes.trim() !== '') {
+        notesText.innerText = props.notes;
+        notesRow.style.display = 'block';
+      } else {
+        notesRow.style.display = 'none';
+      }
+
+      const creatorRow = document.getElementById('bdayCreatorRow');
+      const creatorText = document.getElementById('bdayViewCreator');
+      if (props.creator_name) {
+        creatorText.innerText = props.creator_name;
+        creatorRow.style.display = 'flex';
+      } else {
+        creatorRow.style.display = 'none';
+      }
+
+      const delBtn = document.getElementById('btnDeleteBirthday');
+      if (delBtn) {
+        delBtn.style.display = props.can_delete ? 'inline-flex' : 'none';
+      }
+
+      openModal('birthdayDetailsModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function handleDeleteCurrentBirthday() {
+      if (!currentViewingBirthday || !currentViewingBirthday.birthday_id) return;
+      const bdayId = currentViewingBirthday.birthday_id;
+      const personName = currentViewingBirthday.person_name || 'this associate';
+
+      const confirmed = await showConfirmDialog({
+        title: 'Delete Birthday',
+        message: `Are you sure you want to remove ${personName}'s birthday from the calendar?`,
+        confirmText: 'Delete Birthday',
+        cancelText: 'Cancel',
+        isDanger: true,
+        icon: 'trash-2'
+      });
+      if (!confirmed) return;
+
+      const fd = new FormData();
+      fd.append('action', 'delete_birthday');
+      fd.append('id', bdayId);
+
+      try {
+        const res = await fetch('actions/manage_birthdays.php', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Birthday removed.', 'success');
+          closeModal('birthdayDetailsModal');
+          currentViewingBirthday = null;
+          if (typeof refreshCalendarEvents === 'function') refreshCalendarEvents();
+        } else {
+          showToast(data.message || 'Error deleting birthday.', 'error');
+        }
+      } catch (err) {
+        showToast('Network error while deleting birthday.', 'error');
       }
     }
 

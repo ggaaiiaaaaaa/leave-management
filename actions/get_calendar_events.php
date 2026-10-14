@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 $filterUserId = (int)($_GET['user_id'] ?? 0);
 $filterType = $_GET['leave_type'] ?? '';
 $showHolidays = isset($_GET['show_holidays']) ? (int)$_GET['show_holidays'] : 1;
+$showBirthdays = isset($_GET['show_birthdays']) ? (int)$_GET['show_birthdays'] : 1;
 $viewer = getCurrentUser();
 $isAdmin = $viewer['role'] === 'admin';
 if (!$isAdmin) $filterUserId = 0;
@@ -104,6 +105,97 @@ if ($showHolidays) {
                 'description' => $h['description'] ?? 'Philippine Public Holiday'
             ]
         ];
+    }
+}
+
+// 3. Fetch Firm & Associate Birthdays (Annually Recurring)
+if ($showBirthdays) {
+    $bdaySql = "
+        SELECT b.id, b.user_id, b.person_name, b.birth_date, b.notes, b.created_by,
+               u.name as linked_name, u.avatar_path, u.avatar_initials, u.title as linked_title,
+               creator.name as creator_name
+        FROM birthdays b
+        LEFT JOIN users u ON b.user_id = u.id
+        LEFT JOIN users creator ON b.created_by = creator.id
+    ";
+    $bdayParams = [];
+    if ($filterUserId > 0) {
+        $bdaySql .= " WHERE b.user_id = ?";
+        $bdayParams[] = $filterUserId;
+    }
+    $bdayStmt = $pdo->prepare($bdaySql);
+    $bdayStmt->execute($bdayParams);
+    $birthdays = $bdayStmt->fetchAll();
+
+    $startYear = isset($_GET['start']) ? (int)substr($_GET['start'], 0, 4) : ((int)date('Y') - 1);
+    $endYear = isset($_GET['end']) ? (int)substr($_GET['end'], 0, 4) : ((int)date('Y') + 1);
+    if ($startYear < 2000) $startYear = (int)date('Y') - 1;
+    if ($endYear < $startYear) $endYear = $startYear + 1;
+    if ($endYear - $startYear > 5) $endYear = $startYear + 5;
+
+    foreach ($birthdays as $b) {
+        $bDateStr = $b['birth_date'];
+        $parts = explode('-', $bDateStr);
+        if (count($parts) < 3) continue;
+        $origYear = (int)$parts[0];
+        $month = (int)$parts[1];
+        $day = (int)$parts[2];
+
+        for ($y = $startYear; $y <= $endYear; $y++) {
+            $targetDay = $day;
+            if ($month === 2 && $day === 29 && !checkdate(2, 29, $y)) {
+                $targetDay = 28;
+            }
+            $targetDate = sprintf('%04d-%02d-%02d', $y, $month, $targetDay);
+
+            $turningAge = null;
+            if ($origYear > 1900 && $origYear <= $y) {
+                $turningAge = $y - $origYear;
+            }
+
+            $ageSuffix = "";
+            if ($turningAge !== null && $turningAge > 0) {
+                $rem100 = $turningAge % 100;
+                $rem10 = $turningAge % 10;
+                $ord = 'th';
+                if (!in_array($rem100, [11, 12, 13], true)) {
+                    if ($rem10 === 1) $ord = 'st';
+                    elseif ($rem10 === 2) $ord = 'nd';
+                    elseif ($rem10 === 3) $ord = 'rd';
+                }
+                $ageSuffix = " ({$turningAge}{$ord})";
+            }
+            $title = $b['person_name'] . "'s Birthday" . $ageSuffix;
+
+            $canDelete = $isAdmin;
+
+            $events[] = [
+                'id' => 'bday_' . $b['id'] . '_' . $y,
+                'title' => $title,
+                'start' => $targetDate,
+                'backgroundColor' => '#ec4899', // festive vibrant pink
+                'borderColor' => '#db2777',
+                'textColor' => '#ffffff',
+                'allDay' => true,
+                'display' => 'block',
+                'className' => 'fc-birthday-event',
+                'extendedProps' => [
+                    'is_birthday' => true,
+                    'is_holiday' => false,
+                    'birthday_id' => (int)$b['id'],
+                    'person_name' => $b['person_name'],
+                    'birth_date' => $b['birth_date'],
+                    'target_date' => $targetDate,
+                    'month_day' => date('F j', strtotime($targetDate)),
+                    'turning_age' => $turningAge,
+                    'notes' => $b['notes'] ?? '',
+                    'user_id' => $b['user_id'],
+                    'created_by' => $b['created_by'],
+                    'creator_name' => $b['creator_name'] ?? 'Managing Partner',
+                    'can_delete' => $canDelete
+                ]
+            ];
+        }
     }
 }
 

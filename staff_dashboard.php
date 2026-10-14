@@ -32,7 +32,7 @@ $leaveReqStmt->execute([$user['id']]);
 $leaveRequests = $leaveReqStmt->fetchAll();
 
 // All staff for calendar filtering
-$allUsersStmt = $pdo->query("SELECT id, name FROM users ORDER BY id ASC");
+$allUsersStmt = $pdo->query("SELECT id, name, title, birth_date FROM users ORDER BY id ASC");
 $allUsers = $allUsersStmt->fetchAll();
 
 // Fetch Active Leave Types & User's Dynamic Allocations
@@ -601,6 +601,14 @@ $leaveIconMap = [
                 <span>Show Philippine Public Holidays</span>
               </label>
             </div>
+
+            <div class="filter-group">
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="calToggleBirthdays" checked onchange="refreshCalendarEvents()">
+                <i data-lucide="cake" style="width:13px;height:13px;color:#db2777;"></i>
+                <span>Show Birthdays</span>
+              </label>
+            </div>
           </div>
 
           <div class="dashboard-card">
@@ -615,6 +623,7 @@ $leaveIconMap = [
               <?php endforeach; ?>
               <div class="legend-chip"><span class="dot" style="background:#dc2626;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Regular Holiday</div>
               <div class="legend-chip"><span class="dot" style="background:#7c2d12;"></span> <i data-lucide="flag" style="width:12px;height:12px;"></i> Special Holiday</div>
+              <div class="legend-chip"><span class="dot" style="background:#ec4899;"></span> <i data-lucide="cake" style="width:12px;height:12px;color:#db2777;"></i> Firm Birthdays</div>
             </div>
           </div>
         </div>
@@ -1086,6 +1095,11 @@ $leaveIconMap = [
             </div>
           </div>
 
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Date of Birth (Visible to firm on Team Calendar)</label>
+            <input type="date" name="birth_date" id="myProfileBirthDate" class="form-input" value="<?= htmlspecialchars($user['birth_date'] ?? '') ?>">
+          </div>
+
           <hr style="border:none; border-top:1px solid var(--border-color); margin:18px 0;">
 
           <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px;">Change Password</div>
@@ -1212,6 +1226,45 @@ $leaveIconMap = [
       <div class="modal-footer confirm-dialog-footer">
         <button type="button" class="btn-secondary" id="confirmCancelBtn" style="flex: 1; padding: 11px 18px; font-weight: 600;" onclick="resolveCustomConfirm(false)">Cancel</button>
         <button type="button" class="btn-primary" id="confirmOkBtn" style="flex: 1; padding: 11px 18px; font-weight: 700;" onclick="resolveCustomConfirm(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW BIRTHDAY DETAILS MODAL -->
+  <div class="modal-backdrop" id="birthdayDetailsModal">
+    <div class="modal-window" style="max-width:440px; padding:0; overflow:hidden;">
+      <div class="birthday-modal-hero">
+        <button class="btn-close-modal" onclick="closeModal('birthdayDetailsModal')" style="position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.7); border-radius:50%; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:none; cursor:pointer;">&times;</button>
+        <div class="cake-circle">
+          <i data-lucide="cake" style="width:28px; height:28px;"></i>
+        </div>
+        <h3 id="bdayViewName">Associate Birthday</h3>
+        <p id="bdayViewSubtitle">Firm Birthday Celebration</p>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <div class="bday-highlight-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:11px; font-weight:700; color:#9d174d; text-transform:uppercase; letter-spacing:0.5px;">Annual Date:</span>
+            <span id="bdayViewDate" style="font-weight:700; color:var(--primary); font-size:13px;">October 25</span>
+          </div>
+          <div id="bdayAgeBadgeRow" style="display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed #fbcfe8;">
+            <span style="font-size:11px; font-weight:700; color:#9d174d; text-transform:uppercase; letter-spacing:0.5px;">Milestone:</span>
+            <span id="bdayViewAge" class="badge" style="background:#fce7f3; color:#9d174d; border:1px solid #fbcfe8; font-weight:700; font-size:12px; padding:3px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="party-popper" style="width:13px;height:13px;"></i> <span id="bdayViewAgeText">Turning 32 this year</span></span>
+          </div>
+        </div>
+
+        <div id="bdayNotesRow" style="margin-top:14px; font-size:13px; color:var(--text-main); background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:none;">
+          <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Notes / Greeting:</div>
+          <div id="bdayViewNotes" style="font-weight:500;"></div>
+        </div>
+
+        <div id="bdayCreatorRow" style="margin-top:12px; font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+          <i data-lucide="user" style="width:12px; height:12px;"></i>
+          <span>Added by <strong id="bdayViewCreator">Managing Partner</strong></span>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:14px 20px; justify-content:flex-end; background:var(--bg-subtle);">
+        <button type="button" class="btn-primary" onclick="closeModal('birthdayDetailsModal')">Close</button>
       </div>
     </div>
   </div>
@@ -1995,17 +2048,22 @@ $leaveIconMap = [
         },
         height: 'auto',
         events: function(info, successCallback, failureCallback) {
-          const uId = document.getElementById('calFilterUser').value;
-          const type = document.getElementById('calFilterType').value;
-          const showHolidays = document.getElementById('calToggleHolidays').checked ? 1 : 0;
-          fetch(`actions/get_calendar_events.php?user_id=${uId}&leave_type=${type}&show_holidays=${showHolidays}`)
+          const uId = document.getElementById('calFilterUser')?.value || 0;
+          const type = document.getElementById('calFilterType')?.value || 'ALL';
+          const showHolidays = document.getElementById('calToggleHolidays')?.checked ? 1 : 0;
+          const showBirthdays = document.getElementById('calToggleBirthdays')?.checked ? 1 : 0;
+          const startStr = info.startStr ? encodeURIComponent(info.startStr) : '';
+          const endStr = info.endStr ? encodeURIComponent(info.endStr) : '';
+          fetch(`actions/get_calendar_events.php?user_id=${uId}&leave_type=${type}&show_holidays=${showHolidays}&show_birthdays=${showBirthdays}&start=${startStr}&end=${endStr}`)
             .then(res => res.json())
             .then(data => successCallback(data))
             .catch(err => failureCallback(err));
         },
         eventClick: function(info) {
           const props = info.event.extendedProps;
-          if (props.is_holiday) {
+          if (props.is_birthday) {
+            openBirthdayDetailsModal(props);
+          } else if (props.is_holiday) {
             showToast(`${info.event.title} - ${props.description}`, 'info');
           } else {
             viewDetailsModal(
@@ -2017,6 +2075,53 @@ $leaveIconMap = [
         }
       });
       calendarInstance.render();
+    }
+
+    function refreshCalendarEvents() {
+      if (calendarInstance) {
+        calendarInstance.refetchEvents();
+      }
+    }
+
+    // ==========================================
+    // FIRM BIRTHDAY VIEW CONTROLLER
+    // ==========================================
+    let currentViewingBirthday = null;
+
+    function openBirthdayDetailsModal(props) {
+      currentViewingBirthday = props;
+      document.getElementById('bdayViewName').innerText = props.person_name || 'Associate Birthday';
+      document.getElementById('bdayViewDate').innerText = props.month_day || props.birth_month_day || props.target_date;
+
+      const ageRow = document.getElementById('bdayAgeBadgeRow');
+      const ageText = document.getElementById('bdayViewAgeText');
+      if (props.turning_age && props.turning_age > 0) {
+        if (ageText) ageText.innerText = `Turning ${props.turning_age} this year`;
+        ageRow.style.display = 'flex';
+      } else {
+        ageRow.style.display = 'none';
+      }
+
+      const notesRow = document.getElementById('bdayNotesRow');
+      const notesText = document.getElementById('bdayViewNotes');
+      if (props.notes && props.notes.trim() !== '') {
+        notesText.innerText = props.notes;
+        notesRow.style.display = 'block';
+      } else {
+        notesRow.style.display = 'none';
+      }
+
+      const creatorRow = document.getElementById('bdayCreatorRow');
+      const creatorText = document.getElementById('bdayViewCreator');
+      if (props.creator_name) {
+        creatorText.innerText = props.creator_name;
+        creatorRow.style.display = 'flex';
+      } else {
+        creatorRow.style.display = 'none';
+      }
+
+      openModal('birthdayDetailsModal');
+      if (window.lucide) lucide.createIcons();
     }
 
     // Staff Attendance & DTR Controller

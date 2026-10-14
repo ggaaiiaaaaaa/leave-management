@@ -7,13 +7,16 @@ if (file_exists($envFile) && is_readable($envFile)) {
     $lines = @file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
     foreach ($lines as $line) {
         $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) continue;
+        if ($line === '' || str_starts_with($line, '#'))
+            continue;
         if (str_contains($line, '=')) {
             [$k, $v] = explode('=', $line, 2);
             $k = trim($k);
             $v = trim($v, " \t\n\r\0\x0B\"'");
-            if (!isset($_SERVER[$k])) $_SERVER[$k] = $v;
-            if (!isset($_ENV[$k])) $_ENV[$k] = $v;
+            if (!isset($_SERVER[$k]))
+                $_SERVER[$k] = $v;
+            if (!isset($_ENV[$k]))
+                $_ENV[$k] = $v;
             putenv("{$k}={$v}");
         }
     }
@@ -25,7 +28,7 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
         || (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] !== 'off')
-        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
     session_set_cookie_params([
         'httponly' => true,
         'secure' => $isSecure,
@@ -269,12 +272,27 @@ try {
             description TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS birthdays (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            person_name TEXT NOT NULL,
+            birth_date DATE NOT NULL,
+            notes TEXT,
+            created_by INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        );
     ");
 
     // Dynamic Column Migration Helper for existing databases
     $userCols = $pdo->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('gender', $userCols)) {
         $pdo->exec("ALTER TABLE users ADD COLUMN gender TEXT NOT NULL DEFAULT 'Female'");
+    }
+    if (!in_array('birth_date', $userCols)) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN birth_date DATE");
     }
     if (!in_array('biometric_pin', $userCols)) {
         $pdo->exec("ALTER TABLE users ADD COLUMN biometric_pin TEXT");
@@ -519,6 +537,28 @@ try {
         $currYr = (int) date('Y');
         for ($y = min(2026, $currYr); $y <= max(2030, $currYr + 3); $y++) {
             seedPhilippineHolidays($pdo, $y);
+        }
+    }
+
+    // Seed initial team birthdays if table is empty
+    $bdayCount = (int) $pdo->query("SELECT COUNT(*) FROM birthdays")->fetchColumn();
+    if ($bdayCount === 0 && getenv('LEAVE_SEED_DEMO') === '1') {
+        $joan = $pdo->query("SELECT id, name, title FROM users WHERE email = 'iamjoanalfonso@gmail.com'")->fetch();
+        $joseph = $pdo->query("SELECT id, name, title FROM users WHERE email = 'josephtyeo@gmail.com'")->fetch();
+        $jessel = $pdo->query("SELECT id, name, title FROM users WHERE email = 'jesselbacaling@gmail.com'")->fetch();
+
+        $insBday = $pdo->prepare("INSERT INTO birthdays (user_id, person_name, birth_date, notes, created_by) VALUES (?, ?, ?, ?, ?)");
+        if ($joan) {
+            $insBday->execute([$joan['id'], $joan['name'], '1994-10-25', 'Accounting Compliance Supervisor', $joseph['id'] ?? $joan['id']]);
+            $pdo->prepare("UPDATE users SET birth_date = '1994-10-25' WHERE id = ?")->execute([$joan['id']]);
+        }
+        if ($joseph) {
+            $insBday->execute([$joseph['id'], $joseph['name'], '1988-11-18', 'Managing Partner', $joseph['id']]);
+            $pdo->prepare("UPDATE users SET birth_date = '1988-11-18' WHERE id = ?")->execute([$joseph['id']]);
+        }
+        if ($jessel) {
+            $insBday->execute([$jessel['id'], $jessel['name'], '1995-12-08', 'Accounting Compliance Supervisor', $joseph['id'] ?? $jessel['id']]);
+            $pdo->prepare("UPDATE users SET birth_date = '1995-12-08' WHERE id = ?")->execute([$jessel['id']]);
         }
     }
 } catch (PDOException $e) {

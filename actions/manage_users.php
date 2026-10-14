@@ -113,10 +113,19 @@ if ($action === 'update_profile') {
     }
 
     $initials = generateInitials($name);
+    $birthDate = trim($_POST['birth_date'] ?? '');
+    if (!empty($birthDate)) {
+        $dt = DateTime::createFromFormat('!Y-m-d', $birthDate);
+        if (!$dt || $dt->format('Y-m-d') !== $birthDate) {
+            $birthDate = null;
+        }
+    } else {
+        $birthDate = null;
+    }
 
     // Update user record
-    $sql = "UPDATE users SET name = ?, email = ?, avatar_initials = ?, avatar_path = ?";
-    $params = [$name, $email, $initials, $avatarPath];
+    $sql = "UPDATE users SET name = ?, email = ?, avatar_initials = ?, avatar_path = ?, birth_date = ?";
+    $params = [$name, $email, $initials, $avatarPath, $birthDate];
 
     if ($newHash) {
         $sql .= ", password = ?";
@@ -126,6 +135,19 @@ if ($action === 'update_profile') {
     $params[] = $userId;
 
     $pdo->prepare($sql)->execute($params);
+
+    // Sync to birthdays table if birth_date is provided
+    if ($birthDate) {
+        $bChk = $pdo->prepare("SELECT id FROM birthdays WHERE user_id = ?");
+        $bChk->execute([$userId]);
+        $bId = $bChk->fetchColumn();
+        if ($bId) {
+            $pdo->prepare("UPDATE birthdays SET person_name = ?, birth_date = ? WHERE id = ?")->execute([$name, $birthDate, $bId]);
+        } else {
+            $pdo->prepare("INSERT INTO birthdays (user_id, person_name, birth_date, notes, created_by) VALUES (?, ?, ?, ?, ?)")
+                ->execute([$userId, $name, $birthDate, $curr['title'] ?? 'Associate', $userId]);
+        }
+    }
 
     // Update session
     $_SESSION['user_name'] = $name;
@@ -190,15 +212,29 @@ if ($action === 'add_user' || $action === 'create_user') {
     }
 
     $initials = generateInitials($name);
+    $birthDate = trim($_POST['birth_date'] ?? '');
+    if (!empty($birthDate)) {
+        $dt = DateTime::createFromFormat('!Y-m-d', $birthDate);
+        if (!$dt || $dt->format('Y-m-d') !== $birthDate) {
+            $birthDate = null;
+        }
+    } else {
+        $birthDate = null;
+    }
     $pwdHash = password_hash($password, PASSWORD_DEFAULT);
     $pdo->beginTransaction();
 
     $stmt = $pdo->prepare("
-        INSERT INTO users (name, email, password, role, title, gender, department, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials)
-        VALUES (?, ?, ?, ?, ?, ?, 'General Practice', ?, ?, ?, ?)
+        INSERT INTO users (name, email, password, role, title, gender, department, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_initials, birth_date)
+        VALUES (?, ?, ?, ?, ?, ?, 'General Practice', ?, ?, ?, ?, ?)
     ");
-    $stmt->execute([$name, $email, $pwdHash, $role, $title, $gender, $biometricPin, $faceEnrolled, $fingerprintEnrolled, $initials]);
+    $stmt->execute([$name, $email, $pwdHash, $role, $title, $gender, $biometricPin, $faceEnrolled, $fingerprintEnrolled, $initials, $birthDate]);
     $newUserId = $pdo->lastInsertId();
+
+    if ($birthDate) {
+        $insBday = $pdo->prepare("INSERT INTO birthdays (user_id, person_name, birth_date, notes, created_by) VALUES (?, ?, ?, ?, ?)");
+        $insBday->execute([$newUserId, $name, $birthDate, $title, $user['id']]);
+    }
 
     // Initialize both balance representations from the same policy defaults.
     $activeTypes = $pdo->query("SELECT code, default_days FROM leave_types WHERE is_active = 1")->fetchAll();
@@ -311,9 +347,18 @@ if ($action === 'edit_user') {
 
     $emailChanged = (strtolower($email) !== strtolower($existing['email']));
     $initials = generateInitials($name);
+    $birthDate = trim($_POST['birth_date'] ?? '');
+    if (!empty($birthDate)) {
+        $dt = DateTime::createFromFormat('!Y-m-d', $birthDate);
+        if (!$dt || $dt->format('Y-m-d') !== $birthDate) {
+            $birthDate = null;
+        }
+    } else {
+        $birthDate = null;
+    }
 
-    $sql = "UPDATE users SET name = ?, email = ?, title = ?, gender = ?, role = ?, biometric_pin = ?, face_enrolled = ?, fingerprint_enrolled = ?, avatar_initials = ?, avatar_path = ?";
-    $params = [$name, $email, $title, $gender, $role, $biometricPin, $faceEnrolled, $fingerprintEnrolled, $initials, $avatarPath];
+    $sql = "UPDATE users SET name = ?, email = ?, title = ?, gender = ?, role = ?, biometric_pin = ?, face_enrolled = ?, fingerprint_enrolled = ?, avatar_initials = ?, avatar_path = ?, birth_date = ?";
+    $params = [$name, $email, $title, $gender, $role, $biometricPin, $faceEnrolled, $fingerprintEnrolled, $initials, $avatarPath, $birthDate];
 
     if (!empty($resetPassword)) {
         $pwdHash = password_hash($resetPassword, PASSWORD_DEFAULT);
@@ -325,6 +370,19 @@ if ($action === 'edit_user') {
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+
+    // Sync to birthdays table
+    if ($birthDate) {
+        $bChk = $pdo->prepare("SELECT id FROM birthdays WHERE user_id = ?");
+        $bChk->execute([$targetId]);
+        $bId = $bChk->fetchColumn();
+        if ($bId) {
+            $pdo->prepare("UPDATE birthdays SET person_name = ?, birth_date = ?, notes = ? WHERE id = ?")->execute([$name, $birthDate, $title, $bId]);
+        } else {
+            $pdo->prepare("INSERT INTO birthdays (user_id, person_name, birth_date, notes, created_by) VALUES (?, ?, ?, ?, ?)")
+                ->execute([$targetId, $name, $birthDate, $title, $user['id']]);
+        }
+    }
 
     // NOTIFY ADMIN IF EMAIL WAS CHANGED
     if ($emailChanged) {
@@ -348,7 +406,7 @@ if ($action === 'edit_user') {
 // 4. FETCH USER DETAILS FOR EDIT MODAL
 if ($action === 'get_user') {
     $targetId = (int)($_GET['user_id'] ?? 0);
-    $stmt = $pdo->prepare("SELECT id, name, email, role, title, gender, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_path, avatar_initials FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT id, name, email, role, title, gender, biometric_pin, face_enrolled, fingerprint_enrolled, avatar_path, avatar_initials, birth_date FROM users WHERE id = ?");
     $stmt->execute([$targetId]);
     $u = $stmt->fetch();
 
