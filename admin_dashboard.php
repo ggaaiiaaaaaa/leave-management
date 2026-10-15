@@ -4,6 +4,8 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/services/attendance_calculator.php';
 $user = requireLogin();
 $officeSchedule = getOfficeScheduleSettings($pdo);
+$workDaysArr = array_map('trim', explode(',', $officeSchedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri'));
+$holidaysList = $pdo->query("SELECT holiday_date FROM holidays")->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
 if (!hasRole('admin')) {
     header('Location: staff_dashboard.php');
@@ -3354,19 +3356,31 @@ if (file_exists($zkStatusFile)) {
       }
 
       if (!startStr || !endStr) return;
-      const start = new Date(startStr);
-      const end = new Date(endStr);
+      const start = new Date(startStr + 'T00:00:00');
+      const end = new Date(endStr + 'T00:00:00');
       if (start > end) {
         document.getElementById('computedDaysPreview').innerText = 'Invalid Range';
         return;
       }
 
-      // Compute days excluding weekends
+      const activeWorkDays = <?= json_encode($workDaysArr) ?>;
+      const phHolidayDates = <?= json_encode($holidaysList) ?>;
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      // Compute days based on firm office schedule & Philippine public holidays
       let workingDays = 0;
       let curr = new Date(start);
       while (curr <= end) {
-        const day = curr.getDay();
-        if (day !== 0 && day !== 6) workingDays++;
+        const dayName = dayNames[curr.getDay()];
+        const y = curr.getFullYear();
+        const m = String(curr.getMonth() + 1).padStart(2, '0');
+        const d = String(curr.getDate()).padStart(2, '0');
+        const ymd = `${y}-${m}-${d}`;
+
+        const isFirmWorkDay = activeWorkDays.includes(dayName);
+        const isHoliday = phHolidayDates.includes(ymd);
+
+        if (isFirmWorkDay && !isHoliday) workingDays++;
         curr.setDate(curr.getDate() + 1);
       }
       document.getElementById('computedDaysPreview').innerText = `${workingDays} Working Day(s)`;

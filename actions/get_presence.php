@@ -39,10 +39,11 @@ $isHolidayToday = !empty($todayHoliday);
 
 // Fetch office hours policy to check if working hours have concluded
 $schedule = getOfficeScheduleSettings($pdo);
+$workDaysArr = array_map('trim', explode(',', $schedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri'));
 $workEndTime = $schedule['work_end_time'] ?? '17:30:00';
-$isWeekday = ((int)date('N', strtotime($today)) <= 5);
+$isWorkDayToday = in_array(date('D', strtotime($today)), $workDaysArr, true);
 $isDayDone = (date('H:i:s') >= $workEndTime);
-$isWorkingHoursDoneToday = ($isWeekday && !$isHolidayToday && $isDayDone);
+$isWorkingHoursDoneToday = ($isWorkDayToday && !$isHolidayToday && $isDayDone);
 
 $roster = [];
 $counts = [

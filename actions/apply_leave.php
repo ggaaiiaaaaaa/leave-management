@@ -2,6 +2,7 @@
 // actions/apply_leave.php - Process leave application with clean categories, gender validation & holiday discount
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../services/mailer.php';
+require_once __DIR__ . '/../services/attendance_calculator.php';
 requireLogin();
 requirePostWithCsrf();
 
@@ -96,6 +97,10 @@ if ($start->diff($end)->days > 366) {
     exit;
 }
 
+// Fetch office schedule settings to determine active working days
+$officeSchedule = getOfficeScheduleSettings($pdo);
+$workDaysArr = array_map('trim', explode(',', $officeSchedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri'));
+
 // Fetch all official holidays in the date range
 $holidayStmt = $pdo->prepare("SELECT holiday_date, title FROM holidays WHERE holiday_date BETWEEN ? AND ?");
 $holidayStmt->execute([$startDate, $endDate]);
@@ -107,11 +112,12 @@ $weekendCount = 0;
 
 $curr = clone $start;
 while ($curr <= $end) {
-    $dayOfWeek = (int)$curr->format('N'); // 1 (Mon) to 7 (Sun)
+    $dayAbbr = $curr->format('D'); // Mon, Tue, Wed, Thu, Fri, Sat, Sun
     $currDateStr = $curr->format('Y-m-d');
+    $isFirmWorkDay = in_array($dayAbbr, $workDaysArr, true);
 
-    if ($dayOfWeek >= 6) {
-        // Weekend (Saturday or Sunday)
+    if (!$isFirmWorkDay) {
+        // Rest day according to firm office schedule
         $weekendCount++;
     } elseif (isset($holidaysInRange[$currDateStr])) {
         // Philippine Official Public Holiday
@@ -125,7 +131,7 @@ while ($curr <= $end) {
 if ($workingDays <= 0) {
     echo json_encode([
         'success' => false,
-        'message' => "The selected date range contains only weekends or official Philippine holidays. No leave days need to be deducted."
+        'message' => "The selected date range contains only non-working schedule days or official Philippine holidays. No leave days need to be deducted."
     ]);
     exit;
 }

@@ -71,6 +71,7 @@ $format12h = function($t) {
 };
 
 $schedule = getOfficeScheduleSettings($pdo);
+$workDaysArr = array_map('trim', explode(',', $schedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri'));
 $workEndTime = $schedule['work_end_time'] ?? '17:30:00';
 $todayDate = date('Y-m-d');
 $currentTime = date('H:i:s');
@@ -82,10 +83,10 @@ $isWorkingHoursDone = function(string $d) use ($todayDate, $currentTime, $workEn
     return false; // Future dates are not finished
 };
 
-// Helper: check if date is a standard working day (Monday to Friday, not a statutory holiday)
-$isWorkingDay = function(string $d) use ($holidayDates): bool {
-    $dow = (int)date('N', strtotime($d));
-    return ($dow <= 5 && !isset($holidayDates[$d]));
+// Helper: check if date is an active working day according to firm schedule (not a statutory holiday)
+$isWorkingDay = function(string $d) use ($holidayDates, $workDaysArr): bool {
+    $dayAbbr = date('D', strtotime($d));
+    return (in_array($dayAbbr, $workDaysArr, true) && !isset($holidayDates[$d]));
 };
 
 $dtrRecords = [];
@@ -111,7 +112,8 @@ if ($isSingleDay) {
     // Index leaves by user_id for today
     $dayLeaves = [];
     foreach ($approvedLeaves as $lv) {
-        if ($singleDate >= $lv['start_date'] && $singleDate <= $lv['end_date'] && (int)date('N', strtotime($singleDate)) <= 5 && !isset($holidayDates[$singleDate])) {
+        $dayAbbr = date('D', strtotime($singleDate));
+        if ($singleDate >= $lv['start_date'] && $singleDate <= $lv['end_date'] && in_array($dayAbbr, $workDaysArr, true) && !isset($holidayDates[$singleDate])) {
             $dayLeaves[$lv['user_id']] = $lv;
         }
     }
@@ -177,7 +179,7 @@ if ($isSingleDay) {
                 $statusType = 'neutral';
                 if (isset($holidayDates[$singleDate])) {
                     $statusText = 'Holiday';
-                } elseif ((int)date('N', strtotime($singleDate)) > 5) {
+                } elseif (!in_array(date('D', strtotime($singleDate)), $workDaysArr, true)) {
                     $statusText = 'Weekend / Rest Day';
                 } else {
                     $statusText = 'Not Yet Clocked In';
@@ -256,7 +258,7 @@ if ($isSingleDay) {
                 break;
             }
         }
-        $isOnLeave = !empty($leave) && (int)date('N', strtotime($logDate)) <= 5 && !isset($holidayDates[$logDate]);
+        $isOnLeave = !empty($leave) && in_array(date('D', strtotime($logDate)), $workDaysArr, true) && !isset($holidayDates[$logDate]);
 
         $metrics = calculateAttendanceMetrics(
             $bio['time_in'] ?? null,
@@ -343,8 +345,8 @@ if ($isSingleDay) {
 
         while ($curTs <= $endTs) {
             $dayStr = date('Y-m-d', $curTs);
-            $dow = intval(date('N', $curTs)); // 1-7 (7=Sun)
-            if ($dow <= 5 && !isset($holidayDates[$dayStr]) && empty($userDateLogsMap[$uid . '_' . $dayStr])) {
+            $dayAbbr = date('D', $curTs);
+            if (in_array($dayAbbr, $workDaysArr, true) && !isset($holidayDates[$dayStr]) && empty($userDateLogsMap[$uid . '_' . $dayStr])) {
                 $userDateLogsMap[$uid . '_' . $dayStr] = true;
                 $onLeaveCount++;
                 $hours = $isPaidLeave ? 8.0 : 0.0;

@@ -5,6 +5,7 @@ require_once __DIR__ . '/services/attendance_calculator.php';
 requireLogin();
 
 $officeSchedule = getOfficeScheduleSettings($pdo);
+$workDaysArr = array_map('trim', explode(',', $officeSchedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri'));
 
 $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['role'] === 'admin');
@@ -515,8 +516,10 @@ if ($isAdmin) {
 
                     for ($d = $startDay; $d <= $endDay; $d++):
                         $currentDateStr = sprintf("%04d-%02d-%02d", $year, $month, $d);
-                        $dayOfWeek = date('N', strtotime($currentDateStr)); // 1 (Mon) - 7 (Sun)
-                        $isWeekend = ($dayOfWeek >= 6);
+                        $dayAbbr = date('D', strtotime($currentDateStr));
+                        $dayOfWeek = (int)date('N', strtotime($currentDateStr)); // 1 (Mon) - 7 (Sun)
+                        $isWorkDay = in_array($dayAbbr, $workDaysArr, true);
+                        $isRestDay = !$isWorkDay;
                         $log = $logsMap[$currentDateStr] ?? null;
 
                         // Check holiday
@@ -566,13 +569,13 @@ if ($isAdmin) {
                             $rowNote = "ON LEAVE ({$leaveLabel})";
                             // Automatically credit standard hours for paid authorized leave days on working days
                             $reqDailyHours = floatval($officeSchedule['required_daily_hours'] ?? 8.0);
-                            if (empty($tIn) && $isPaidLeave && !$isWeekend) {
+                            if (empty($tIn) && $isPaidLeave && $isWorkDay) {
                                 $renderedHours = $reqDailyHours;
                             }
-                        } elseif ($isWeekend && empty($tIn)) {
+                        } elseif ($isRestDay && empty($tIn)) {
                             $rowClass = 'weekend-row';
-                            $rowNote = ($dayOfWeek == 6) ? 'SATURDAY' : 'SUNDAY';
-                        } elseif (!$isWeekend && empty($tIn) && $isWorkHoursEnded) {
+                            $rowNote = ($dayOfWeek == 6) ? 'SATURDAY' : (($dayOfWeek == 7) ? 'SUNDAY' : strtoupper($dayAbbr));
+                        } elseif ($isWorkDay && empty($tIn) && $isWorkHoursEnded) {
                             $rowClass = 'absent-row';
                             $rowNote = 'ABSENT';
                         }

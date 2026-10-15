@@ -1,7 +1,12 @@
 <?php
 // staff_dashboard.php - Dedicated Staff CPA Self-Service Portal (JTYeo CPA Accounting Office)
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/services/attendance_calculator.php';
 requireLogin();
+
+$officeSchedule = getOfficeScheduleSettings($pdo);
+$workDaysArr = array_map('trim', explode(',', $officeSchedule['work_days'] ?? 'Mon,Tue,Wed,Thu,Fri'));
+$holidaysList = $pdo->query("SELECT holiday_date FROM holidays")->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
 $user = getCurrentUser();
 $userRole = $user['role'];
@@ -1718,6 +1723,9 @@ $leaveIconMap = [
       setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; setTimeout(() => toast.remove(), 300); }, 3500);
     }
 
+    const activeWorkDays = <?= json_encode($workDaysArr) ?>;
+    const phHolidayDates = <?= json_encode($holidaysList) ?>;
+
     function calculateWorkingDaysPreview() {
       const startStr = document.getElementById('applyStartDate').value;
       const endStr = document.getElementById('applyEndDate').value;
@@ -1760,18 +1768,27 @@ $leaveIconMap = [
       }
 
       if (!startStr || !endStr) return;
-      const start = new Date(startStr);
-      const end = new Date(endStr);
+      const start = new Date(startStr + 'T00:00:00');
+      const end = new Date(endStr + 'T00:00:00');
       if (start > end) {
         document.getElementById('computedDaysPreview').innerText = 'Invalid Range';
         return;
       }
 
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       let workingDays = 0;
       let curr = new Date(start);
       while (curr <= end) {
-        const day = curr.getDay();
-        if (day !== 0 && day !== 6) workingDays++;
+        const dayName = dayNames[curr.getDay()];
+        const y = curr.getFullYear();
+        const m = String(curr.getMonth() + 1).padStart(2, '0');
+        const d = String(curr.getDate()).padStart(2, '0');
+        const ymd = `${y}-${m}-${d}`;
+
+        const isFirmWorkDay = activeWorkDays.includes(dayName);
+        const isHoliday = phHolidayDates.includes(ymd);
+
+        if (isFirmWorkDay && !isHoliday) workingDays++;
         curr.setDate(curr.getDate() + 1);
       }
       document.getElementById('computedDaysPreview').innerText = `${workingDays} Working Day(s)`;
